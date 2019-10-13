@@ -1,0 +1,6 @@
+[project]
+org-name="eclk"
+version="0.1.0"
+
+[dependencies]
+"maryamzi/websub.hub.mysqlstore" = { path = "<PATH_TO_websub.hub.mysqlstore_balo>", version = "0.1.0"}
