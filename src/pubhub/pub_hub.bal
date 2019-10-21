@@ -3,13 +3,14 @@ import ballerina/http;
 import ballerina/log;
 import ballerina/mime;
 import ballerina/websub;
+import ballerina/xmlutils;
 import ballerinax/java.jdbc;
 
 import maryamzi/websub.hub.mysqlstore;
 
-listener http:Listener httpListener = new (config:getAsInt("eclk.pub.port", 8080));
-
 websub:WebSubHub webSubHub = startHubAndRegisterTopic();
+
+listener http:Listener httpListener = new (config:getAsInt("eclk.pub.port", 8080));
 
 // Instead of another service here, we can have an upstream publisher publish directly to the hub. TBD.
 @http:ServiceConfig {
@@ -23,76 +24,68 @@ service resultDist on httpListener {
         path: "/publish"
     }
     resource function publishResult(http:Caller caller, http:Request req) {
-        if !(req.hasHeader(mime:CONTENT_TYPE)) {
-            panic error(ERROR_REASON, message = "content-type header not available!");
+        json|error payloadResult = req.getJsonPayload();
+
+        if payloadResult is error {
+            panic error(ERROR_REASON, message = "Error extracting JSON payload: " + payloadResult.toString());
         }
 
-        publishContent(caller, req.getHeader(mime:CONTENT_TYPE), req);
-    }
+        error? respResult = caller->accepted();
+        if (respResult is error) {
+            log:printError("Error responding on result notification", respResult);
+        }
 
+        json jsonPayload = <json> payloadResult;
+
+        worker smsWorker {
+            // Send SMS to all subscribers.
+            // TODO - should we ensure SMS is sent first?
+        }
+
+        worker jsonWorker {
+            actOnValidUpdate(function() returns error? {
+                log:printInfo("Notifying results for " + jsonPayload.toJsonString());
+                return webSubHub.publishUpdate(JSON_RESULTS_TOPIC, jsonPayload, mime:APPLICATION_JSON);
+            });
+        }
+
+        worker xmlWorker {
+            xml|error xmlResult = xmlutils:fromJSON(jsonPayload);
+            if xmlResult is error {
+                panic error(ERROR_REASON, message = "Error converting JSON to XML: " + xmlResult.toString());
+            }
+
+            xml xmlPayload = <xml> xmlResult;
+            actOnValidUpdate(function() returns error? {
+                log:printInfo("Notifying results for " + xmlPayload.toString());
+                return webSubHub.publishUpdate(XML_RESULTS_TOPIC, xmlPayload);
+            });
+        }
+
+        worker textWorker {
+            // TODO
+            string stringPayload = jsonPayload.toJsonString();
+            actOnValidUpdate(function() returns error? {
+                log:printInfo("Notifying results for " + stringPayload);
+                return webSubHub.publishUpdate(TEXT_RESULTS_TOPIC, stringPayload);
+            });
+
+        }
+
+        worker imageWorker {
+            // TODO
+        }
+
+        worker siteWorker {
+            // TODO
+        }
+    }
 }
 
-// Revisit what we are logging and the level.
-function publishContent(http:Caller caller, string contentType, http:Request req) {
-    if (contentType.endsWith("json")) {
-        json|error content = req.getJsonPayload();
-        if (content is json) {
-            json jsonContent = content;
-            actOnValidUpdate(caller, function() returns error? {
-                log:printInfo("Notifying results for " + jsonContent.toJsonString());
-                return webSubHub.publishUpdate(JSON_RESULTS_TOPIC, jsonContent, contentType);
-            });
-        } else {
-            logAndRespondPayloadRetrievalFailure(caller, <@untainted> content);
-        }
-    } else if (contentType.endsWith("xml")) {
-        xml|error content = req.getXmlPayload();
-        if (content is xml) {
-            xml xmlContent = content;
-            actOnValidUpdate(caller, function() returns error? {
-                log:printInfo("Notifying results for " + xmlContent.toString());
-                return webSubHub.publishUpdate(XML_RESULTS_TOPIC, xmlContent, contentType);
-            });
-        } else {
-            logAndRespondPayloadRetrievalFailure(caller, <@untainted> content);
-        }
-    } else {
-        if (contentType.toLowerAscii() != mime:TEXT_PLAIN) {
-            panic error(ERROR_REASON, message = "Unsupported content type: " + contentType);
-        }
-
-        string|error content = req.getTextPayload();
-        if (content is string) {
-            string stringContent = content;
-            actOnValidUpdate(caller, function() returns error? {
-                log:printInfo("Notifying results for " + stringContent);
-                return webSubHub.publishUpdate(TEXT_RESULTS_TOPIC, stringContent, contentType);
-            });
-        } else {
-            logAndRespondPayloadRetrievalFailure(caller, <@untainted> content);
-        }
-    }
-}
-
-function actOnValidUpdate(http:Caller caller, function() returns error? publishFunction) {
-    error? result = caller->accepted();
-    if (result is error) {
-        log:printError("Error responding on result notification", result);
-    }
+function actOnValidUpdate(function() returns error? publishFunction) {
     error? publishResult = publishFunction();
     if (publishResult is error) {
         log:printError("Error publishing update", publishResult);
-    }
-}
-
-function logAndRespondPayloadRetrievalFailure(http:Caller caller, error err) {
-    log:printError("Error retrieving payload", err);
-    http:Response response = new;
-    response.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
-    response.setPayload("Error retrieving payload: " + err.toString());
-    error? result = caller->respond(response);
-    if (result is error) {
-        log:printError("Error responding on payload retrieval failure", result);
     }
 }
 
