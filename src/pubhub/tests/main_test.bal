@@ -82,13 +82,9 @@ const textUpdate = "Result: candOne: 110500, candTwo: 9500";
 @test:BeforeSuite
 function publish() {
     runtime:sleep(5000); // wait for subscription process to complete.
-    websub:Client hubClient = new("http://localhost:9090/websub/hub");
-    error? res = webSubHub.publishUpdate("https://github.com/ECLK/Results-Dist-json",
-                                         jsonUpdate,
-                                         "application/json");
-    checkpanic hubClient->publishUpdate("https://github.com/ECLK/Results-Dist-xml", xmlUpdate,
-                                        "application/xml");
-    checkpanic hubClient->publishUpdate("https://github.com/ECLK/Results-Dist-text", textUpdate, "text/plain");
+    checkpanic webSubHub.publishUpdate("https://github.com/ECLK/Results-Dist-json", jsonUpdate, "application/json");
+    checkpanic webSubHub.publishUpdate("https://github.com/ECLK/Results-Dist-xml", xmlUpdate, "application/xml");
+    checkpanic webSubHub.publishUpdate("https://github.com/ECLK/Results-Dist-text", textUpdate, "text/plain");
     runtime:sleep(5000); // wait for update notification
 }
 

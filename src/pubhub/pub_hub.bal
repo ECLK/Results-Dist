@@ -99,14 +99,16 @@ function startHubAndRegisterTopic() returns websub:WebSubHub {
         }
     });
 
-    mysqlstore:MySqlHubPersistenceStore persistenceStore = checkpanic new (subscriptionDb);
+    string encryptionKey = config:getAsString("eclk.hub.db.encryptionkey");
+    if (encryptionKey.trim() == "") {
+        panic error(ERROR_REASON, message = "encryption key not specified or invalid");
+    }
+
+    mysqlstore:MySqlHubPersistenceStore persistenceStore = checkpanic new (subscriptionDb, encryptionKey.toBytes());
 
     websub:WebSubHub | websub:HubStartedUpError hubStartUpResult =
         websub:startHub(new http:Listener(config:getAsInt("eclk.hub.port", 9090)),
                         {
-                            remotePublish: {
-                                enabled: config:getAsBoolean("eclk.hub.remotepublish.enabled")
-                            },
                             hubPersistenceStore: persistenceStore,
                             clientConfig: {
                                 // TODO: finalize
