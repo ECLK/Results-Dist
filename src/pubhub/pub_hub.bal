@@ -1,3 +1,4 @@
+import ballerina/auth;
 import ballerina/config;
 import ballerina/http;
 import ballerina/log;
@@ -7,6 +8,18 @@ import ballerina/xmlutils;
 import ballerinax/java.jdbc;
 
 import maryamzi/websub.hub.mysqlstore;
+
+// Inbound auth handler for Hub service
+auth:InboundBasicAuthProvider inboundBasicAuthProvider = new;
+http:BasicAuthHandler inboundBasicAuthHandler = new(inboundBasicAuthProvider);
+
+// Outbound auth handler for Hub client
+auth:OutboundBasicAuthProvider OutBoundbasicAuthProvider = new({
+    username: config:getAsString("username", "tom"),
+    password: config:getAsString("password", "123")
+});
+
+http:BasicAuthHandler outboundBasicAuthHandler = new(OutBoundbasicAuthProvider);
 
 websub:WebSubHub webSubHub = startHubAndRegisterTopic();
 
@@ -102,7 +115,17 @@ function startHubAndRegisterTopic() returns websub:WebSubHub {
     mysqlstore:MySqlHubPersistenceStore persistenceStore = checkpanic new (subscriptionDb);
 
     websub:WebSubHub | websub:HubStartedUpError hubStartUpResult =
-        websub:startHub(new http:Listener(config:getAsInt("eclk.hub.port", 9090)),
+        websub:startHub(new http:Listener(config:getAsInt("eclk.hub.port", 9090), config = {
+                          auth: {
+                              authHandlers: [inboundBasicAuthHandler]
+                          },
+                          secureSocket: {
+                              keyStore: {
+                                  path: "${ballerina.home}/bre/security/ballerinaKeystore.p12",
+                                  password: "ballerina"
+                              }
+                          }
+                      }),
                         {
                             remotePublish: {
                                 enabled: config:getAsBoolean("eclk.hub.remotepublish.enabled")
@@ -113,6 +136,15 @@ function startHubAndRegisterTopic() returns websub:WebSubHub {
                                 retryConfig: {
                                     count:  3,
                                     intervalInMillis: 5000
+                                },
+                                followRedirects: { enabled: true, maxCount: 5 },
+                                timeoutInMillis: 5*60000, // Check
+                                auth: { authHandler: outboundBasicAuthHandler },
+                                secureSocket: {
+                                    trustStore: {
+                                        path: config:getAsString("truststore"),
+                                        password: "ballerina"
+                                    }
                                 }
                             }
                         });
