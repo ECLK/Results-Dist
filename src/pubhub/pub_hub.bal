@@ -9,25 +9,33 @@ import ballerinax/java.jdbc;
 
 import maryamzi/websub.hub.mysqlstore;
 
-// Inbound auth handler for Hub service
-auth:InboundBasicAuthProvider inboundBasicAuthProvider = new;
-http:BasicAuthHandler inboundBasicAuthHandler = new(inboundBasicAuthProvider);
-
-// Outbound auth handler for Hub client
-auth:OutboundBasicAuthProvider OutBoundbasicAuthProvider = new({
-    username: config:getAsString("username", "tom"),
-    password: config:getAsString("password", "123")
-});
-
-http:BasicAuthHandler outboundBasicAuthHandler = new(OutBoundbasicAuthProvider);
+// Inbound auth handler for Pub and Hub services
+http:BasicAuthHandler inboundBasicAuthHandler = new(new auth:InboundBasicAuthProvider());
 
 websub:WebSubHub webSubHub = startHubAndRegisterTopic();
 
-listener http:Listener httpListener = new (config:getAsInt("eclk.pub.port", 8181));
+listener http:Listener httpListener = new (config:getAsInt("eclk.pub.port", 8181), config = {
+    auth: {
+        authHandlers: [inboundBasicAuthHandler]
+    },
+    secureSocket: {
+        keyStore: {
+            path: config:getAsString("eclk.pub.keystore.path"),
+            password: config:getAsString("eclk.pub.keystore.password")
+        },
+        trustStore: {
+            path: config:getAsString("eclk.pub.truststore.path"),
+            password: config:getAsString("eclk.pub.truststore.password")
+        }
+    }
+});
 
 // Instead of another service here, we can have an upstream publisher publish directly to the hub. TBD.
 @http:ServiceConfig {
-    basePath: "/results.dist"
+    basePath: "/results.dist",
+    auth: {
+        scopes: ["publisher"]
+    }
 }
 service resultDist on httpListener {
 
@@ -121,8 +129,8 @@ function startHubAndRegisterTopic() returns websub:WebSubHub {
                           },
                           secureSocket: {
                               keyStore: {
-                                  path: "${ballerina.home}/bre/security/ballerinaKeystore.p12",
-                                  password: "ballerina"
+                                  path: config:getAsString("eclk.hub.keystore.path"),
+                                  password: config:getAsString("eclk.hub.keystore.password")
                               }
                           }
                       }),
@@ -139,11 +147,10 @@ function startHubAndRegisterTopic() returns websub:WebSubHub {
                                 },
                                 followRedirects: { enabled: true, maxCount: 5 },
                                 timeoutInMillis: 5*60000, // Check
-                                auth: { authHandler: outboundBasicAuthHandler },
                                 secureSocket: {
                                     trustStore: {
-                                        path: config:getAsString("truststore"),
-                                        password: "ballerina"
+                                        path: config:getAsString("eclk.hub.client.truststore.path"),
+                                        password: config:getAsString("eclk.hub.client.truststore.password")
                                     }
                                 }
                             }
