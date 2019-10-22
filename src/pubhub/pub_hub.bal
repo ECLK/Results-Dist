@@ -129,13 +129,19 @@ function registerTopics(websub:WebSubHub hub) {
     registerTopic(hub, JSON_RESULTS_TOPIC);
     registerTopic(hub, XML_RESULTS_TOPIC);
     registerTopic(hub, TEXT_RESULTS_TOPIC);
+    registerTopic(hub, IMAGE_RESULTS_TOPIC);
 }
 
 function registerTopic(websub:WebSubHub hub, string topic) {
     error? result = hub.registerTopic(topic);
     if (result is error) {
-        // Not panicking here, since the error would usually be an already registered.
-        // TODO: check if we can improve this be more specific
-        log:printError("Error registering topic", result);
+        string? message = result.detail()?.message;
+
+        if (message is string && message.indexOf("topic already exists") != ()) {
+            // Not panicking for failures due to already being registered.
+            return;
+        }
+
+        panic result;
     }
 }
