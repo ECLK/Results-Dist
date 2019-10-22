@@ -13,7 +13,6 @@ const IMAGE_TOPIC = "https://github.com/ECLK/Results-Dist-image";
 
 const UNDERSOCRE = "_";
 const COLON = ":";
-const SCHEME = "http://"; // TODO: update
 
 const JSON_EXT = ".json";
 const XML_EXT = ".xml";
@@ -29,120 +28,141 @@ const TWO_DAYS_IN_SECONDS = 172800;
 
 string subscriberSecret = "";
 
+string scheme = "http://";
 string subscriberDomain = "localhost";
 int subscriberPort = 8080;
 
-websub:Listener websubListener = new(subscriberPort);
-
 final string directoryPath = ""; // TODO: set
 
-service jsonSubscriber =
-@websub:SubscriberServiceConfig {
-    path: JSON_PATH,
-    subscribeOnStartUp: true,
-    target: [HUB, JSON_TOPIC],
-    leaseSeconds: TWO_DAYS_IN_SECONDS,
-    secret: subscriberSecret,
-    callback: getUrl(JSON_PATH)
-}
-service {
-    resource function onNotification(websub:Notification notification) {
-        json|error jsonPayload = notification.getJsonPayload();
-        if (jsonPayload is json) {
-            writeJson(directoryPath.concat(getFileName(JSON_EXT)), jsonPayload);
-        } else {
-            log:printError("Error extracting JSON payload", jsonPayload);
-        }
+function getJsonSubscriber() returns service {
+    return
+    @websub:SubscriberServiceConfig {
+        path: JSON_PATH,
+        subscribeOnStartUp: true,
+        target: [HUB, JSON_TOPIC],
+        leaseSeconds: TWO_DAYS_IN_SECONDS,
+        secret: subscriberSecret,
+        callback: getUrl(JSON_PATH)
     }
-};
-
-service xmlSubscriber =
-@websub:SubscriberServiceConfig {
-    path: XML_PATH,
-    subscribeOnStartUp: true,
-    target: [HUB, XML_TOPIC],
-    leaseSeconds: TWO_DAYS_IN_SECONDS,
-    secret: subscriberSecret,
-    callback: getUrl(XML_PATH)
-}
-service {
-    resource function onNotification(websub:Notification notification) {
-        xml|error xmlPayload = notification.getXmlPayload();
-        if (xmlPayload is xml) {
-            writeXml(directoryPath.concat(getFileName(XML_EXT)), xmlPayload);
-        } else {
-            log:printError("Error extracting XML payload", xmlPayload);
+    service {
+        resource function onNotification(websub:Notification notification) {
+            json|error jsonPayload = notification.getJsonPayload();
+            if (jsonPayload is json) {
+                writeJson(directoryPath.concat(getFileName(JSON_EXT)), jsonPayload);
+            } else {
+                log:printError("Error extracting JSON payload", jsonPayload);
+            }
         }
-    }
-};
-
-service textSubscriber =
-@websub:SubscriberServiceConfig {
-    path: TEXT_PATH,
-    subscribeOnStartUp: true,
-    target: [HUB, TEXT_TOPIC],
-    leaseSeconds: TWO_DAYS_IN_SECONDS,
-    secret: subscriberSecret,
-    callback: getUrl(TEXT_PATH)
+    };
 }
-service {
-    resource function onNotification(websub:Notification notification) {
-        string|error textPayload = notification.getTextPayload();
-        if (textPayload is string) {
-            write(directoryPath.concat(getFileName(TEXT_EXT)), textPayload);
-        } else {
-            log:printError("Error extracting text payload", textPayload);
-        }
-    }
-};
 
-service imageSubscriber =
-@websub:SubscriberServiceConfig {
-    path: IMAGE_PATH,
-    subscribeOnStartUp: true,
-    target: [HUB, IMAGE_TOPIC],
-    leaseSeconds: TWO_DAYS_IN_SECONDS,
-    secret: subscriberSecret,
-    callback: getUrl(IMAGE_PATH)
+function getXmlSubscriber() returns service {
+    return
+    @websub:SubscriberServiceConfig {
+        path: XML_PATH,
+        subscribeOnStartUp: true,
+        target: [HUB, XML_TOPIC],
+        leaseSeconds: TWO_DAYS_IN_SECONDS,
+        secret: subscriberSecret,
+        callback: getUrl(XML_PATH)
+    }
+    service {
+        resource function onNotification(websub:Notification notification) {
+            xml|error xmlPayload = notification.getXmlPayload();
+            if (xmlPayload is xml) {
+                writeXml(directoryPath.concat(getFileName(XML_EXT)), xmlPayload);
+            } else {
+                log:printError("Error extracting XML payload", xmlPayload);
+            }
+        }
+    };
 }
-service {
-    resource function onNotification(websub:Notification notification) {
-        byte[]|error binaryPayload = notification.getBinaryPayload();
-        if (binaryPayload is byte[]) {
-            write(directoryPath.concat(getFileName(PDF_EXT)), binaryPayload.toBase64());
-        } else {
-            log:printError("Error extracting image payload", binaryPayload);
-        }
-    }
-};
 
-public function main(string secret, string content = "json", string domain = "localhost", int port = 8080) {
+function getTextSubscriber() returns service {
+    return
+    @websub:SubscriberServiceConfig {
+        path: TEXT_PATH,
+        subscribeOnStartUp: true,
+        target: [HUB, TEXT_TOPIC],
+        leaseSeconds: TWO_DAYS_IN_SECONDS,
+        secret: subscriberSecret,
+        callback: getUrl(TEXT_PATH)
+    }
+    service {
+        resource function onNotification(websub:Notification notification) {
+            string|error textPayload = notification.getTextPayload();
+            if (textPayload is string) {
+                write(directoryPath.concat(getFileName(TEXT_EXT)), textPayload);
+            } else {
+                log:printError("Error extracting text payload", textPayload);
+            }
+        }
+    };
+}
+
+function getImageSubscriber() returns service {
+    return
+    @websub:SubscriberServiceConfig {
+        path: IMAGE_PATH,
+        subscribeOnStartUp: true,
+        target: [HUB, IMAGE_TOPIC],
+        leaseSeconds: TWO_DAYS_IN_SECONDS,
+        secret: subscriberSecret,
+        callback: getUrl(IMAGE_PATH)
+    }
+    service {
+        resource function onNotification(websub:Notification notification) {
+            byte[]|error binaryPayload = notification.getBinaryPayload();
+            if (binaryPayload is byte[]) {
+                write(directoryPath.concat(getFileName(PDF_EXT)), binaryPayload.toBase64());
+            } else {
+                log:printError("Error extracting image payload", binaryPayload);
+            }
+        }
+    };
+}
+
+public function main(string secret, string content = "json", string domain = "localhost", int port = 8080,
+                     string? keystorePath = (), string keystorePassword = "") {
     subscriberSecret = <@untainted> secret;
     subscriberDomain = <@untainted> domain;
     subscriberPort = <@untainted> port;
 
+    websub:SubscriberListenerConfiguration config = {};
+    if (keystorePath is string) {
+        scheme = "https://";
+        config.httpServiceSecureSocket = {
+            keyStore: {
+                path: keystorePath,
+                password: keystorePassword
+            }
+        };
+    }
+
+    websub:Listener websubListener = new(subscriberPort, config);
+
     match content {
         "json" => {
-            checkpanic websubListener.__attach(jsonSubscriber);
+            checkpanic websubListener.__attach(getJsonSubscriber());
         }
 
         "xml" => {
-            checkpanic websubListener.__attach(xmlSubscriber);
+            checkpanic websubListener.__attach(getXmlSubscriber());
         }
 
         "text" => {
-            checkpanic websubListener.__attach(textSubscriber);
+            checkpanic websubListener.__attach(getTextSubscriber());
         }
 
         "image" => {
-            checkpanic websubListener.__attach(imageSubscriber);
+            checkpanic websubListener.__attach(getImageSubscriber());
         }
 
         "all" => {
-            checkpanic websubListener.__attach(jsonSubscriber);
-            checkpanic websubListener.__attach(xmlSubscriber);
-            checkpanic websubListener.__attach(textSubscriber);
-            checkpanic websubListener.__attach(imageSubscriber);
+            checkpanic websubListener.__attach(getJsonSubscriber());
+            checkpanic websubListener.__attach(getXmlSubscriber());
+            checkpanic websubListener.__attach(getTextSubscriber());
+            checkpanic websubListener.__attach(getImageSubscriber());
         }
     }
 
@@ -203,5 +223,5 @@ function writeContent(string path, function(io:WritableCharacterChannel wch) ret
 }
 
 function getUrl(string path) returns string {
-    return SCHEME.concat(subscriberDomain, COLON, subscriberPort.toString(), path);
+    return scheme.concat(subscriberDomain, COLON, subscriberPort.toString(), path);
 }
