@@ -1,4 +1,3 @@
-import ballerina/config;
 import ballerina/io;
 import ballerina/log;
 import ballerina/system;
@@ -13,24 +12,38 @@ const TEXT_TOPIC = "https://github.com/ECLK/Results-Dist-text";
 const IMAGE_TOPIC = "https://github.com/ECLK/Results-Dist-image";
 
 const UNDERSOCRE = "_";
+const COLON = ":";
+const SCHEME = "http://"; // TODO: update
+
 const JSON_EXT = ".json";
 const XML_EXT = ".xml";
 const TEXT_EXT = ".txt";
 const PDF_EXT = ".pdf";
 
-int port = config:getAsInt("subscriber.port", 8080);
+const JSON_PATH = "/json";
+const XML_PATH = "/xml";
+const TEXT_PATH = "/txt";
+const IMAGE_PATH = "/image";
 
-websub:Listener websubListener = new(port);
+const TWO_DAYS_IN_SECONDS = 172800;
+
+string subscriberSecret = "";
+
+string subscriberDomain = "localhost";
+int subscriberPort = 8080;
+
+websub:Listener websubListener = new(subscriberPort);
 
 final string directoryPath = ""; // TODO: set
 
 service jsonSubscriber =
 @websub:SubscriberServiceConfig {
-    path: "/json",
+    path: JSON_PATH,
     subscribeOnStartUp: true,
     target: [HUB, JSON_TOPIC],
-    leaseSeconds: 172800,
-    callback: "http://localhost:" + port.toString() + "/json"
+    leaseSeconds: TWO_DAYS_IN_SECONDS,
+    secret: subscriberSecret,
+    callback: getUrl(JSON_PATH)
 }
 service {
     resource function onNotification(websub:Notification notification) {
@@ -45,11 +58,12 @@ service {
 
 service xmlSubscriber =
 @websub:SubscriberServiceConfig {
-    path: "/xml",
+    path: XML_PATH,
     subscribeOnStartUp: true,
     target: [HUB, XML_TOPIC],
-    leaseSeconds: 172800,
-    callback: "http://localhost:" + port.toString() + "/xml"
+    leaseSeconds: TWO_DAYS_IN_SECONDS,
+    secret: subscriberSecret,
+    callback: getUrl(XML_PATH)
 }
 service {
     resource function onNotification(websub:Notification notification) {
@@ -64,11 +78,12 @@ service {
 
 service textSubscriber =
 @websub:SubscriberServiceConfig {
-    path: "/text",
+    path: TEXT_PATH,
     subscribeOnStartUp: true,
     target: [HUB, TEXT_TOPIC],
-    leaseSeconds: 172800,
-    callback: "http://localhost:" + port.toString() + "/text"
+    leaseSeconds: TWO_DAYS_IN_SECONDS,
+    secret: subscriberSecret,
+    callback: getUrl(TEXT_PATH)
 }
 service {
     resource function onNotification(websub:Notification notification) {
@@ -83,11 +98,12 @@ service {
 
 service imageSubscriber =
 @websub:SubscriberServiceConfig {
-    path: "/image",
+    path: IMAGE_PATH,
     subscribeOnStartUp: true,
     target: [HUB, IMAGE_TOPIC],
-    leaseSeconds: 172800,
-    callback: "http://localhost:" + port.toString() + "/image"
+    leaseSeconds: TWO_DAYS_IN_SECONDS,
+    secret: subscriberSecret,
+    callback: getUrl(IMAGE_PATH)
 }
 service {
     resource function onNotification(websub:Notification notification) {
@@ -100,25 +116,29 @@ service {
     }
 };
 
-public function main(string? contentType = ()) {
-    match contentType {
-        "--json"|() => {
+public function main(string secret, string content = "json", string domain = "localhost", int port = 8080) {
+    subscriberSecret = <@untainted> secret;
+    subscriberDomain = <@untainted> domain;
+    subscriberPort = <@untainted> port;
+
+    match content {
+        "json" => {
             checkpanic websubListener.__attach(jsonSubscriber);
         }
 
-        "--xml" => {
+        "xml" => {
             checkpanic websubListener.__attach(xmlSubscriber);
         }
 
-        "--text" => {
+        "text" => {
             checkpanic websubListener.__attach(textSubscriber);
         }
 
-        "--image" => {
+        "image" => {
             checkpanic websubListener.__attach(imageSubscriber);
         }
 
-        "--all" => {
+        "all" => {
             checkpanic websubListener.__attach(jsonSubscriber);
             checkpanic websubListener.__attach(xmlSubscriber);
             checkpanic websubListener.__attach(textSubscriber);
@@ -180,4 +200,8 @@ function writeContent(string path, function(io:WritableCharacterChannel wch) ret
     } else {
         log:printError("Error creating a byte channel for " + path, wbc);
     }
+}
+
+function getUrl(string path) returns string {
+    return SCHEME.concat(subscriberDomain, COLON, subscriberPort.toString(), path);
 }

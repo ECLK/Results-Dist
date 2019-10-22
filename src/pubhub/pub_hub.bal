@@ -10,7 +10,7 @@ import maryamzi/websub.hub.mysqlstore;
 
 websub:WebSubHub webSubHub = startHubAndRegisterTopic();
 
-listener http:Listener httpListener = new (config:getAsInt("eclk.pub.port", 8080));
+listener http:Listener httpListener = new (config:getAsInt("eclk.pub.port", 8181));
 
 // Instead of another service here, we can have an upstream publisher publish directly to the hub. TBD.
 @http:ServiceConfig {
