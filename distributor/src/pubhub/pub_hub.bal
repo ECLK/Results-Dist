@@ -1,4 +1,3 @@
-import ballerina/auth;
 import ballerina/config;
 import ballerina/http;
 import ballerina/log;
@@ -9,26 +8,9 @@ import ballerinax/java.jdbc;
 
 import maryamzi/websub.hub.mysqlstore;
 
-// Inbound auth handler for Pub and Hub services
-http:BasicAuthHandler inboundBasicAuthHandler = new(new auth:InboundBasicAuthProvider());
-
 websub:WebSubHub webSubHub = startHubAndRegisterTopic();
 
-listener http:Listener httpListener = new (config:getAsInt("eclk.pub.port", 8181), config = {
-    auth: {
-        authHandlers: [inboundBasicAuthHandler]
-    },
-    secureSocket: {
-        keyStore: {
-            path: config:getAsString("eclk.pub.keystore.path"),
-            password: config:getAsString("eclk.pub.keystore.password")
-        },
-        trustStore: {
-            path: config:getAsString("eclk.pub.truststore.path"),
-            password: config:getAsString("eclk.pub.truststore.password")
-        }
-    }
-});
+listener http:Listener httpListener = new (config:getAsInt("eclk.pub.port", 8181));
 
 // Instead of another service here, we can have an upstream publisher publish directly to the hub. TBD.
 @http:ServiceConfig {
@@ -128,17 +110,7 @@ function startHubAndRegisterTopic() returns websub:WebSubHub {
     mysqlstore:MySqlHubPersistenceStore persistenceStore = checkpanic new (subscriptionDb, encryptionKey.toBytes());
 
     websub:WebSubHub | websub:HubStartedUpError hubStartUpResult =
-        websub:startHub(new http:Listener(config:getAsInt("eclk.hub.port", 9090), config = {
-                          auth: {
-                              authHandlers: [inboundBasicAuthHandler]
-                          },
-                          secureSocket: {
-                              keyStore: {
-                                  path: config:getAsString("eclk.hub.keystore.path"),
-                                  password: config:getAsString("eclk.hub.keystore.password")
-                              }
-                          }
-                      }),
+        websub:startHub(new http:Listener(config:getAsInt("eclk.hub.port", 9090)),
                         {
                             hubPersistenceStore: persistenceStore,
                             clientConfig: {
@@ -151,13 +123,13 @@ function startHubAndRegisterTopic() returns websub:WebSubHub {
                                     enabled: true,
                                     maxCount: 5
                                 },
-                                timeoutInMillis: 5*60000, // Check
-                                secureSocket: {
-                                    trustStore: {
-                                        path: config:getAsString("eclk.hub.client.truststore.path"),
-                                        password: config:getAsString("eclk.hub.client.truststore.password")
-                                    }
-                                }
+                                timeoutInMillis: 5*60000 // Check
+                                //secureSocket: {
+                                //    trustStore: {
+                                //        path: config:getAsString("eclk.hub.client.truststore.path"),
+                                //        password: config:getAsString("eclk.hub.client.truststore.password")
+                                //    }
+                                //}
                             }
                         });
 
