@@ -4,3 +4,13 @@ version="0.1.0"
 
 [dependencies]
 "maryamzi/websub.hub.mysqlstore" = "0.1.1"
+
+[platform]
+target = "java8"
+
+    [[platform.libraries]]
+    artafactId = "mysql-connector-java"
+    version = "5.1.40"
+    path = "src/pubhub/lib/mysql-connector-java-5.1.40.jar"
+    groupId = "mysql"
+    modules = ["pubhub"]
