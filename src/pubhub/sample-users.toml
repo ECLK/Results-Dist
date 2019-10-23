@@ -1,3 +1,4 @@
+# This is a test file
 [b7a.websub.hub.auth]
 enabled=true
 scopes="scope1"
