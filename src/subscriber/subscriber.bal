@@ -122,7 +122,8 @@ function getImageSubscriber() returns service {
     };
 }
 
-public function main(string secret, string content = "json", string domain = "localhost", int port = 8080,
+public function main(string secret, boolean 'json = false, boolean 'xml = false, boolean text = false,
+                     string domain = "localhost", int port = 8080,
                      string? keystorePath = (), string keystorePassword = "") {
     subscriberSecret = <@untainted> secret;
     subscriberDomain = <@untainted> domain;
@@ -141,30 +142,19 @@ public function main(string secret, string content = "json", string domain = "lo
 
     websub:Listener websubListener = new(subscriberPort, config);
 
-    match content {
-        "json" => {
-            checkpanic websubListener.__attach(getJsonSubscriber());
-        }
-
-        "xml" => {
-            checkpanic websubListener.__attach(getXmlSubscriber());
-        }
-
-        "text" => {
-            checkpanic websubListener.__attach(getTextSubscriber());
-        }
-
-        "image" => {
-            checkpanic websubListener.__attach(getImageSubscriber());
-        }
-
-        "all" => {
-            checkpanic websubListener.__attach(getJsonSubscriber());
-            checkpanic websubListener.__attach(getXmlSubscriber());
-            checkpanic websubListener.__attach(getTextSubscriber());
-            checkpanic websubListener.__attach(getImageSubscriber());
-        }
+    if ('json) {
+        checkpanic websubListener.__attach(getJsonSubscriber());
     }
+
+    if ('xml) {
+        checkpanic websubListener.__attach(getXmlSubscriber());
+    }
+
+    if ('text) {
+        checkpanic websubListener.__attach(getTextSubscriber());
+    }
+
+    checkpanic websubListener.__attach(getImageSubscriber());
 
     checkpanic websubListener.__start();
 }
