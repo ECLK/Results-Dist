@@ -28,11 +28,9 @@ const TWO_DAYS_IN_SECONDS = 172800;
 
 string subscriberSecret = "";
 
-string scheme = "http://";
-string subscriberDomain = "localhost";
+string subscriberPublicUrl = "";
 int subscriberPort = 8080;
-
-final string directoryPath = ""; // TODO: set
+string subscriberDirectoryPath = "";
 
 function getJsonSubscriber() returns service {
     return
@@ -48,7 +46,7 @@ function getJsonSubscriber() returns service {
         resource function onNotification(websub:Notification notification) {
             json|error jsonPayload = notification.getJsonPayload();
             if (jsonPayload is json) {
-                writeJson(directoryPath.concat(getFileName(JSON_EXT)), jsonPayload);
+                writeJson(subscriberDirectoryPath.concat(getFileName(JSON_EXT)), jsonPayload);
             } else {
                 log:printError("Error extracting JSON payload", jsonPayload);
             }
@@ -70,7 +68,7 @@ function getXmlSubscriber() returns service {
         resource function onNotification(websub:Notification notification) {
             xml|error xmlPayload = notification.getXmlPayload();
             if (xmlPayload is xml) {
-                writeXml(directoryPath.concat(getFileName(XML_EXT)), xmlPayload);
+                writeXml(subscriberDirectoryPath.concat(getFileName(XML_EXT)), xmlPayload);
             } else {
                 log:printError("Error extracting XML payload", xmlPayload);
             }
@@ -92,7 +90,7 @@ function getTextSubscriber() returns service {
         resource function onNotification(websub:Notification notification) {
             string|error textPayload = notification.getTextPayload();
             if (textPayload is string) {
-                write(directoryPath.concat(getFileName(TEXT_EXT)), textPayload);
+                write(subscriberDirectoryPath.concat(getFileName(TEXT_EXT)), textPayload);
             } else {
                 log:printError("Error extracting text payload", textPayload);
             }
@@ -114,7 +112,7 @@ function getImageSubscriber() returns service {
         resource function onNotification(websub:Notification notification) {
             byte[]|error binaryPayload = notification.getBinaryPayload();
             if (binaryPayload is byte[]) {
-                write(directoryPath.concat(getFileName(PDF_EXT)), binaryPayload.toBase64());
+                write(subscriberDirectoryPath.concat(getFileName(PDF_EXT)), binaryPayload.toBase64());
             } else {
                 log:printError("Error extracting image payload", binaryPayload);
             }
@@ -122,21 +120,17 @@ function getImageSubscriber() returns service {
     };
 }
 
-public function main(string secret, boolean 'json = false, boolean 'xml = false, boolean text = false,
-                     string domain = "localhost", int port = 8080,
-                     string? keystorePath = (), string keystorePassword = "") {
+public function main(string secret, string publicUrl, boolean 'json = false, boolean 'xml = false, boolean text = false,
+                     int port = 8080, string? certFile = (), string directoryPath = "") {
     subscriberSecret = <@untainted> secret;
-    subscriberDomain = <@untainted> domain;
+    subscriberPublicUrl = <@untainted> publicUrl;
     subscriberPort = <@untainted> port;
+    subscriberDirectoryPath = <@untainted> directoryPath;
 
     websub:SubscriberListenerConfiguration config = {};
-    if (keystorePath is string) {
-        scheme = "https://";
+    if (certFile is string) {
         config.httpServiceSecureSocket = {
-            keyStore: {
-                path: keystorePath,
-                password: keystorePassword
-            }
+            certFile: certFile
         };
     }
 
@@ -213,5 +207,5 @@ function writeContent(string path, function(io:WritableCharacterChannel wch) ret
 }
 
 function getUrl(string path) returns string {
-    return scheme.concat(subscriberDomain, COLON, subscriberPort.toString(), path);
+    return subscriberPublicUrl.concat(path);
 }
