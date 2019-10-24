@@ -2,7 +2,6 @@ import ballerina/log;
 import ballerina/websub;
 
 // TODO: set correct ones once decided
-const HUB = "http://localhost:9090/websub/hub";
 const JSON_TOPIC = "https://github.com/ECLK/Results-Dist-json";
 const XML_TOPIC = "https://github.com/ECLK/Results-Dist-xml";
 const TEXT_TOPIC = "https://github.com/ECLK/Results-Dist-text";
@@ -23,6 +22,7 @@ const IMAGE_PATH = "/image";
 
 const TWO_DAYS_IN_SECONDS = 172800;
 
+string hub = "http://localhost:9090/websub/hub";
 string subscriberSecret = "";
 
 string subscriberPublicUrl = "";
@@ -72,7 +72,7 @@ public function main (string secret, string publicUrl,
     subscriberService = @websub:SubscriberServiceConfig {
         path: JSON_PATH,
         subscribeOnStartUp: true,
-        target: [HUB, JSON_TOPIC],
+        target: [hub, JSON_TOPIC],
         leaseSeconds: TWO_DAYS_IN_SECONDS,
         secret: subscriberSecret,
         callback: subscriberPublicUrl.concat(JSON_PATH)
@@ -105,7 +105,7 @@ public function main (string secret, string publicUrl,
     subscriberService = @websub:SubscriberServiceConfig {
         path: IMAGE_PATH,
         subscribeOnStartUp: true,
-        target: [HUB, IMAGE_TOPIC],
+        target: [hub, IMAGE_TOPIC],
         leaseSeconds: TWO_DAYS_IN_SECONDS,
         secret: subscriberSecret,
         callback: subscriberPublicUrl.concat(IMAGE_PATH)
