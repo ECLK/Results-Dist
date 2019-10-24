@@ -102,12 +102,13 @@ function startHubAndRegisterTopic() returns websub:WebSubHub {
         }
     });
 
+    byte[]? key = ();
     string encryptionKey = config:getAsString("eclk.hub.db.encryptionkey");
-    if (encryptionKey.trim() == "") {
-        panic error(ERROR_REASON, message = "encryption key not specified or invalid");
+    if (encryptionKey.trim() != "") {
+        key = encryptionKey.toBytes();
     }
 
-    mysqlstore:MySqlHubPersistenceStore persistenceStore = checkpanic new (subscriptionDb, encryptionKey.toBytes());
+    mysqlstore:MySqlHubPersistenceStore persistenceStore = checkpanic new (subscriptionDb, key);
 
     websub:WebSubHub | websub:HubStartedUpError hubStartUpResult =
         websub:startHub(new http:Listener(config:getAsInt("eclk.hub.port", 9090)),
