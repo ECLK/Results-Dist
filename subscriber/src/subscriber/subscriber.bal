@@ -1,7 +1,4 @@
-import ballerina/io;
 import ballerina/log;
-import ballerina/system;
-import ballerina/time;
 import ballerina/websub;
 
 // TODO: set correct ones once decided
@@ -32,104 +29,19 @@ string subscriberPublicUrl = "";
 int subscriberPort = 8080;
 string subscriberDirectoryPath = "";
 
-function getJsonSubscriber() returns service {
-    return
-    @websub:SubscriberServiceConfig {
-        path: JSON_PATH,
-        subscribeOnStartUp: true,
-        target: [hub, JSON_TOPIC],
-        leaseSeconds: TWO_DAYS_IN_SECONDS,
-        secret: subscriberSecret,
-        callback: getUrl(JSON_PATH)
-    }
-    service {
-        resource function onNotification(websub:Notification notification) {
-            json|error jsonPayload = notification.getJsonPayload();
-            if (jsonPayload is json) {
-                writeJson(subscriberDirectoryPath.concat(getFileName(JSON_EXT)), jsonPayload);
-            } else {
-                log:printError("Error extracting JSON payload", jsonPayload);
-            }
-        }
-    };
-}
+// what formats does the user want results saved in?
+boolean wantJson = false;
+boolean wantXml = false;
+boolean wantTxt = false;
 
-function getXmlSubscriber() returns service {
-    return
-    @websub:SubscriberServiceConfig {
-        path: XML_PATH,
-        subscribeOnStartUp: true,
-        target: [hub, XML_TOPIC],
-        leaseSeconds: TWO_DAYS_IN_SECONDS,
-        secret: subscriberSecret,
-        callback: getUrl(XML_PATH)
-    }
-    service {
-        resource function onNotification(websub:Notification notification) {
-            xml|error xmlPayload = notification.getXmlPayload();
-            if (xmlPayload is xml) {
-                writeXml(subscriberDirectoryPath.concat(getFileName(XML_EXT)), xmlPayload);
-            } else {
-                log:printError("Error extracting XML payload", xmlPayload);
-            }
-        }
-    };
-}
-
-function getTextSubscriber() returns service {
-    return
-    @websub:SubscriberServiceConfig {
-        path: TEXT_PATH,
-        subscribeOnStartUp: true,
-        target: [hub, TEXT_TOPIC],
-        leaseSeconds: TWO_DAYS_IN_SECONDS,
-        secret: subscriberSecret,
-        callback: getUrl(TEXT_PATH)
-    }
-    service {
-        resource function onNotification(websub:Notification notification) {
-            string|error textPayload = notification.getTextPayload();
-            if (textPayload is string) {
-                write(subscriberDirectoryPath.concat(getFileName(TEXT_EXT)), textPayload);
-            } else {
-                log:printError("Error extracting text payload", textPayload);
-            }
-        }
-    };
-}
-
-function getImageSubscriber() returns service {
-    return
-    @websub:SubscriberServiceConfig {
-        path: IMAGE_PATH,
-        subscribeOnStartUp: true,
-        target: [hub, IMAGE_TOPIC],
-        leaseSeconds: TWO_DAYS_IN_SECONDS,
-        secret: subscriberSecret,
-        callback: getUrl(IMAGE_PATH)
-    }
-    service {
-        resource function onNotification(websub:Notification notification) {
-            byte[]|error binaryPayload = notification.getBinaryPayload();
-            if (binaryPayload is byte[]) {
-                write(subscriberDirectoryPath.concat(getFileName(PDF_EXT)), binaryPayload.toBase64());
-            } else {
-                log:printError("Error extracting image payload", binaryPayload);
-            }
-        }
-    };
-}
-
-public function main(string secret, string publicUrl, string? hubUrl = (), boolean 'json = false, boolean 'xml = false,
-                     boolean text = false, int port = 8080, string? certFile = (), string directoryPath = "") {
+public function main (string secret, string publicUrl, 
+                      boolean 'json = false, boolean 'xml = false, boolean text = false,
+                      int port = 8080, string? certFile = (), string directoryPath = "") returns error? {
     subscriberSecret = <@untainted> secret;
     subscriberPublicUrl = <@untainted> publicUrl;
     subscriberPort = <@untainted> port;
     subscriberDirectoryPath = <@untainted> directoryPath;
-
-    if (hubUrl is string) {
-        hub = <@untainted> hubUrl;
-    }
+    service subscriberService;
 
     websub:SubscriberListenerConfiguration config = {};
     if (certFile is string) {
@@ -138,78 +50,80 @@ public function main(string secret, string publicUrl, string? hubUrl = (), boole
         };
     }
 
+    // check what format the user wants results in
+    if 'json {
+        wantJson = true;
+    }
+    if 'xml {
+        wantXml = true;
+    }
+    if 'text {
+        wantTxt = true;
+    }
+    if !(wantJson || wantXml || wantTxt) {
+        log:printError("No output format requested! Qutting ... ask for json or txt!");
+        return;
+    }
+
+    // start the listener
     websub:Listener websubListener = new(subscriberPort, config);
 
-    if ('json) {
-        checkpanic websubListener.__attach(getJsonSubscriber());
+    // attach JSON subscriber
+    subscriberService = @websub:SubscriberServiceConfig {
+        path: JSON_PATH,
+        subscribeOnStartUp: true,
+        target: [hub, JSON_TOPIC],
+        leaseSeconds: TWO_DAYS_IN_SECONDS,
+        secret: subscriberSecret,
+        callback: subscriberPublicUrl.concat(JSON_PATH)
     }
-
-    if ('xml) {
-        checkpanic websubListener.__attach(getXmlSubscriber());
-    }
-
-    if ('text) {
-        checkpanic websubListener.__attach(getTextSubscriber());
-    }
-
-    checkpanic websubListener.__attach(getImageSubscriber());
-
-    checkpanic websubListener.__start();
-}
-
-function getFileName(string ext) returns string {
-    return time:currentTime().time.toString().concat(UNDERSOCRE, system:uuid(), ext);
-}
-
-function closeWcc(io:WritableCharacterChannel wc) {
-    var result = wc.close();
-    if (result is error) {
-        log:printError("Error occurred while closing the character stream", result);
-    }
-}
-
-function closeWbc(io:WritableByteChannel wc) {
-    var result = wc.close();
-    if (result is error) {
-        log:printError("Error occurred while closing the byte stream", result);
-    }
-}
-
-function writeJson(string path, json content) {
-    writeContent(path, function(io:WritableCharacterChannel wch) returns error? {
-        return wch.writeJson(content);
-    });
-}
-
-function writeXml(string path, xml content) {
-    writeContent(path, function(io:WritableCharacterChannel wch) returns error? {
-        return wch.writeXml(content);
-    });
-}
-
-function write(string path, string content) {
-    writeContent(path, function(io:WritableCharacterChannel wch) returns int|error {
-        return wch.write(content, 0);
-    });
-}
-
-function writeContent(string path, function(io:WritableCharacterChannel wch) returns int|error? writeFunc) {
-    io:WritableByteChannel|error wbc = io:openWritableFile(path);
-    if (wbc is io:WritableByteChannel) {
-        io:WritableCharacterChannel wch = new(wbc, "UTF8");
-        var result = writeFunc(wch);
-        if (result is error) {
-            log:printError("Error writing content", result);
-        } else {
-            log:printInfo("Update written to " + path);
+    service {
+        resource function onNotification(websub:Notification notification) {
+            json|error jsonPayload = notification.getJsonPayload();
+            if (jsonPayload is json) {
+                if jsonPayload.'type == "SUMMARY" {
+                    saveSummaryResult(jsonPayload);
+                } else if jsonPayload.'type == "PARTY" {
+                    savePartyResult(jsonPayload);
+                } else {
+                    log:printError ("Unknown JSON data received: " + jsonPayload.toString());
+                }
+                
+                //match jsonPayload {
+                  //  { 'type : "SUMMARY" } => { saveSummaryResult(jsonPayload); }
+                    //{ 'type : "PARTY" } => { savePartyResult(jsonPayload); }
+                  //  var _ => { log:printError ("Unknown JSON data received: " + jsonPayload.toString()); }
+                //}
+            } else {
+                log:printError("Expected JSON payload, received:", jsonPayload);
+            }
         }
-        closeWcc(wch);
-        closeWbc(wbc);
-    } else {
-        log:printError("Error creating a byte channel for " + path, wbc);
+    };
+    check websubListener.__attach(subscriberService);
+
+    // attach Image subscriber
+    subscriberService = @websub:SubscriberServiceConfig {
+        path: IMAGE_PATH,
+        subscribeOnStartUp: true,
+        target: [hub, IMAGE_TOPIC],
+        leaseSeconds: TWO_DAYS_IN_SECONDS,
+        secret: subscriberSecret,
+        callback: subscriberPublicUrl.concat(IMAGE_PATH)
     }
+    service {
+        resource function onNotification(websub:Notification notification) {
+            byte[]|error binaryPayload = notification.getBinaryPayload();
+            if (binaryPayload is byte[]) {
+                log:printInfo("IMG Result received: " + binaryPayload.toString());
+                write(subscriberDirectoryPath.concat(getFileName(PDF_EXT)), binaryPayload.toBase64());
+            } else {
+                log:printError("Error extracting image payload", binaryPayload);
+            }
+        }
+    };    
+    check websubListener.__attach(subscriberService);
+
+    // start off
+    check websubListener.__start();
 }
 
-function getUrl(string path) returns string {
-    return subscriberPublicUrl.concat(path);
-}

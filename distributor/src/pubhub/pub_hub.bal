@@ -1,89 +1,12 @@
 import ballerina/config;
 import ballerina/http;
 import ballerina/log;
-import ballerina/mime;
 import ballerina/websub;
-import ballerina/xmlutils;
 import ballerinax/java.jdbc;
 
 import maryamzi/websub.hub.mysqlstore;
 
 websub:WebSubHub webSubHub = startHubAndRegisterTopic();
-
-listener http:Listener httpListener = new (config:getAsInt("eclk.pub.port", 8181));
-
-// Instead of another service here, we can have an upstream publisher publish directly to the hub. TBD.
-@http:ServiceConfig {
-    basePath: "/results.dist",
-    auth: {
-        scopes: ["publisher"]
-    }
-}
-service resultDist on httpListener {
-
-    // This resource accepts result notification requests.
-    @http:ResourceConfig {
-        methods: ["POST"],
-        path: "/publish"
-    }
-    resource function publishResult(http:Caller caller, http:Request req) {
-        json|error payloadResult = req.getJsonPayload();
-
-        if payloadResult is error {
-            panic error(ERROR_REASON, message = "Error extracting JSON payload: " + payloadResult.toString());
-        }
-
-        error? respResult = caller->accepted();
-        if (respResult is error) {
-            log:printError("Error responding on result notification", respResult);
-        }
-
-        json jsonPayload = <json> payloadResult;
-
-        worker smsWorker {
-            // Send SMS to all subscribers.
-            // TODO - should we ensure SMS is sent first?
-        }
-
-        worker jsonWorker {
-            actOnValidUpdate(function() returns error? {
-                log:printInfo("Notifying results for " + jsonPayload.toJsonString());
-                return webSubHub.publishUpdate(JSON_RESULTS_TOPIC, jsonPayload, mime:APPLICATION_JSON);
-            });
-        }
-
-        worker xmlWorker {
-            xml|error xmlResult = xmlutils:fromJSON(jsonPayload);
-            if xmlResult is error {
-                panic error(ERROR_REASON, message = "Error converting JSON to XML: " + xmlResult.toString());
-            }
-
-            xml xmlPayload = <xml> xmlResult;
-            actOnValidUpdate(function() returns error? {
-                log:printInfo("Notifying results for " + xmlPayload.toString());
-                return webSubHub.publishUpdate(XML_RESULTS_TOPIC, xmlPayload);
-            });
-        }
-
-        worker textWorker {
-            // TODO
-            string stringPayload = jsonPayload.toJsonString();
-            actOnValidUpdate(function() returns error? {
-                log:printInfo("Notifying results for " + stringPayload);
-                return webSubHub.publishUpdate(TEXT_RESULTS_TOPIC, stringPayload);
-            });
-
-        }
-
-        worker imageWorker {
-            // TODO
-        }
-
-        worker siteWorker {
-            // TODO
-        }
-    }
-}
 
 function actOnValidUpdate(function() returns error? publishFunction) {
     error? publishResult = publishFunction();
