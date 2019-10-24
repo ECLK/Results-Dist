@@ -5,7 +5,6 @@ import ballerina/time;
 import ballerina/websub;
 
 // TODO: set correct ones once decided
-const HUB = "http://localhost:9090/websub/hub";
 const JSON_TOPIC = "https://github.com/ECLK/Results-Dist-json";
 const XML_TOPIC = "https://github.com/ECLK/Results-Dist-xml";
 const TEXT_TOPIC = "https://github.com/ECLK/Results-Dist-text";
@@ -26,6 +25,7 @@ const IMAGE_PATH = "/image";
 
 const TWO_DAYS_IN_SECONDS = 172800;
 
+string hub = "http://localhost:9090/websub/hub";
 string subscriberSecret = "";
 
 string subscriberPublicUrl = "";
@@ -37,7 +37,7 @@ function getJsonSubscriber() returns service {
     @websub:SubscriberServiceConfig {
         path: JSON_PATH,
         subscribeOnStartUp: true,
-        target: [HUB, JSON_TOPIC],
+        target: [hub, JSON_TOPIC],
         leaseSeconds: TWO_DAYS_IN_SECONDS,
         secret: subscriberSecret,
         callback: getUrl(JSON_PATH)
@@ -59,7 +59,7 @@ function getXmlSubscriber() returns service {
     @websub:SubscriberServiceConfig {
         path: XML_PATH,
         subscribeOnStartUp: true,
-        target: [HUB, XML_TOPIC],
+        target: [hub, XML_TOPIC],
         leaseSeconds: TWO_DAYS_IN_SECONDS,
         secret: subscriberSecret,
         callback: getUrl(XML_PATH)
@@ -81,7 +81,7 @@ function getTextSubscriber() returns service {
     @websub:SubscriberServiceConfig {
         path: TEXT_PATH,
         subscribeOnStartUp: true,
-        target: [HUB, TEXT_TOPIC],
+        target: [hub, TEXT_TOPIC],
         leaseSeconds: TWO_DAYS_IN_SECONDS,
         secret: subscriberSecret,
         callback: getUrl(TEXT_PATH)
@@ -103,7 +103,7 @@ function getImageSubscriber() returns service {
     @websub:SubscriberServiceConfig {
         path: IMAGE_PATH,
         subscribeOnStartUp: true,
-        target: [HUB, IMAGE_TOPIC],
+        target: [hub, IMAGE_TOPIC],
         leaseSeconds: TWO_DAYS_IN_SECONDS,
         secret: subscriberSecret,
         callback: getUrl(IMAGE_PATH)
@@ -120,12 +120,16 @@ function getImageSubscriber() returns service {
     };
 }
 
-public function main(string secret, string publicUrl, boolean 'json = false, boolean 'xml = false, boolean text = false,
-                     int port = 8080, string? certFile = (), string directoryPath = "") {
+public function main(string secret, string publicUrl, string? hubUrl = (), boolean 'json = false, boolean 'xml = false,
+                     boolean text = false, int port = 8080, string? certFile = (), string directoryPath = "") {
     subscriberSecret = <@untainted> secret;
     subscriberPublicUrl = <@untainted> publicUrl;
     subscriberPort = <@untainted> port;
     subscriberDirectoryPath = <@untainted> directoryPath;
+
+    if (hubUrl is string) {
+        hub = <@untainted> hubUrl;
+    }
 
     websub:SubscriberListenerConfiguration config = {};
     if (certFile is string) {
