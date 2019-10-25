@@ -1,6 +1,6 @@
 const SUMMARY_RESULT = "SUMMARY";
 const PARTY_RESULT = "PARTY";
-type ResultLevel "NATIONAL" | "ELECTORAL-DISTRICT" | "POLLING-DISTRICT";
+type ResultLevel "NATIONAL" | "ELECTORAL-DISTRICT" | "POLLING-DIVISION";
 
 type SummaryResult record {|
     SUMMARY_RESULT 'type;
