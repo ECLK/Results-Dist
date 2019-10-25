@@ -22,11 +22,11 @@ const IMAGE_PATH = "/image";
 
 const TWO_DAYS_IN_SECONDS = 172800;
 
-string hub = "http://localhost:9090/websub/hub";
+string hub = "";
 string subscriberSecret = "";
 
 string subscriberPublicUrl = "";
-int subscriberPort = 8080;
+int subscriberPort = -1;
 string subscriberDirectoryPath = "";
 
 // what formats does the user want results saved in?
@@ -36,11 +36,14 @@ boolean wantTxt = false;
 
 public function main (string secret, string publicUrl, 
                       boolean 'json = false, boolean 'xml = false, boolean text = false,
-                      int port = 8080, string? certFile = (), string directoryPath = "") returns error? {
+                      int port = 8080, string? certFile = (), string directoryPath = "",
+                      string hubURL = "https://6052758a.ngrok.io/websub/hub") returns error? {
     subscriberSecret = <@untainted> secret;
     subscriberPublicUrl = <@untainted> publicUrl;
     subscriberPort = <@untainted> port;
     subscriberDirectoryPath = <@untainted> directoryPath;
+    hub = <@untainted> hubURL;
+
     service subscriberService;
 
     websub:SubscriberListenerConfiguration config = {};
@@ -61,7 +64,7 @@ public function main (string secret, string publicUrl,
         wantTxt = true;
     }
     if !(wantJson || wantXml || wantTxt) {
-        log:printError("No output format requested! Qutting ... ask for json or txt!");
+        log:printError("No output format requested! Quitting ... ask for json or txt!");
         return;
     }
 
