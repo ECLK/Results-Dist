@@ -53,3 +53,12 @@ type PresidentialPreferencesResult record {|
     string pd_name?;
     PartyResult[] by_party;
 |};
+
+// Shared record structure for all results that we can persist as well
+type Result record {|
+    string code;
+    json jsonResult;
+    string 'type;
+    PresidentialResult | PresidentialPreferencesResult result?;
+    byte[] image?;
+|};
