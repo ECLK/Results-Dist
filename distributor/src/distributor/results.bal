@@ -3,20 +3,11 @@ import ballerina/log;
 import ballerina/mime;
 import ballerina/websub;
 
-type Result record {|
-    string code;
-    json jsonResult;
-    PresidentialResult | PresidentialPreferencesResult result?;
-    byte[] image?;
-|};
-Result[] savedResults = [];
-
 # Service for results tabulation to publish results to. We assume that results tabulation will deliver
 # a result in two separate messages - one with the json result data and another with an image of the
 # signed result document.
 # 
 # Both will be saved for resilience and later access for subscribers who want it.
-
 @http:ServiceConfig {
     basePath: "/result",
     auth: {
@@ -31,20 +22,14 @@ service receiveResults on resultsListener {
     }
     resource function receiveData(http:Caller caller, http:Request req, string resultCode, json jsonResult) returns error? {
         PresidentialResult | PresidentialPreferencesResult result;
+        string resultType;
 
         // make sure its a good result
-        if jsonResult.'type == PRESIDENTIAL_RESULT {
-            result = check PresidentialResult.constructFrom(jsonResult);
-        } else if jsonResult.'type == PRESIDENTIAL_PREFS_RESULT {
-            result = check PresidentialResult.constructFrom(jsonResult);
-        } else {
-            log:printError ("Unknown JSON data received for '" + resultCode + "': " + jsonResult.toString());
-            return error("Unknown result type for '" + resultCode + "': " + jsonResult.'type.toString());
-        }
+        [resultType, result] = check convertJsonToResult (resultCode, jsonResult);
         log:printInfo("Result data received for '" + resultCode + "': " + jsonResult.toJsonString());
 
-        // store the result in the DB against the resultCode
-        saveResult(resultCode, jsonResult, result);
+        // store the result in the DB against the resultCode and assign it a sequence #
+        check saveResult(resultCode, jsonResult, resultType);
 
         // publish the received result asynchronously
         _ = start publishResultData(resultCode, jsonResult, result);
@@ -59,15 +44,10 @@ service receiveResults on resultsListener {
         body: "imageData"
     }
     resource function receiveImage(http:Caller caller, http:Request req, string resultCode, byte[] imageData) returns error? {
-        // make sure its the right format
-        // TODO - check the media type to make sure its PDF (checking with Ranjan)
-        if req.getContentType() != mime:APPLICATION_PDF {
-            return error("Unknown image format received for '" + resultCode + "': " + <@untainted> req.getContentType());
-        }
         log:printInfo("IMG Result received for '" + resultCode + "': " + imageData.toString());
 
         // store the image in the DB against the resultCode
-        saveImage(resultCode, imageData);
+        check saveImage(resultCode, req.getContentType(), imageData);
 
         // update website asynchronously
         _ = start updateWebsite();
@@ -77,15 +57,21 @@ service receiveResults on resultsListener {
     }
 }
 
-# Save an incoming result to make sure we don't lose it after getting it
-function saveResult (string resultCode, json jsonResult, PresidentialResult | PresidentialPreferencesResult result) {
-    // temp
-    savedResults.push(<Result>{code: resultCode, jsonResult: jsonResult, result: result});
-}
+function convertJsonToResult (string resultCode, json jsonResult) returns [string, PresidentialResult | PresidentialPreferencesResult] | error {
+    PresidentialResult | PresidentialPreferencesResult result;
+    string resultType;
 
-# Save an image associated with a result
-function saveImage(string resultCode, byte[] imageData) {
-    // save in DB
+    if jsonResult.'type == PRESIDENTIAL_RESULT {
+        result = check PresidentialResult.constructFrom(jsonResult);
+        resultType = PRESIDENTIAL_RESULT;
+    } else if jsonResult.'type == PRESIDENTIAL_PREFS_RESULT {
+        result = check PresidentialResult.constructFrom(jsonResult);
+        resultType = PRESIDENTIAL_PREFS_RESULT;
+    } else {
+        log:printError ("Unknown JSON data for '" + resultCode + "': " + jsonResult.toString());
+        return error("Unknown result type for '" + resultCode + "': " + jsonResult.'type.toString());
+    }
+    return [resultType, result];
 }
 
 # Publish the results as follows:
