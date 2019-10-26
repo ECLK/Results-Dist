@@ -1,5 +1,4 @@
 import ballerina/config;
-import ballerina/http;
 import ballerina/log;
 import ballerina/websub;
 import ballerinax/java.jdbc;
@@ -34,7 +33,7 @@ function startHubAndRegisterTopic() returns websub:WebSubHub {
     mysqlstore:MySqlHubPersistenceStore persistenceStore = checkpanic new (subscriptionDb, key);
 
     websub:WebSubHub | websub:HubStartedUpError hubStartUpResult =
-        websub:startHub(new http:Listener(config:getAsInt("eclk.hub.port", 9090)),
+        websub:startHub(<@untainted> mediaListener, // weird BUG in ballerina compiler
                         {
                             hubPersistenceStore: persistenceStore,
                             clientConfig: {
