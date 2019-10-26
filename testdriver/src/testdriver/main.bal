@@ -30,25 +30,38 @@ public function main(string resultsURL) returns error? {
             int pdNum = check readInt("Enter PD number from district (0-" + maxPDnum.toString() + "): ");
             if pdNum < 0 || pdNum > maxPDnum {
                 io:println("Bad PD entered");
+                continue;
             }
             NPDResult npr = ner.by_pd[pdNum];
             string resCode = "SUMMARY--" + edNum.toString() + "--" + pdNum.toString();
             NSummaryStats ns = npr.summary_stats;
+            PartyResult[] by_party = 
+                npr.by_party.map(
+                    x => <PartyResult>{ 
+                            party: x.party,
+                            candidate: x.candidate,
+                            votes: x.votes,
+                            percentage: getPercentage(x.votes, ns.total_polled)
+                        });
 
             // convert to right format
-            SummaryResult sr = {
-                    'type : "SUMMARY",
+            PresidentialResult sr = {
+                    'type : PRESIDENTIAL_RESULT,
                     timestamp: check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ"),
                     level: "POLLING-DIVISION",
                     ed_code: edNum.toString(),
                     ed_name: ner.ed_name,
                     pd_code: pdNum.toString(),
                     pd_name: npr.pd_name,
-                    valid: npr.summary_stats.valid_votes,
-                    rejected: npr.summary_stats.rejected_votes,
-                    polled: npr.summary_stats.total_polled,
-                    electors: npr.summary_stats.registered_voters
+                    by_party: by_party,
+                    summary: {
+                        valid: ns.valid_votes,
+                        rejected: ns.rejected_votes,
+                        polled: ns.total_polled,
+                        electors: ns.registered_voters
+                    }
             };
+
             json jj = check json.constructFrom(sr);
             io:println("posting to /result/data/: resCode=" + resCode + "; data=" + jj.toJsonString());
             var res = check resultsSystem->post ("/result/data/" + resCode, jj);
@@ -56,6 +69,15 @@ public function main(string resultsURL) returns error? {
     }
 
     io:println("ALL DONE: press ^C to exit (not sure why!)");
+}
+
+// return %ge with 2 digits precision
+function getPercentage (int votes, int total_polled) returns decimal {
+    float f;
+
+    f = (votes*10000.0)/total_polled;
+    int i = <int> f;
+    return <decimal> i/100;
 }
 
 function loadData() returns error? {
