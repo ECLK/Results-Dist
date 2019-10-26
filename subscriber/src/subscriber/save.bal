@@ -3,14 +3,14 @@ import ballerina/log;
 import ballerina/system;
 import ballerina/time;
 
-function saveSummaryResult (json result) {
+function saveResult(json result) {
     log:printInfo("Received summary result: " + result.toString());
 //    SummaryResult sr = check SummaryResult.constructFrom (result);
 //   log:printInfo("Received SUMMARY result:");
 //    writeJson(subscriberDirectoryPath.concat(getFileName(JSON_EXT)), result);
 }
 
-function savePartyResult (json result) {
+function savePreferentialResult(json result) {
     log:printInfo("Received party result: " + result.toString());
 //    writeJson(subscriberDirectoryPath.concat(getFileName(JSON_EXT)), result);
 }
