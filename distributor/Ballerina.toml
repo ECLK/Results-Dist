@@ -11,6 +11,6 @@ target = "java8"
     [[platform.libraries]]
     artafactId = "mysql-connector-java"
     version = "5.1.40"
-    path = "src/pubhub/lib/mysql-connector-java-5.1.40.jar"
+    path = "src/lib/mysql-connector-java-5.1.40.jar"
     groupId = "mysql"
-    modules = ["pubhub"]
+    modules = ["distributor"]
