@@ -3,9 +3,6 @@ import ballerina/websub;
 
 // TODO: set correct ones once decided
 const JSON_TOPIC = "https://github.com/ECLK/Results-Dist-json";
-const XML_TOPIC = "https://github.com/ECLK/Results-Dist-xml";
-const TEXT_TOPIC = "https://github.com/ECLK/Results-Dist-text";
-const IMAGE_TOPIC = "https://github.com/ECLK/Results-Dist-image";
 
 const UNDERSOCRE = "_";
 const COLON = ":";
@@ -29,11 +26,11 @@ string subscriberPublicUrl = "";
 int subscriberPort = -1;
 string subscriberDirectoryPath = "";
 
-// what formats does the user want results saved in?
 boolean wantJson = false;
 boolean wantXml = false;
 boolean wantTxt = false;
 
+// what formats does the user want results saved in?
 public function main (string secret, string publicUrl, 
                       boolean 'json = false, boolean 'xml = false, boolean text = false,
                       int port = 8080, string? certFile = (), string directoryPath = "",
@@ -82,48 +79,20 @@ public function main (string secret, string publicUrl,
     }
     service {
         resource function onNotification(websub:Notification notification) {
-            json|error jsonPayload = notification.getJsonPayload();
-            if (jsonPayload is json) {
-                if jsonPayload.'type == "SUMMARY" {
-                    saveSummaryResult(jsonPayload);
-                } else if jsonPayload.'type == "PARTY" {
-                    savePartyResult(jsonPayload);
+            json|error payload = notification.getJsonPayload();
+            if (payload is json) {
+                if payload.'type == PRESIDENTIAL_RESULT {
+                    saveResult(payload);
+                } else if payload.'type == PRESIDENTIAL_PREFS_RESULT {
+                    savePreferentialResult(payload);
                 } else {
-                    log:printError ("Unknown JSON data received: " + jsonPayload.toString());
+                    log:printError ("Unknown JSON data received: " + payload.toString());
                 }
-                
-                //match jsonPayload {
-                  //  { 'type : "SUMMARY" } => { saveSummaryResult(jsonPayload); }
-                    //{ 'type : "PARTY" } => { savePartyResult(jsonPayload); }
-                  //  var _ => { log:printError ("Unknown JSON data received: " + jsonPayload.toString()); }
-                //}
             } else {
-                log:printError("Expected JSON payload, received:", jsonPayload);
+                log:printError("Expected JSON payload, received:", payload);
             }
         }
     };
-    check websubListener.__attach(subscriberService);
-
-    // attach Image subscriber
-    subscriberService = @websub:SubscriberServiceConfig {
-        path: IMAGE_PATH,
-        subscribeOnStartUp: true,
-        target: [hub, IMAGE_TOPIC],
-        leaseSeconds: TWO_DAYS_IN_SECONDS,
-        secret: subscriberSecret,
-        callback: subscriberPublicUrl.concat(IMAGE_PATH)
-    }
-    service {
-        resource function onNotification(websub:Notification notification) {
-            byte[]|error binaryPayload = notification.getBinaryPayload();
-            if (binaryPayload is byte[]) {
-                log:printInfo("IMG Result received: " + binaryPayload.toString());
-                write(subscriberDirectoryPath.concat(getFileName(PDF_EXT)), binaryPayload.toBase64());
-            } else {
-                log:printError("Error extracting image payload", binaryPayload);
-            }
-        }
-    };    
     check websubListener.__attach(subscriberService);
 
     // start off
