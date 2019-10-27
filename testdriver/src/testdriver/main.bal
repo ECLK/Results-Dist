@@ -3,7 +3,7 @@ import ballerina/http;
 import ballerina/lang.'int;
 import ballerina/time;
 
-const PRESIDENTIAL_RESULT = "PRESIDENTIAL";
+const PRESIDENTIAL_RESULT = "PRESIDENTIAL-FIRST";
 
 map<NNationalResult> allresults = {};
 
@@ -53,7 +53,7 @@ public function main(string resultsURL) returns error? {
                     'type : PRESIDENTIAL_RESULT,
                     timestamp: check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ"),
                     level: "POLLING-DIVISION",
-                    ed_code: edNum.toString(),
+                    ed_code: io:sprintf("%02d", ner.ed_num),
                     ed_name: ner.ed_name,
                     pd_code: pdNum.toString(),
                     pd_name: npr.pd_name,
@@ -76,12 +76,11 @@ public function main(string resultsURL) returns error? {
 }
 
 // return %ge with 2 digits precision
-function getPercentage (int votes, int total_polled) returns decimal {
+function getPercentage (int votes, int total_polled) returns string {
     float f;
 
-    f = (votes*10000.0)/total_polled;
-    int i = <int> f;
-    return <decimal> i/100;
+    f = (votes*100.0)/total_polled;
+    return io:sprintf("%.2f", f);
 }
 
 function loadData() returns error? {
