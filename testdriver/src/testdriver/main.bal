@@ -3,6 +3,8 @@ import ballerina/http;
 import ballerina/lang.'int;
 import ballerina/time;
 
+const PRESIDENTIAL_RESULT = "PRESIDENTIAL";
+
 map<NNationalResult> allresults = {};
 
 public function main(string resultsURL) returns error? {
@@ -37,9 +39,9 @@ public function main(string resultsURL) returns error? {
             NPDResult npr = ner.by_pd[pdNum];
             string resCode = edNum.toString() + "--" + pdNum.toString();
             NSummaryStats ns = npr.summary_stats;
-            PartyResult[] by_party = 
+            json[] by_party = 
                 npr.by_party.map(
-                    x => <PartyResult>{ 
+                    x => <json>{ 
                             party: x.party,
                             candidate: x.candidate,
                             votes: x.votes,
@@ -47,7 +49,7 @@ public function main(string resultsURL) returns error? {
                         });
 
             // convert to right format
-            PresidentialResult sr = {
+            json sr = {
                     'type : PRESIDENTIAL_RESULT,
                     timestamp: check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ"),
                     level: "POLLING-DIVISION",
@@ -64,10 +66,9 @@ public function main(string resultsURL) returns error? {
                     }
             };
 
-            json jj = check json.constructFrom(sr);
             io:println("posting to /result/data/: electionCode=" + electionCode + 
-                       "; resCode=" + resCode + "; data=" + jj.toJsonString());
-            var res = check resultsSystem->post ("/result/data/" + electionCode + "/" + resCode, jj);
+                       "; resCode=" + resCode + "; data=" + sr.toJsonString());
+            var res = check resultsSystem->post ("/result/data/" + electionCode + "/" + resCode, sr);
         }
     }
 
