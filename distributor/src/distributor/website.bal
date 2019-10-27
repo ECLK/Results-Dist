@@ -1,6 +1,7 @@
 import ballerina/http;
 import ballerina/mime;
 import ballerina/time;
+import ballerina/xmlutils;
 
 # Show a website for media people to get a list of all released results with
 # links to each json value and the image with the signed official document.
@@ -31,7 +32,8 @@ service mediaWebsite on mediaListener {
                         "<td>" + seqNo + "</td>" +
                         "<td>" + edName + "</td>" +
                         "<td>" + pdName + "</td>" +
-                        "<td><a href='/result/" + r.election + "/" + seqNo + "'>JSON</a>" + "</td>" +
+                        "<td><a href='/result/" + r.election + "/" + seqNo + "?format=json'>JSON</a>" + "</td>" +
+                        "<td><a href='/result/" + r.election + "/" + seqNo + "?format=xml'>XML</a>" + "</td>" +
                         "<td><a href='/release/" + r.election + "/" + seqNo + "'>Release</a>" + "</td>" +
                         "</tr>";
         }
@@ -50,14 +52,22 @@ service mediaWebsite on mediaListener {
         path: "/result/{election}/{seqNo}",
         methods: ["GET"]
     }
-    resource function jsonResult (http:Caller caller, http:Request req, string election, int seqNo) returns error? {
-        http:Response hr = new;
+    resource function data (http:Caller caller, http:Request req, string election, int seqNo) returns error? {
+        // what's the format they want? we'll default to json if they don't say or get messy
+        string format = req.getQueryParamValue ("format") ?: "json";
+        if format != "xml" && format != "json" {
+            format = "json";
+        }
 
-        // find the result object
+        // find the result object and send it in the format they want
         foreach Result r in resultsCache {
             if r.election == election && r?.sequenceNo == seqNo {
-                hr.setJsonPayload(r.jsonResult);
-                return caller->ok(hr);
+                if format == "json" {
+                    return caller->ok (r.jsonResult);
+                } else {
+                    json j = { result: r.jsonResult };
+                    return caller->ok(check xmlutils:fromJSON(j));
+                }
             }
         }
 

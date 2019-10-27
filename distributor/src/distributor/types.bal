@@ -9,7 +9,7 @@ type PartyResult record {|
     string party;
     string candidate;
     int votes;
-    decimal percentage;
+    string percentage;
 |};
 
 type SummaryResult record {|
@@ -19,7 +19,7 @@ type SummaryResult record {|
     int electors;
 |};
 
-const PRESIDENTIAL_RESULT = "PRESIDENTIAL";
+const PRESIDENTIAL_RESULT = "PRESIDENTIAL-FIRST";
 
 type PresidentialResult record {|
     PRESIDENTIAL_RESULT 'type;

@@ -45,13 +45,13 @@ function __init() {
     table<Result> ret = checkpanic dbClient->select(SELECT_RESULTS_DATA, Result);
     int count = 0;
     while (ret.hasNext()) {
-        Result r = checkpanic trap <Result> ret.getNext();
+        Result r = <Result> ret.getNext();
         count = count + 1;
 
         // fix up the jsonData - DB stores it a string, not json type
         io:StringReader sr = new(r.jsonResult.toJsonString(), encoding = "UTF-8");
-        r.jsonResult = checkpanic sr.readJson(); // should not happen as the data should be correct!
-        resultsCache.push (r);
+        r.jsonResult =  <map<json>> sr.readJson();
+        resultsCache.push(r);
     }
     if (count > 0) {
         log:printInfo("Loaded " + count.toString() + " previous results from database");
