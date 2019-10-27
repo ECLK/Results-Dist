@@ -59,7 +59,7 @@ function __init() {
         DataResult dr = <DataResult> ret.getNext();
         count = count + 1;
 
-        // read json string and conver to json
+        // read json string and convert to json
         io:StringReader sr = new(dr.jsonResult, encoding = "UTF-8");
         map<json> jm =  <map<json>> sr.readJson();
 
@@ -88,7 +88,7 @@ function saveResult(Result result) returns error? {
         result.sequenceNo = sequenceNo;
 
         // put sequence # to json that's going to get distributed
-        result.jsonResult["sequence_number"] = result.sequenceNo;
+        result.jsonResult["sequence_number"] = sequenceNo;
 
         // now put the json string into the db
         _ = check dbClient->update(UPDATE_RESULT_JSON, result.jsonResult.toJsonString(), result.sequenceNo);
