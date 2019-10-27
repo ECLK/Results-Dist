@@ -56,9 +56,11 @@ type PresidentialPreferencesResult record {|
 
 // Shared record structure for all results that we can persist as well
 type Result record {|
+    int sequenceNo;
+    string election;
     string code;
-    json jsonResult;
     string 'type;
-    PresidentialResult | PresidentialPreferencesResult result?;
-    byte[] image?;
+    json jsonResult;
+    string? imageMediaType;
+    byte[]? imageData;
 |};
