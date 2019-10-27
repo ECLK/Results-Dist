@@ -81,13 +81,7 @@ public function main (string secret, string publicUrl,
         resource function onNotification(websub:Notification notification) {
             json|error payload = notification.getJsonPayload();
             if (payload is json) {
-                if payload.'type == PRESIDENTIAL_RESULT {
-                    saveResult(payload);
-                } else if payload.'type == PRESIDENTIAL_PREFS_RESULT {
-                    savePreferentialResult(payload);
-                } else {
-                    log:printError ("Unknown JSON data received: " + payload.toString());
-                }
+                saveResult(payload);
             } else {
                 log:printError("Expected JSON payload, received:", payload);
             }
