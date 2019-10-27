@@ -60,7 +60,7 @@ type Result record {|
     string election;
     string code;
     string 'type;
-    json jsonResult;
+    map<json> jsonResult;
     string? imageMediaType;
     byte[]? imageData;
 |};

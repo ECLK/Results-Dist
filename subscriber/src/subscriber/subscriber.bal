@@ -28,11 +28,10 @@ string subscriberDirectoryPath = "";
 
 boolean wantJson = false;
 boolean wantXml = false;
-boolean wantTxt = false;
 
 // what formats does the user want results saved in?
 public function main (string secret, string publicUrl, 
-                      boolean 'json = false, boolean 'xml = false, boolean text = false,
+                      boolean 'json = false, boolean 'xml = false,
                       int port = 8080, string? certFile = (), string directoryPath = "",
                       string hubURL = "https://6052758a.ngrok.io/websub/hub") returns error? {
     subscriberSecret = <@untainted> secret;
@@ -57,11 +56,8 @@ public function main (string secret, string publicUrl,
     if 'xml {
         wantXml = true;
     }
-    if 'text {
-        wantTxt = true;
-    }
-    if !(wantJson || wantXml || wantTxt) {
-        log:printError("No output format requested! Quitting ... ask for json or txt!");
+    if !(wantJson || wantXml) {
+        log:printError("No output format requested! Quitting ... ask for json or xml!");
         return;
     }
 
