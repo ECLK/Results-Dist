@@ -10,12 +10,14 @@ public function main(string resultsURL) returns error? {
     check loadData();
 
     // send some results to the results system
-    http:Client resultsSystem = new (resultsURL);
-    NNationalResult? nr = allresults["2015"];
+    string electionCode = allresults.keys()[0];
+    NNationalResult? nr = allresults[electionCode];
     if nr is () {
-        return error("2015 results are not there");
+        return error("No results found");
     } else {
-        io:println("Posting summary results");
+        http:Client resultsSystem = new (resultsURL);
+
+        io:println("Publishing results:");
         while true {
             int edNum = check readInt("\nEnter polling district code (0-21) or -1 to exit: ");
             if edNum == -1 {
@@ -33,7 +35,7 @@ public function main(string resultsURL) returns error? {
                 continue;
             }
             NPDResult npr = ner.by_pd[pdNum];
-            string resCode = "SUMMARY--" + edNum.toString() + "--" + pdNum.toString();
+            string resCode = edNum.toString() + "--" + pdNum.toString();
             NSummaryStats ns = npr.summary_stats;
             PartyResult[] by_party = 
                 npr.by_party.map(
@@ -63,8 +65,9 @@ public function main(string resultsURL) returns error? {
             };
 
             json jj = check json.constructFrom(sr);
-            io:println("posting to /result/data/: resCode=" + resCode + "; data=" + jj.toJsonString());
-            var res = check resultsSystem->post ("/result/data/" + resCode, jj);
+            io:println("posting to /result/data/: electionCode=" + electionCode + 
+                       "; resCode=" + resCode + "; data=" + jj.toJsonString());
+            var res = check resultsSystem->post ("/result/data/" + electionCode + "/" + resCode, jj);
         }
     }
 
@@ -88,12 +91,12 @@ function loadData() returns error? {
         service {
             @http:ResourceConfig {
                 methods: ["POST"],
-                path: "/{year}",
+                path: "/{election}",
                 body: "result"
             }
-            resource function data(http:Caller caller, http:Request req, string year, NNationalResult result) returns error? {
-                allresults[<@untainted> year] = <@untainted> result;
-                io:println("Received data for election year: " + year);
+            resource function data(http:Caller caller, http:Request req, string election, NNationalResult result) returns error? {
+                allresults[<@untainted> election] = <@untainted> result;
+                io:println("Received data for election: " + election);
                 check caller->ok ("Thanks!");
             }
         };
@@ -101,7 +104,7 @@ function loadData() returns error? {
     http:Listener hl = new(4444);
     check hl.__attach(svc);
     check hl.__start();
-    _ = io:readln("POST json data to http://localhost:4444/YEAR now and hit RETURN to continue!");
+    _ = io:readln("POST json data to http://localhost:4444/ELECTION now and hit RETURN to continue!");
     if allresults.length() == 0 {
         io:println("No results received!");
         return error("No results received");
