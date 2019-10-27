@@ -28,7 +28,7 @@ service receiveResults on resultsListener {
     }
     resource function receiveData(http:Caller caller, http:Request req, string electionCode, string resultCode, 
                                   json jsonResult) returns error? {
-        // payload is supposed to be a json object
+        // payload is supposed to be a json object - its ok to get upset if not
         map<json> jsonobj = check trap <map<json>> jsonResult;
 
         // make sure its a good result
@@ -105,11 +105,8 @@ function publishResultData(Result result) {
         worker jsonWorker returns error? {
             websub:WebSubHub wh = <websub:WebSubHub> hub; // safe .. working around type guard limitation
 
-            // sequence # to json that's going to get distributed (will not error - ignore the check)
-            json j = check result.jsonResult.mergeJson({ sequence_number: result.sequenceNo});
-
             // push it out
-            var r = wh.publishUpdate(JSON_RESULTS_TOPIC, j, mime:APPLICATION_JSON);
+            var r = wh.publishUpdate(JSON_RESULTS_TOPIC, result.jsonResult, mime:APPLICATION_JSON);
             if r is error {
                 log:printError("Error publishing update: ", r);
             }

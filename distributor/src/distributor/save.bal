@@ -23,7 +23,8 @@ const string CREATE_RESULTS_TABLE = "CREATE TABLE IF NOT EXISTS results (" +
                                     "    imageData BLOB DEFAULT NULL," + 
                                     "    PRIMARY KEY (sequenceNo))";
 const INSERT_RESULT = "INSERT INTO results (election, code, jsonResult, type) VALUES (?, ?, ?, ?)";
-const INSERT_RESULT_IMAGE = "UPDATE results SET imageMediaType = ?, imageData = ? WHERE election = ?, code = ?";
+const UPDATE_RESULT_JSON = "UPDATE results SET jsonResult = ? WHERE sequenceNo = ?";
+const UPDATE_RESULT_IMAGE = "UPDATE results SET imageMediaType = ?, imageData = ? WHERE election = ?, code = ?";
 const SELECT_RESULTS_DATA = "SELECT sequenceNo, election, code, type, jsonResult, imageMediaType, imageData FROM results";
 
 jdbc:Client dbClient = new ({
@@ -35,6 +36,16 @@ jdbc:Client dbClient = new ({
     }    
 });
 
+type DataResult record {|
+    int sequenceNo;
+    string election;
+    string code;
+    string 'type;
+    string jsonResult;
+    string? imageMediaType;
+    byte[]? imageData;
+|};
+
 # Create database and set up at module init time and load any data in there to
 # memory for the website to show. Panic if there's any issue.
 function __init() {
@@ -45,13 +56,22 @@ function __init() {
     table<Result> ret = checkpanic dbClient->select(SELECT_RESULTS_DATA, Result);
     int count = 0;
     while (ret.hasNext()) {
-        Result r = <Result> ret.getNext();
+        DataResult dr = <DataResult> ret.getNext();
         count = count + 1;
 
-        // fix up the jsonData - DB stores it a string, not json type
-        io:StringReader sr = new(r.jsonResult.toJsonString(), encoding = "UTF-8");
-        r.jsonResult =  <map<json>> sr.readJson();
-        resultsCache.push(r);
+        // read json string and conver to json
+        io:StringReader sr = new(dr.jsonResult, encoding = "UTF-8");
+        map<json> jm =  <map<json>> sr.readJson();
+
+        resultsCache.push(<Result> {
+            sequenceNo: dr.sequenceNo,
+            election: dr.election,
+            code: dr.code,
+            'type: dr.'type,
+            jsonResult: jm,
+            imageMediaType: dr.imageMediaType,
+            imageData: dr.imageData
+        });
     }
     if (count > 0) {
         log:printInfo("Loaded " + count.toString() + " previous results from database");
@@ -61,11 +81,17 @@ function __init() {
 # Save an incoming result to make sure we don't lose it after getting it
 # + return - error if unable to insert to the database
 function saveResult(Result result) returns error? {
-    var r = dbClient->update(INSERT_RESULT, result.election, result.code, result.jsonResult.toJsonString(), result.'type);
+    // save it without the proper json first so we can put the sequence number into that
+    var r = dbClient->update(INSERT_RESULT, result.election, result.code, "", result.'type);
     if r is jdbc:UpdateResult {
-        // set sequenceNo of the result to what the DB assigned
-        int key = check trap <int>r.generatedKeys["GENERATED_KEY"];
-        result.sequenceNo = key;
+        int sequenceNo = check trap <int>r.generatedKeys["GENERATED_KEY"];
+        result.sequenceNo = sequenceNo;
+
+        // put sequence # to json that's going to get distributed
+        result.jsonResult["sequence_number"] = result.sequenceNo;
+
+        // now put the json string into the db
+        _ = check dbClient->update(UPDATE_RESULT_JSON, result.jsonResult.toJsonString(), result.sequenceNo);
     } else {
         log:printError("Unable to save result in database: " + r.toString());
         return r;
@@ -79,7 +105,7 @@ function saveResult(Result result) returns error? {
 # + return - error if unable to insert image for the given resultCode
 function saveImage(string electionCode, string resultCode, string mediaType, byte[] imageData) returns error? {
     // save in DB
-    var ret = dbClient->update(INSERT_RESULT_IMAGE, mediaType, imageData, electionCode, resultCode);
+    var ret = dbClient->update(UPDATE_RESULT_IMAGE, mediaType, imageData, electionCode, resultCode);
     if ret is jdbc:DatabaseError {
         log:printError("Unable to save image in database: " + ret.toString());
         return ret;
