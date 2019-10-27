@@ -50,7 +50,7 @@ function __init() {
 
         // fix up the jsonData - DB stores it a string, not json type
         io:StringReader sr = new(r.jsonResult.toJsonString(), encoding = "UTF-8");
-        r.jsonResult = checkpanic sr.readJson(); // should not happen as the data should be correct!
+        r.jsonResult =  <map<json>> sr.readJson();
         resultsCache.push(r);
     }
     if (count > 0) {

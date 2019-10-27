@@ -28,8 +28,11 @@ service receiveResults on resultsListener {
     }
     resource function receiveData(http:Caller caller, http:Request req, string electionCode, string resultCode, 
                                   json jsonResult) returns error? {
+        // payload is supposed to be a json object
+        map<json> jsonobj = check trap <map<json>> jsonResult;
+
         // make sure its a good result
-        Result result = <@untainted> check convertJsonToResult (electionCode, resultCode, jsonResult);
+        Result result = <@untainted> check convertJsonToResult (electionCode, resultCode, jsonobj);
         log:printInfo("Result data received for '" + electionCode +  "/" + resultCode);
 
         // store the result in the DB against the resultCode and assign it a sequence #
@@ -61,7 +64,7 @@ service receiveResults on resultsListener {
     }
 }
 
-function convertJsonToResult (string electionCode, string resultCode, json jsonResult) returns Result | error {
+function convertJsonToResult (string electionCode, string resultCode, map<json> jsonResult) returns Result | error {
     PresidentialResult | PresidentialPreferencesResult resultData;
     string resultType;
 
@@ -99,9 +102,14 @@ function publishResultData(Result result) {
             // TODO - should we ensure SMS is sent first?
         }
 
-        worker jsonWorker {
+        worker jsonWorker returns error? {
             websub:WebSubHub wh = <websub:WebSubHub> hub; // safe .. working around type guard limitation
-            var r = wh.publishUpdate(JSON_RESULTS_TOPIC, result.jsonResult, mime:APPLICATION_JSON);
+
+            // sequence # to json that's going to get distributed (will not error - ignore the check)
+            json j = check result.jsonResult.mergeJson({ sequence_number: result.sequenceNo});
+
+            // push it out
+            var r = wh.publishUpdate(JSON_RESULTS_TOPIC, j, mime:APPLICATION_JSON);
             if r is error {
                 log:printError("Error publishing update: ", r);
             }
