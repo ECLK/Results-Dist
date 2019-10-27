@@ -53,7 +53,7 @@ function __init() {
     _ = checkpanic dbClient->update(CREATE_RESULTS_TABLE);
 
     // load any results in there to our cache - the order will match the autoincrement and will be the sequence #
-    table<Result> ret = checkpanic dbClient->select(SELECT_RESULTS_DATA, Result);
+    table<DataResult> ret = checkpanic dbClient->select(SELECT_RESULTS_DATA, DataResult);
     int count = 0;
     while (ret.hasNext()) {
         DataResult dr = <DataResult> ret.getNext();
@@ -87,9 +87,9 @@ function saveResult(Result result) returns error? {
         int sequenceNo = check trap <int>r.generatedKeys["GENERATED_KEY"];
         result.sequenceNo = sequenceNo;
 
-        // put sequence # to json that's going to get distributed
-        result.jsonResult["sequence_number"] = sequenceNo;
-
+        // put sequence # to json that's going to get distributed as a 3 digit #
+        result.jsonResult["sequence_number"] = io:sprintf("%03d", result.sequenceNo);
+        
         // now put the json string into the db
         _ = check dbClient->update(UPDATE_RESULT_JSON, result.jsonResult.toJsonString(), result.sequenceNo);
     } else {

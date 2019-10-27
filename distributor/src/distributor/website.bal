@@ -25,7 +25,7 @@ service mediaWebsite on mediaListener {
         while i > 0 { // show results in reverse order of release
             i = i - 1;
             Result r = resultsCache[i];
-            string seqNo = r.sequenceNo.toString();
+            string seqNo = r.jsonResult.sequence_number.toString();
             string edName = r.jsonResult.ed_name.toString();
             string pdName = r.jsonResult.pd_name.toString();
             tab = tab + "<tr>" +
