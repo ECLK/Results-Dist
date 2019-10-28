@@ -88,7 +88,7 @@ function saveResult(Result result) returns error? {
         result.sequenceNo = sequenceNo;
 
         // put sequence # to json that's going to get distributed as a 3 digit #
-        result.jsonResult["sequence_number"] = io:sprintf("%03d", sequenceNo);
+        result.jsonResult["sequence_number"] = io:sprintf("%04d", sequenceNo);
 
         // now put the json string into the db against the record we just created
         _ = check dbClient->update(UPDATE_RESULT_JSON, result.jsonResult.toJsonString(), result.sequenceNo);
