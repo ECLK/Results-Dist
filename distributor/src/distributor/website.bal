@@ -20,7 +20,7 @@ service mediaWebsite on mediaListener {
         string tt = check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ");
         body = body + "<p>List of all released results as of " + tt + "</p>";
         
-        string tab = "<table><tr><th>Sequence No</th><th>Electoral District</th><th>Polling Division</th><th>JSON</th><th>Document</th></tr>";
+        string tab = "<table><tr><th>Sequence No</th><th>Electoral District</th><th>Polling Division</th><th>JSON</th><th>XML</th><th>Document</th></tr>";
         int i = resultsCache.length();
         while i > 0 { // show results in reverse order of release
             i = i - 1;
@@ -66,7 +66,7 @@ service mediaWebsite on mediaListener {
                     return caller->ok (r.jsonResult);
                 } else {
                     // put the result json object into a wrapper object to get a parent element
-                    // NOTE: this code must match the logic in the subscriber saving code as 
+                    // NOTE: this code must match the logic in the subscriber saving code as
                     // both add this object wrapper with the property named "result". Bit
                     // dangerous as someone can forget to change both together - hence this comment!
                     json j = { result: r.jsonResult };
@@ -76,7 +76,9 @@ service mediaWebsite on mediaListener {
         }
 
         // bad request
-        return caller->ok ("Not found!");
+        http:Response res = new;
+        res.statusCode = http:STATUS_NOT_FOUND;
+        return caller->respond(res);
     }
 
     @http:ResourceConfig {
@@ -89,9 +91,12 @@ service mediaWebsite on mediaListener {
         // find image of the release doc and return it (if its there - may not have appeared yet)
         foreach Result r in resultsCache {
             if r.election == election && r?.sequenceNo == seqNo {
-                if r.imageData is byte[] && r.imageMediaType is string {
-                    hr.setBinaryPayload(r.imageData ?: []); // not needed .. type guard is not being propagated
-                    hr.setContentType(r.imageMediaType ?: "text/plain"); // not needed
+                byte[]? imageData = r.imageData;
+                string? imageMediaType = r.imageMediaType;
+
+                if imageData is byte[] && imageMediaType is string {
+                    hr.setBinaryPayload(imageData);
+                    hr.setContentType(imageMediaType);
                     return caller->ok(hr);
                 } else {
                     return caller->ok ("No official release available (yet)");
@@ -100,7 +105,9 @@ service mediaWebsite on mediaListener {
         }
 
         // bad request
-        return caller->ok ("Not found!");
+        http:Response res = new;
+        res.statusCode = http:STATUS_NOT_FOUND;
+        return caller->respond(res);
     }
 }
 
