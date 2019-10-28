@@ -33,7 +33,7 @@ boolean wantXml = false;
 public function main (string secret, string publicUrl, 
                       boolean 'json = false, boolean 'xml = false,
                       int port = 8080, string? certFile = (), string directoryPath = "",
-                      string hubURL = "https://6052758a.ngrok.io/websub/hub") returns error? {
+                      string hubURL = "XXX") returns error? {
     subscriberSecret = <@untainted> secret;
     subscriberPublicUrl = <@untainted> publicUrl;
     subscriberPort = <@untainted> port;
