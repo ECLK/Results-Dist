@@ -1,6 +1,7 @@
 import ballerina/io;
 import ballerina/log;
 import ballerina/xmlutils;
+import ballerina/stringutils as su;
 
 const PRESIDENTIAL_RESULT = "PRESIDENTIAL-FIRST";
 const LEVEL_PD = "POLLING-DIVISION";
@@ -64,11 +65,11 @@ function getFileNameBase(map<json> result) returns string {
         LEVEL_NI => { name = name + "NI"; }
         LEVEL_NF => { name = name + "NF"; }
     }
-    // add electoral district / polling division names if needed
+    // add electoral district / polling division names if needed with spaces replaced with _
     if resultLevel == LEVEL_ED || resultLevel == LEVEL_PD {
-        name = name + "-" + result.ed_name.toString();
+        name = name + "-" + su:replaceAll(result.ed_name.toString()," ", "_");
         if resultLevel == LEVEL_PD {
-            name = name + "-" + result.pd_name.toString();
+            name = name + "-" + su:replaceAll(result.pd_name.toString()," ", "_");
         }
     }
     return name;
