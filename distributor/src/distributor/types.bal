@@ -6,7 +6,8 @@ type ResultLevel
     "NATIONAL-FINAL";
 
 type PartyResult record {|
-    string party;
+    string party_code;
+    string party_name;
     string candidate;
     int votes;
     string percentage;
