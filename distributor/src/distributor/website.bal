@@ -25,7 +25,7 @@ service mediaWebsite on mediaListener {
         while i > 0 { // show results in reverse order of release
             i = i - 1;
             Result r = resultsCache[i];
-            string seqNo = r.sequenceNo.toString();
+            string seqNo = r.jsonResult.sequence_number.toString();
             string edName = r.jsonResult.ed_name.toString();
             string pdName = r.jsonResult.pd_name.toString();
             tab = tab + "<tr>" +
@@ -65,6 +65,10 @@ service mediaWebsite on mediaListener {
                 if format == "json" {
                     return caller->ok (r.jsonResult);
                 } else {
+                    // put the result json object into a wrapper object to get a parent element
+                    // NOTE: this code must match the logic in the subscriber saving code as
+                    // both add this object wrapper with the property named "result". Bit
+                    // dangerous as someone can forget to change both together - hence this comment!
                     json j = { result: r.jsonResult };
                     return caller->ok(check xmlutils:fromJSON(j));
                 }
