@@ -33,7 +33,7 @@ service receiveResults on resultsListener {
 
         // make sure its a good result
         Result result = <@untainted> check convertJsonToResult (electionCode, resultCode, jsonobj);
-        log:printInfo("Result data received for '" + electionCode +  "/" + resultCode);
+        log:printInfo("Result data received for " + electionCode +  "/" + resultCode);
 
         // store the result in the DB against the resultCode and assign it a sequence #
         check saveResult(result);
@@ -52,7 +52,7 @@ service receiveResults on resultsListener {
     }
     resource function receiveImage(http:Caller caller, http:Request req, string electionCode, string resultCode, 
                                    byte[] imageData) returns error? {
-        log:printInfo("Result image received for '" + electionCode +  "/" + resultCode);
+        log:printInfo("Result image received for " + electionCode +  "/" + resultCode);
 
         string mediaType = req.getContentType();
 
