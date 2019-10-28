@@ -65,6 +65,10 @@ service mediaWebsite on mediaListener {
                 if format == "json" {
                     return caller->ok (r.jsonResult);
                 } else {
+                    // put the result json object into a wrapper object to get a parent element
+                    // NOTE: this code must match the logic in the subscriber saving code as 
+                    // both add this object wrapper with the property named "result". Bit
+                    // dangerous as someone can forget to change both together - hence this comment!
                     json j = { result: r.jsonResult };
                     return caller->ok(check xmlutils:fromJSON(j));
                 }

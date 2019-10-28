@@ -77,7 +77,7 @@ public function main (string secret, string publicUrl,
         resource function onNotification(websub:Notification notification) {
             json|error payload = notification.getJsonPayload();
             if (payload is json) {
-                saveResult(payload);
+                saveResult(<@untainted map<json>>payload); // we know its an object
             } else {
                 log:printError("Expected JSON payload, received:", payload);
             }
