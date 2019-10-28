@@ -2,6 +2,7 @@ import ballerina/io;
 import ballerina/http;
 import ballerina/lang.'int;
 import ballerina/time;
+import ballerina/stringutils as su;
 
 const PRESIDENTIAL_RESULT = "PRESIDENTIAL-FIRST";
 
@@ -37,7 +38,7 @@ public function main(string resultsURL) returns error? {
                 continue;
             }
             NPDResult npr = ner.by_pd[pdNum];
-            string resCode = edNum.toString() + "--" + pdNum.toString();
+            string resCode = createResultCode (ner.ed_name.toString(), npr.pd_name.toString());
             NSummaryStats ns = npr.summary_stats;
             json[] by_party = 
                 npr.by_party.map(
@@ -53,9 +54,7 @@ public function main(string resultsURL) returns error? {
                     'type : PRESIDENTIAL_RESULT,
                     timestamp: check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ"),
                     level: "POLLING-DIVISION",
-                    ed_code: io:sprintf("%02d", ner.ed_num),
                     ed_name: ner.ed_name,
-                    pd_code: pdNum.toString(),
                     pd_name: npr.pd_name,
                     by_party: by_party,
                     summary: {
@@ -73,6 +72,11 @@ public function main(string resultsURL) returns error? {
     }
 
     io:println("ALL DONE: press ^C to exit (not sure why!)");
+}
+
+function createResultCode (string edName, string pdName) returns string {
+    string code = edName + "--" + pdName;
+    return su:replaceAll(code, " ", "_");
 }
 
 // return %ge with 2 digits precision
