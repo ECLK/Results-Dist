@@ -86,7 +86,8 @@ public function main(string resultsURL) returns error? {
 
             json[] by_party = pr.map(
                 x => <json> { 
-                    party: x.party,
+                    party_name: x.party, 
+                    party_code: x.party, // note: we don't have proper data in the old data feeds
                     candidate: x.candidate,
                     votes: x.votes,
                     percentage: getPercentage(x.votes, ss.total_polled)

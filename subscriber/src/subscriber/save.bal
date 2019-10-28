@@ -67,9 +67,9 @@ function getFileNameBase(map<json> result) returns string {
     }
     // add electoral district / polling division names if needed with spaces replaced with _
     if resultLevel == LEVEL_ED || resultLevel == LEVEL_PD {
-        name = name + "-" + su:replaceAll(result.ed_name.toString()," ", "_");
+        name = name + "--" + su:replaceAll(result.ed_name.toString()," ", "_");
         if resultLevel == LEVEL_PD {
-            name = name + "-" + su:replaceAll(result.pd_name.toString()," ", "_");
+            name = name + "--" + su:replaceAll(result.pd_name.toString()," ", "_");
         }
     }
     return name;
