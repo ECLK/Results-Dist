@@ -118,7 +118,10 @@ public function main(string resultsURL) returns error? {
 
             io:println("posting to /result/data/: electionCode=" + electionCode + 
                        "; resCode=" + resCode + "; data=" + result.toJsonString());
-            _ = check resultsSystem->post ("/result/data/" + electionCode + "/" + resCode, result);
+            http:Response hr = check resultsSystem->post ("/result/data/" + electionCode + "/" + resCode, result);
+            if hr.statusCode != http:STATUS_ACCEPTED {
+                io:println("Error while posting result: ", hr);
+            }
         }
     }
 
