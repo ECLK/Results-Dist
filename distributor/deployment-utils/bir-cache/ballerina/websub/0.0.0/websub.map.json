@@ -1,0 +1,19 @@
+{
+"ballerina/websub/addSubscription" : "org/ballerinalang/net/websub/nativeimpl/AddSubscription" ,
+"ballerina/websub/publishToInternalHub" : "org/ballerinalang/net/websub/nativeimpl/PublishToInternalHub" ,
+"ballerina/websub/validateAndPublishToInternalHub" : "org/ballerinalang/net/websub/nativeimpl/ValidateAndPublishToInternalHub" ,
+"ballerina/websub/startUpHubService" : "org/ballerinalang/net/websub/nativeimpl/StartUpHubService" ,
+"ballerina/websub/WebSubHub.getAvailableTopics" : "org/ballerinalang/net/websub/nativeimpl/GetAvailableTopics" ,
+"ballerina/websub/Listener.registerWebSubSubscriberService" : "org/ballerinalang/net/websub/nativeimpl/RegisterWebSubSubscriberService" ,
+"ballerina/websub/unregisterTopicAtHub" : "org/ballerinalang/net/websub/nativeimpl/UnregisterTopicAtHub" ,
+"ballerina/websub/Listener.setTopic" : "org/ballerinalang/net/websub/nativeimpl/SetTopic" ,
+"ballerina/websub/Listener.initWebSubSubscriberServiceEndpoint" : "org/ballerinalang/net/websub/nativeimpl/InitWebSubSubscriberServiceEndpoint" ,
+"ballerina/websub/stopHubService" : "org/ballerinalang/net/websub/nativeimpl/StopHubService" ,
+"ballerina/websub/isTopicRegistered" : "org/ballerinalang/net/websub/nativeimpl/IsTopicRegistered" ,
+"ballerina/websub/WebSubHub.getSubscribers" : "org/ballerinalang/net/websub/nativeimpl/GetSubscribers" ,
+"ballerina/websub/Listener.startWebSubSubscriberServiceEndpoint" : "org/ballerinalang/net/websub/nativeimpl/StartWebSubSubscriberServiceEndpoint" ,
+"ballerina/websub/constructByteArray" : "org/ballerinalang/net/websub/nativeimpl/ConstructByteArray" ,
+"ballerina/websub/Listener.retrieveSubscriptionParameters" : "org/ballerinalang/net/websub/nativeimpl/RetrieveSubscriptionParameters" ,
+"ballerina/websub/registerTopicAtHub" : "org/ballerinalang/net/websub/nativeimpl/RegisterTopicAtHub" ,
+"ballerina/websub/removeSubscription" : "org/ballerinalang/net/websub/nativeimpl/RemoveSubscription"
+}
