@@ -39,7 +39,7 @@ public function main (string secret,                // secret to send to the hub
                       string resultsPath= "/tmp"    // where to store results
                     ) returns error? {
     subscriberSecret = <@untainted> secret;
-    subscriberPublicUrl = <@untainted> ((publicUrl == "") ? "http://localhost:${port}/" : publicUrl);
+    subscriberPublicUrl = <@untainted> (publicUrl == "" ? string `http://localhost:${port}` : publicUrl);
     subscriberPort = <@untainted> port;
     subscriberDirectoryPath = <@untainted> resultsPath;
     hub = <@untainted> hubURL;
@@ -54,7 +54,7 @@ public function main (string secret,                // secret to send to the hub
         wantXml = true;
     }
     if !(wantJson || wantXml) {
-        log:printError("No output format requested! Giving you JSON files");
+        // default to giving json
         wantJson = true;
     }
 
