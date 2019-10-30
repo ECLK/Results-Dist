@@ -41,6 +41,9 @@ service mediaWebsite on mediaListener {
         }
         tab = tab + "</table>";
         body = body + tab;
+        body = body + "<p/>";
+        body = body + "<p>All  results released so far as single JSON value: "
+                    + "<a href='/allresults'>All Results</a>";
         body = body + "</body>";
         string doc = "<html>" + head + body + "</html>";
 
@@ -50,6 +53,18 @@ service mediaWebsite on mediaListener {
         return caller->ok(hr);
     }
 
+    resource function allresults (http:Caller caller, http:Request req) returns error? {
+        json[] results = [];
+
+        // return results in reverse order
+        int i = resultsCache.length();
+        while i > 0 { // show results in reverse order of release
+            i = i - 1;
+            results.push(resultsCache[i].jsonResult);
+        }
+        return caller->ok(results);
+    }
+    
     @http:ResourceConfig {
         path: "/result/{election}/{seqNo}",
         methods: ["GET"]
