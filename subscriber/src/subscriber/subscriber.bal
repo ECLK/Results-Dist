@@ -30,24 +30,21 @@ boolean wantJson = false;
 boolean wantXml = false;
 
 // what formats does the user want results saved in?
-public function main (string secret, string publicUrl, 
-                      boolean 'json = false, boolean 'xml = false,
-                      int port = 8080, string? certFile = (), string directoryPath = "",
-                      string hubURL = "XXX") returns error? {
+public function main (string secret,                // secret to send to the hub
+                      boolean 'json = false,        // do I want json?
+                      boolean 'xml = false,         // do I want xml?
+                      string hubURL = "http://localhost:9090/websub/hub", // where do I subscribe at
+                      int port = 8080,              // port I'm going to open
+                      string publicUrl="",          // how to reach me over the internet
+                      string resultsPath= "/tmp"    // where to store results
+                    ) returns error? {
     subscriberSecret = <@untainted> secret;
-    subscriberPublicUrl = <@untainted> publicUrl;
+    subscriberPublicUrl = <@untainted> (publicUrl == "" ? string `http://localhost:${port}` : publicUrl);
     subscriberPort = <@untainted> port;
-    subscriberDirectoryPath = <@untainted> directoryPath;
+    subscriberDirectoryPath = <@untainted> resultsPath;
     hub = <@untainted> hubURL;
 
     service subscriberService;
-
-    websub:SubscriberListenerConfiguration config = {};
-    if (certFile is string) {
-        config.httpServiceSecureSocket = {
-            certFile: certFile
-        };
-    }
 
     // check what format the user wants results in
     if 'json {
@@ -57,12 +54,12 @@ public function main (string secret, string publicUrl,
         wantXml = true;
     }
     if !(wantJson || wantXml) {
-        log:printError("No output format requested! Quitting ... ask for json or xml!");
-        return;
+        // default to giving json
+        wantJson = true;
     }
 
     // start the listener
-    websub:Listener websubListener = new(subscriberPort, config);
+    websub:Listener websubListener = new(subscriberPort);
 
     // attach JSON subscriber
     subscriberService = @websub:SubscriberServiceConfig {
