@@ -24,7 +24,6 @@ string subscriberSecret = "";
 
 string subscriberPublicUrl = "";
 int subscriberPort = -1;
-string subscriberDirectoryPath = "";
 
 boolean wantJson = false;
 boolean wantXml = false;
@@ -35,13 +34,11 @@ public function main (string secret,                // secret to send to the hub
                       boolean 'xml = false,         // do I want xml?
                       string hubURL = "http://localhost:9090/websub/hub", // where do I subscribe at
                       int port = 1111,              // port I'm going to open
-                      string publicURL="",          // how to reach me over the internet
-                      string resultsPath= "/tmp"    // where to store results
+                      string publicURL=""          // how to reach me over the internet
                     ) returns error? {
     subscriberSecret = <@untainted> secret;
     subscriberPublicUrl = <@untainted> (publicURL == "" ? string `http://localhost:${port}` : publicURL);
     subscriberPort = <@untainted> port;
-    subscriberDirectoryPath = <@untainted> resultsPath;
     hub = <@untainted> hubURL;
 
     service subscriberService;
