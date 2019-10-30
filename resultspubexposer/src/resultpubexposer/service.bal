@@ -14,8 +14,13 @@ service RPE on exposer {
     }
     resource function forward (http:Caller hc, http:Request hr, string electionCode, string resultCode) returns error? {
         log:printInfo("Received request for /result/data/${electionCode}/${resultCode}");
-        http:Response resp = check resultsEp->forward("/result/data/${electionCode}/${resultCode}", hr);
+        http:Response|error resp = resultsEp->forward("/result/data/${electionCode}/${resultCode}", hr);
         log:printInfo("Received response from backend: code=" + resp.toString());
-        return hc->respond (resp);
+        if resp is error {
+            log:printInfo("Received error: " + resp.toString());
+            return resp;
+        } else {
+            log:printInfo("Published to results distributor: " + resp.toString()); 
+        }
     }
 }
