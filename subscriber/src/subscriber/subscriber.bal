@@ -34,7 +34,7 @@ public function main (string secret,                // secret to send to the hub
                       boolean 'json = false,        // do I want json?
                       boolean 'xml = false,         // do I want xml?
                       string hubURL = "http://localhost:9090/websub/hub", // where do I subscribe at
-                      int port = 8080,              // port I'm going to open
+                      int port = 1111,              // port I'm going to open
                       string publicURL="",          // how to reach me over the internet
                       string resultsPath= "/tmp"    // where to store results
                     ) returns error? {
