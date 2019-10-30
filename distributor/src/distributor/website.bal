@@ -18,18 +18,20 @@ service mediaWebsite on mediaListener {
         string body = "<body>";
         body = body + "<h1>Released Results Data for Media Partners</h1>";
         string tt = check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ");
-        body = body + "<p>List of all released results as of " + tt + "</p>";
+        body = body + "<p>Current time: " + tt + "</p>";
         
-        string tab = "<table><tr><th>Sequence No</th><th>Electoral District</th><th>Polling Division</th><th>JSON</th><th>XML</th><th>Document</th></tr>";
+        string tab = "<table><tr><th>Sequence No</th><th>Release Time</th><th>Electoral District</th><th>Polling Division</th><th>JSON</th><th>XML</th><th>Document</th></tr>";
         int i = resultsCache.length();
         while i > 0 { // show results in reverse order of release
             i = i - 1;
             Result r = resultsCache[i];
             string seqNo = r.jsonResult.sequence_number.toString();
+            string timestamp = r.jsonResult.timestamp.toString();
             string edName = r.jsonResult.ed_name.toString();
             string pdName = r.jsonResult.pd_name.toString();
             tab = tab + "<tr>" +
                         "<td>" + seqNo + "</td>" +
+                        "<td>" + timestamp + "</td>" +
                         "<td>" + edName + "</td>" +
                         "<td>" + pdName + "</td>" +
                         "<td><a href='/result/" + r.election + "/" + seqNo + "?format=json'>JSON</a>" + "</td>" +
