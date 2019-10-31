@@ -41,13 +41,10 @@ public function main() returns error? {
                                 //    enabled: true,
                                 //    maxCount: 5
                                 //},
-                                timeoutInMillis: 5*60000 // Check
-                                //secureSocket: {
-                                //    trustStore: {
-                                //        path: config:getAsString("eclk.hub.client.truststore.path"),
-                                //        password: config:getAsString("eclk.hub.client.truststore.password")
-                                //    }
-                                //}
+                                timeoutInMillis: 5*60000, // Check
+                                secureSocket: {
+                                    verifyHostname: false
+                                }
                             }
                         });
 
