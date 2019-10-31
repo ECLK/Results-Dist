@@ -2,7 +2,13 @@ import ballerina/encoding;
 import ballerina/http;
 import ballerina/log;
 
-http:Client c = new("https://postman-echo.com");
+http:Client c = new("https://postman-echo.com", {
+                                                    retryConfig: {
+                                                        count:  3,
+                                                        intervalInMillis: 5000
+                                                    },
+                                                    timeoutInMillis: 5*60000
+                                                });
 
 service foo on mediaListener {
     resource function bar(http:Caller caller, http:Request request) returns error? {
