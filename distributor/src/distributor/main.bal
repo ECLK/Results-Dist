@@ -41,10 +41,7 @@ public function main() returns error? {
                                 //    enabled: true,
                                 //    maxCount: 5
                                 //},
-                                timeoutInMillis: 5*60000, // Check
-                                secureSocket: {
-                                    verifyHostname: false
-                                }
+                                timeoutInMillis: 5*60000 // Check
                             }
                         });
 
