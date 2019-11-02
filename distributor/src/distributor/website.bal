@@ -71,6 +71,7 @@ service mediaWebsite on mediaListener {
         body = body + "<p/>";
         body = body + "<p>All  results released so far as single JSON value: "
                     + "<a href='/allresults'>All Results</a>";
+        body = body + "<p>Another test run? <a href='http://resultstest.ecdev.opensource.lk:9999/start'>Start</a></p>";
         body = body + "<p>Read subscriber startup message: <a href='info'>Here</a></p>";
         body = body + "</body>";
         string doc = "<html>" + head + body + "</html>";
