@@ -3,7 +3,6 @@ import ballerina/mime;
 import ballerina/time;
 import ballerina/xmlutils;
 import ballerina/file;
-import ballerina/io;
 
 const LEVEL_PD = "POLLING-DIVISION";
 const LEVEL_ED = "ELECTORAL-DISTRICT";
@@ -72,6 +71,7 @@ service mediaWebsite on mediaListener {
         body = body + "<p/>";
         body = body + "<p>All  results released so far as single JSON value: "
                     + "<a href='/allresults'>All Results</a>";
+        body = body + "<p>Another test run? <a href='http://resultstest.ecdev.opensource.lk:9999/start'>Start</a></p>";
         body = body + "<p>Read subscriber startup message: <a href='info'>Here</a></p>";
         body = body + "</body>";
         string doc = "<html>" + head + body + "</html>";
@@ -173,7 +173,6 @@ service mediaWebsite on mediaListener {
         methods: ["GET"]
     }
     resource function isactive(http:Caller caller, http:Request request, string versionNo) returns error? {
-        io:println("looking for :web/active-" + <@untainted> versionNo + ": = ", file:exists("web/active-" + <@untainted> versionNo));
         if file:exists("web/active-" + <@untainted> versionNo) {
             return caller->ok("Still good");
         } else {
