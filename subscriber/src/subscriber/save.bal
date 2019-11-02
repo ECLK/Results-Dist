@@ -47,6 +47,9 @@ function saveResult(map<json> result) {
 #	{LevelCode}	Result level: PD for polling division, ED for electoral district,
 #				NI for national incremental result and NF for national final result.
 #	{EDName}	Name of the electoral district in English.
+#	{Code}		If ED result, then 2 digit code of the district. If PD result then
+#				2 digit ED code followed by one character PD code, with “P” 
+#				being used for postal results for the district.
 #	{PDName}	Name of the polling division in English.
 #	{ext}		Either “json” or “xml” depending on the format of the file.
 # 
@@ -58,13 +61,14 @@ function getFileNameBase(map<json> result) returns string {
 
     string resultLevel = result.level.toString();
 
-    // add level code
+    // add level code and ED / PD code if needed
     match resultLevel {
-        LEVEL_PD => { name = name + "PD"; }
-        LEVEL_ED => { name = name + "ED"; }
+        LEVEL_PD => { name = name + "PD" + "-" + result.pd_code.toString(); }
+        LEVEL_ED => { name = name + "ED" + "-" + result.ed_code.toString(); }
         LEVEL_NI => { name = name + "NI"; }
         LEVEL_NF => { name = name + "NF"; }
     }
+
     // add electoral district / polling division names if needed with spaces replaced with _
     if resultLevel == LEVEL_ED || resultLevel == LEVEL_PD {
         name = name + "--" + su:replaceAll(result.ed_name.toString()," ", "_");

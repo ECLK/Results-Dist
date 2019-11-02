@@ -26,6 +26,7 @@ const INSERT_RESULT = "INSERT INTO results (election, code, jsonResult, type) VA
 const UPDATE_RESULT_JSON = "UPDATE results SET jsonResult = ? WHERE sequenceNo = ?";
 const UPDATE_RESULT_IMAGE = "UPDATE results SET imageMediaType = ?, imageData = ? WHERE election = ?, code = ?";
 const SELECT_RESULTS_DATA = "SELECT sequenceNo, election, code, type, jsonResult, imageMediaType, imageData FROM results";
+const DROP_RESULTS_TABLE = "DROP TABLE results";
 
 jdbc:Client dbClient = new ({
     url: config:getAsString("eclk.hub.db.url"),
@@ -55,6 +56,7 @@ function __init() {
     // load any results in there to our cache - the order will match the autoincrement and will be the sequence #
     table<DataResult> ret = checkpanic dbClient->select(SELECT_RESULTS_DATA, DataResult);
     int count = 0;
+    resultsCache = [];
     while (ret.hasNext()) {
         DataResult dr = <DataResult> ret.getNext();
         count = count + 1;
@@ -126,4 +128,11 @@ function saveImage(string electionCode, string resultCode, string mediaType, byt
         log:printWarn("Updating result cache for new image for election=" + electionCode + ", code='" + resultCode +
                       "' failed as result was missing. WEIRD!");
     }
+}
+
+# Clean everything from the DB and the in-memory cache
+# + return - error if something goes wrong
+function resetResults() returns error? {
+    _ = check dbClient->update(DROP_RESULTS_TABLE);
+    __init();
 }

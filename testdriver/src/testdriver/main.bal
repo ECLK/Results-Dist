@@ -2,176 +2,211 @@ import ballerina/io;
 import ballerina/http;
 import ballerina/lang.'int;
 import ballerina/time;
-import ballerina/stringutils as su;
+import ballerina/math;
+import ballerina/runtime;
 
 const PRESIDENTIAL_RESULT = "PRESIDENTIAL-FIRST";
+const electionCode = "2015-Presidential-Playback";
 
-map<NNationalResult> allresults = {};
+// loaded results data:
+// - index is district code (0 to 21)
+// - value is map containing a json object (map<json>) of per PD results with PD code as key 
+map<map<json>>[] results = [];
+// same result json objects but by PD index as loaded
+map<json>[] resultsByPD = [];
 
-public function main(string resultsURL) returns error? {
+int sleeptime = 0;
+
+public function main(string resultsURL, int delay = 10000) returns error? {
+    sleeptime = <@untainted> delay;
+
+    // avoiding compiler bug
+    foreach int i in 0...21 {
+        results[i] = {};
+    }
+
     // load presidential election data from Nuwan
-    check loadData();
+    check loadNuwanData();
 
-    // send some results to the results system
-    string electionCode = allresults.keys()[0];
-    NNationalResult? nr = allresults[electionCode];
-    map<boolean> published = {};
+    http:Client resultsSystem = new (resultsURL);
+ 
+    check publishOneSet(resultsSystem);
+}
 
-    if nr is () {
-        return error("No results found");
-    } else {
-        http:Client resultsSystem = new (resultsURL);
-        json result = null;
-        string resCode = "";
+function loadNuwanData () returns error? {
+    map<json>[] data = <@untainted map<json>[]> check readJson("elections.lk.presidential.2015.json");
 
-        io:println("Publishing results:");
-        while true {
-            NSummaryStats ss = { registered_voters: 0, total_polled: 0, valid_votes: 0, rejected_votes: 0};
-            NPartyResult[] pr;
-            string level;
-            string ed_name;
-            string pd_name;
+    foreach json j in data { // can't use data.forEach because I want to use check in the body
+        // reset time stamp
+        j["timestamp"] = check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+        // note: sequence # will be reset by the saving logic of the distributor
 
-            int edNum = check readInt("\nEnter polling district code (1 to 22), 0 for national or -1 to exit: ");
-            if edNum == -1 {
-                break;
-            } else if edNum == 0 {
-                //result = sendNationalResult (nr, resultsSystem);
-                io:println ("National not yet implemented");
-                continue;
-            } else if edNum < 1 || edNum > 22 {
-                io:println("Bad ED entered!");
-                continue;
-            } else {
-                NEDResult ner = nr.by_ed[edNum-1];
-                int maxPDnum = ner.by_pd.length();
+        // save it in the right place
+        int districtCode = check 'int:fromString(j.ed_code.toString());
+        string divisionCode = j.pd_code.toString().substring(2);
+        results[districtCode-1][divisionCode] = j;
+        resultsByPD.push(j);
+    }
+}
 
-                ed_name = ner.ed_name;
+function publishOneSet (http:Client rc)returns error? {
+    io:println("Publishing new result set starting at " + time:currentTime().toString());
+    _ = check rc->get("/result/reset"); // reset the results store
+    
+    boolean[] pdSent = [];
+    int[] edSent = []; // # of result sent per ED
+    int nPDs = 160 + 22; // including polling divs
+    int nEDs = 22;
 
-                int pdNum = check readInt("Enter PD number from district (1-" + maxPDnum.toString() + ") or 0 for district: ");
-                if pdNum < 0 || pdNum > maxPDnum {
-                    io:println("Bad PD entered");
-                    continue;
-                } else if pdNum == 0 {
-                    pd_name = ""; // N/A since this is a district total
-
-                    // need to add up all the PDs in this ED
-                    pr = ner.by_pd[0].by_party.clone();
-                    boolean first = true;
-                    ner.by_pd.forEach(
-                        function (NPDResult n) {
-                            if first == false {
-                                int max = n.by_party.length()-1;
-                                foreach int i in 0 ... max {
-                                    pr[i].votes = pr[i].votes + n.by_party[i].votes;
-                                }
-                            }
-                            first = false;
-                            ss.registered_voters = ss.registered_voters + n.summary_stats.registered_voters;
-                            ss.total_polled = ss.total_polled + n.summary_stats.total_polled;
-                            ss.valid_votes = ss.valid_votes + n.summary_stats.valid_votes;
-                            ss.rejected_votes = ss.rejected_votes + n.summary_stats.rejected_votes;
-                        }
-                    );
-                    level = "ELECTORAL-DISTRICT";
-                } else {
-                    NPDResult npr = ner.by_pd[pdNum-1];
-                    pd_name = npr.pd_name;
-                    resCode = createResultCode (ner.ed_name.toString(), npr.pd_name.toString());
-                    ss = npr.summary_stats;
-                    pr = npr.by_party;
-                    level = "POLLING-DIVISION";
-                }
-            }
-
-            json[] by_party = pr.map(
-                x => <json> { 
-                    party_name: x.party, 
-                    party_code: x.party, // note: we don't have proper data in the old data feeds
-                    candidate: x.candidate,
-                    votes: x.votes,
-                    percentage: getPercentage(x.votes, ss.total_polled)
-                }
-            );
-
-            // convert to right format
-            result = {
-                    'type : PRESIDENTIAL_RESULT,
-                    timestamp: check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ"),
-                    level: level,
-                    ed_name: ed_name,
-                    pd_name: pd_name,
-                    by_party: by_party,
-                    summary: {
-                        valid: ss.valid_votes,
-                        rejected: ss.rejected_votes,
-                        polled: ss.total_polled,
-                        electors: ss.registered_voters
-                    }
-            };
-            string pubkey = result.level.toString()+result.ed_name.toString()+result.pd_name.toString();
-            if published[pubkey] ?: false {
-                io:println ("That is already published; pick something else");
-                continue;
-            }
-            published[pubkey] = true;
-
-            io:println("posting to /result/data/: electionCode=" + electionCode + 
-                       "; resCode=" + resCode + "; data=" + result.toJsonString());
-            http:Response hr = check resultsSystem->post ("/result/data/" + electionCode + "/" + resCode, result);
-            if hr.statusCode != http:STATUS_ACCEPTED {
-                io:println("Error while posting result: ", hr);
-            }
+    // init these as I'm reading them before assigning - looks like default value can't be read (?)
+    foreach int i in 0..< nPDs {
+        pdSent[i] = false;
+        if i < nEDs {
+            edSent[i] = 0;
         }
     }
 
-    io:println("ALL DONE: press ^C to exit (not sure why!)");
-}
-
-function createResultCode (string edName, string pdName) returns string {
-    string code = edName + "--" + pdName;
-    return su:replaceAll(code, " ", "_");
-}
-
-// return %ge with 2 digits precision
-function getPercentage (int votes, int total_polled) returns string {
-    float f;
-
-    f = (votes*100.0)/total_polled;
-    return io:sprintf("%.2f", f);
-}
-
-function loadData() returns error? {
-    service svc = 
-        @http:ServiceConfig {
-            basePath: "/"
+    int sentCount = 0;
+    while sentCount < nPDs+nEDs {
+        int edCode = check math:randomInRange(0, nEDs);
+        // if we've sent as many results for this ED as there are PDs there then done with that district
+        if edSent[edCode] == results[edCode].length() { 
+            // find an unfinished ED
+            edCode = -1;
+            foreach int i in 0 ..< 22 {
+                if edSent[i] < results[i].length() {
+                    edCode = i;
+                    break;
+                }
+            }
+            if edCode == -1 {
+                panic error ("World is flat - No EDs which are not complete! What am I doing here?!");
+            }
         }
-        service {
-            @http:ResourceConfig {
-                methods: ["POST"],
-                path: "/{election}",
-                body: "result"
-            }
-            resource function data(http:Caller caller, http:Request req, string election, NNationalResult result) returns error? {
-                allresults[<@untainted> election] = <@untainted> result;
-                io:println("Received data for election: " + election);
-                check caller->ok ("Thanks!");
-            }
-        };
 
-    http:Listener hl = new(4444);
-    check hl.__attach(svc);
-    check hl.__start();
-    _ = io:readln("POST json data to http://localhost:4444/ELECTION now and hit RETURN to continue!");
-    if allresults.length() == 0 {
-        io:println("No results received!");
-        return error("No results received");
+        // get a PD result from the selected ED
+        int pdCode = check math:randomInRange(0, nPDs);
+        int edOfPD = check 'int:fromString(resultsByPD[pdCode].ed_code.toString()) - 1; // code in results is 1-based
+        if edOfPD != edCode || pdSent[pdCode] == true { // if PD is in wrong ED or is already sent then find another
+            // find an unsent PD in the selected ED
+            pdCode = -1;
+            foreach int i in 0 ..< nPDs {
+                edOfPD = check 'int:fromString(resultsByPD[i].ed_code.toString()) - 1; // code in results is 1-based
+                if pdSent[i] == false && edOfPD == edCode {
+                    pdCode = i;
+                    break;
+                }
+            }
+            if pdCode == -1 {
+                panic error ("World is flat - No unsent PD in this ED: " + edCode.toString());
+            }
+        }
+
+        // send PD result
+        if pdSent[pdCode] == true {
+            panic error ("World is flat - Trying to resend result for pdCode = " + pdCode.toString());
+        }
+        pdSent[pdCode] = true;
+        string resCode = resultsByPD[pdCode]?.pd_code.toString();
+        string edCodeFromPD = resultsByPD[pdCode]?.ed_code.toString();
+        io:println(io:sprintf("Sending PD results for %s", resCode));
+        check sendResult (rc, PRESIDENTIAL_RESULT, resCode, resultsByPD[pdCode]);
+        edSent[edCode] = edSent[edCode] + 1; // sent another result for this ED
+        sentCount = sentCount + 1;
+ 
+        // send ED result if I've sent as many PD results for this district as there are PDs there
+        if edSent[edCode] == results[edCode].length() { 
+            resCode = io:sprintf("%02d", edCode+1);
+            io:println(io:sprintf("Sending ED results for resCode=%s", resCode));
+            check sendResult (rc, PRESIDENTIAL_RESULT, resCode, check createEDResult(edCode));
+            sentCount = sentCount + 1;
+        }
+
+        // delay a bit
+        runtime:sleep(sleeptime);
     }
-    check hl.__detach(svc);
-    check hl.__immediateStop();
+    io:println("Published ", sentCount, " results.");
 }
 
-function readInt (string msg) returns int | error {
-    string input = io:readln(msg);
-    return <@untainted> 'int:fromString(input);
+function createEDResult (int edCode) returns map<json> | error {
+    map<map<json>> byPDResults = results[edCode];
+    string ed_code = "";
+    string ed_name = "";
+    map<json>[] distByParty = []; // array of json value each for a single party results for the district
+    record {|
+        int valid;
+        int rejected;
+        int polled;
+        int electors;
+    |} distSummary = { // aggregate results (not by_party)
+        valid: 0, 
+        rejected: 0, 
+        polled: 0, 
+        electors: 0
+    };
+    int[] votes_by_party = [];
+    int pdCount = 0;
+    foreach [string, json] [pdCode, pdResult] in byPDResults.entries() {
+        ed_code = pdResult.ed_code.toString();
+        ed_name = pdResult.ed_name.toString();
+        json[] by_party = <json[]> pdResult.by_party;
+        int nparties = by_party.length();
+        foreach int i in 0 ... nparties-1 {
+            if pdCount == 0 { // at the first PD of the ED
+                // init vote count to zero for i-th party at first PD in district
+                votes_by_party[i] = 0;
+
+                // set up 
+                distByParty[i] = {};
+                distByParty[i]["party_code"] = check by_party[i].party_code;
+                distByParty[i]["party_name"] = "Party " + distByParty[i]["party_code"].toString(); // no party_name in test data
+                distByParty[i]["candidate"] = "Candidate " + distByParty[i]["party_code"].toString(); // no candidate name in test data
+            } else if pdCount > 1 && distByParty[i].party_code != by_party[i].party_code {
+                // all parties are supposed to be in the same order in each PD
+                panic error("Unexpected problem: party codes are not in the same order across all PDs of district " +
+                            pdResult.ed_name.toString());
+            }
+            // add up votes and do %ge later as totals are not yet known
+            votes_by_party[i] = votes_by_party[i] + <int>by_party[i].votes;            
+        }
+
+        // add up the summary results
+        json summary = <json> pdResult.summary;
+        distSummary.valid = distSummary.valid + <int> summary.valid;
+        distSummary.rejected = distSummary.rejected + <int> summary.rejected;
+        distSummary.polled = distSummary.polled + <int> summary.polled;
+        distSummary.electors = distSummary.electors + <int> summary.electors;
+
+        pdCount = pdCount + 1;
+    }
+
+    // put the vote total & percentages in the result json
+    foreach int i in 0 ... votes_by_party.length()-1 {
+        distByParty[i]["votes"] = votes_by_party[i];
+        distByParty[i]["percentage"] = io:sprintf ("%.2f", votes_by_party[i]*100.0/distSummary.valid);
+    }
+
+    return {
+        'type: "PRESIDENTIAL-FIRST", 
+        timestamp: check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ"),
+        level: "ELECTORAL-DISTRICT", 
+        ed_code: ed_code,
+        ed_name: ed_name,
+        by_party: distByParty,
+        summary: {
+            valid: distSummary.valid,
+            rejected: distSummary.rejected,
+            polled: distSummary.polled,
+            electors: distSummary.electors
+        }
+    };
+}
+
+function sendResult (http:Client hc, string resType, string resCode, map<json> result) returns error? {
+    http:Response hr = check hc->post ("/result/data/" + electionCode + "/" + resType + "/" + resCode, result);
+    if hr.statusCode != http:STATUS_ACCEPTED {
+        io:println("Error while posting result to: /result/data/" + electionCode + "/" + resType + "/" + resCode);
+        io:println("\tstatus=", hr.statusCode, ", contentType=", hr.getContentType(), " payload=", hr.getTextPayload());
+        return error ("Unable to post result for " + resCode);
+    }
 }
