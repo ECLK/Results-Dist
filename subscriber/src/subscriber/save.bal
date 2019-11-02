@@ -10,8 +10,11 @@ const LEVEL_NI = "NATIONAL-INCREMENTAL";
 const LEVEL_NF = "NATIONAL-FINAL";
 
 
-function saveResult(map<json> result) {
-    string fileBase = getFileNameBase(result);
+function saveResult(map<json> resultAll) {
+    string electionCode = resultAll.election_code.toString();
+    map<json> result = <map<json>> resultAll?.result;
+
+    string fileBase = getFileNameBase(electionCode, result);
     if wantJson {
         string jsonfile = fileBase + ".json";
         error? e = writeJson(jsonfile, result);
@@ -54,9 +57,9 @@ function saveResult(map<json> result) {
 #	{ext}		Either “json” or “xml” depending on the format of the file.
 # 
 # + return - returns the base name for the file 
-function getFileNameBase(map<json> result) returns string {
+function getFileNameBase(string electionCode, map<json> result) returns string {
     // start with sequence # and type code
-    string name = result.sequence_number.toString() + "-" +
+    string name = electionCode + "-" + result.sequence_number.toString() + "-" +
         (result.'type.toString() == PRESIDENTIAL_RESULT ? "PE1" : "PE2") + "-";
 
     string resultLevel = result.level.toString();
