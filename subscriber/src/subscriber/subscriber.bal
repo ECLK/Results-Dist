@@ -36,7 +36,7 @@ boolean wantXml = false;
 public function main (string secret,                // secret to send to the hub
                       boolean 'json = false,        // do I want json?
                       boolean 'xml = false,         // do I want xml?
-                      string homeURL = "http://resultstest.ecdev.opensource.lk", // where do I subscribe at
+                      string homeURL = "https://resultstest.ecdev.opensource.lk", // where do I subscribe at
                       int port = 1111,              // port I'm going to open
                       string myURL=""          // how to reach me over the internet
                     ) returns error? {
