@@ -89,7 +89,7 @@ function publishResultData(Result result) {
         }
 
         worker jsonWorker returns error? {
-            websub:WebSubHub wh = <websub:WebSubHub> hub; // safe .. working around type guard limitation
+            websub:Hub wh = <websub:Hub> hub; // safe .. working around type guard limitation
 
             // push it out
             var r = wh.publishUpdate(JSON_RESULTS_TOPIC, result.jsonResult, mime:APPLICATION_JSON);
