@@ -78,8 +78,7 @@ public function main (string secret,                // secret to send to the hub
     // check whether this version is still supported
     hr = check hc->get("/isactive/" + MY_VERSION);
     if hr.statusCode != 200 {
-        io:println("*** This version of the subscriber is no longer supported!");
-        return;
+        return error("*** This version of the subscriber is no longer supported!");
     }
 
     // start the listener
