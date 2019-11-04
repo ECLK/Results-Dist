@@ -33,8 +33,6 @@ int subscriberPort = -1;
 boolean wantJson = false;
 boolean wantXml = false;
 
-auth:OutboundBasicAuthProvider? outboundBasicAuthProvider = ();
-http:BasicAuthHandler? outboundBasicAuthHandler = ();
 http:OutboundAuthConfig? auth = ();
 
 // what formats does the user want results saved in?
@@ -85,14 +83,15 @@ public function main (string secret,                // secret to send to the hub
     websub:Listener websubListener = new(subscriberPort);
 
     if (username is string && password is string) {
-        outboundBasicAuthProvider = new({
+        auth:OutboundBasicAuthProvider outboundBasicAuthProvider = new ({
             username: <@untainted> username,
             password: <@untainted> password
         });
 
-        outboundBasicAuthHandler = new(<auth:OutboundBasicAuthProvider> outboundBasicAuthProvider);
+        http:BasicAuthHandler outboundBasicAuthHandler = 
+                new (<auth:OutboundBasicAuthProvider> outboundBasicAuthProvider);
         auth = {
-            authHandler: <http:BasicAuthHandler> outboundBasicAuthHandler
+            authHandler: outboundBasicAuthHandler
         };
     }
 
