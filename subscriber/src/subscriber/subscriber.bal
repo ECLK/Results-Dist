@@ -39,8 +39,8 @@ http:OutboundAuthConfig? auth = ();
 
 // what formats does the user want results saved in?
 public function main (string secret,                // secret to send to the hub
-                      string? username = (),              // my username  
-                      string? password = (),              // my password  
+                      string? username = (),        // my username  
+                      string? password = (),        // my password  
                       boolean 'json = false,        // do I want json?
                       boolean 'xml = false,         // do I want xml?
                       string homeURL = "http://resultstest.ecdev.opensource.lk", // where do I subscribe at
