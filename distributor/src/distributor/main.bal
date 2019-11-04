@@ -30,6 +30,17 @@ public function main() returns error? {
     var hubStartUpResult =
         check websub:startHub(<@untainted> mediaListener, // weird BUG in ballerina compiler
                                 "/websub", "/hub",
+                                serviceAuth = {
+                                    enabled: true
+                                },
+                                publisherResourceAuth = {
+                                    enabled: true,
+                                    scopes: ["publish"]
+                                },
+                                subscriptionResourceAuth = {
+                                    enabled: true,
+                                    scopes: ["subscribe"]
+                                },
                                 hubConfiguration = {
                                     hubPersistenceStore: persistenceStore,
                                     clientConfig: {
