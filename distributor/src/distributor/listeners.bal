@@ -12,5 +12,6 @@ listener http:Listener mediaListener = new (config:getAsInt("eclk.hub.port", 909
     auth: {
         authHandlers: [inboundBasicAuthHandler],
         mandateSecureSocket: false
-    }
+    },
+    filters: [new SubscriptionFilter()]
 });
