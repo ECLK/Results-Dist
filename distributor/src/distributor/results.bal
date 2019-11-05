@@ -91,8 +91,12 @@ function publishResultData(Result result) {
         worker jsonWorker returns error? {
             websub:Hub wh = <websub:Hub> hub; // safe .. working around type guard limitation
 
-            // push it out
-            var r = wh.publishUpdate(JSON_RESULTS_TOPIC, result.jsonResult, mime:APPLICATION_JSON);
+            // push it out with the election code and the json result as the message
+            json resultAll = {
+                election_code : result.election,
+                result : result.jsonResult
+            };
+            var r = wh.publishUpdate(JSON_RESULTS_TOPIC, resultAll, mime:APPLICATION_JSON);
             if r is error {
                 log:printError("Error publishing update: ", r);
             }
