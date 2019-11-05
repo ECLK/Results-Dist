@@ -1,5 +1,9 @@
 import ballerina/log;
 import ballerina/websub;
+import ballerina/http;
+import ballerina/io;
+
+const MY_VERSION = "2019-11-02";
 
 // TODO: set correct ones once decided
 const JSON_TOPIC = "https://github.com/ECLK/Results-Dist-json";
@@ -24,7 +28,6 @@ string subscriberSecret = "";
 
 string subscriberPublicUrl = "";
 int subscriberPort = -1;
-string subscriberDirectoryPath = "";
 
 boolean wantJson = false;
 boolean wantXml = false;
@@ -33,16 +36,14 @@ boolean wantXml = false;
 public function main (string secret,                // secret to send to the hub
                       boolean 'json = false,        // do I want json?
                       boolean 'xml = false,         // do I want xml?
-                      string hubURL = "http://localhost:9090/websub/hub", // where do I subscribe at
-                      int port = 8080,              // port I'm going to open
-                      string publicUrl="",          // how to reach me over the internet
-                      string resultsPath= "/tmp"    // where to store results
+                      string homeURL = "https://resultstest.ecdev.opensource.lk", // where do I subscribe at
+                      int port = 1111,              // port I'm going to open
+                      string myURL=""          // how to reach me over the internet
                     ) returns error? {
     subscriberSecret = <@untainted> secret;
-    subscriberPublicUrl = <@untainted> (publicUrl == "" ? string `http://localhost:${port}` : publicUrl);
+    subscriberPublicUrl = <@untainted> (myURL == "" ? string `http://localhost:${port}` : myURL);
     subscriberPort = <@untainted> port;
-    subscriberDirectoryPath = <@untainted> resultsPath;
-    hub = <@untainted> hubURL;
+    hub = <@untainted> homeURL + "/websub/hub";
 
     service subscriberService;
 
@@ -56,6 +57,22 @@ public function main (string secret,                // secret to send to the hub
     if !(wantJson || wantXml) {
         // default to giving json
         wantJson = true;
+    }
+
+    // contact home and display message
+    http:Client hc = new(homeURL);
+    http:Response hr = check hc->get("/info");
+    if hr.statusCode == 200 {
+        string msg = check hr.getTextPayload();
+        io:println("Message from the results system:\n");
+        io:println(msg);
+    }
+
+    // check whether this version is still supported
+    hr = check hc->get("/isactive/" + MY_VERSION);
+    if hr.statusCode != 200 {
+        io:println("*** This version of the subscriber is no longer supported!");
+        return;
     }
 
     // start the listener

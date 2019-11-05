@@ -37,17 +37,11 @@ public function main() returns error? {
                                     count:  3,
                                     intervalInMillis: 5000
                                 },
-                                followRedirects: {
-                                    enabled: true,
-                                    maxCount: 5
-                                },
+                                //followRedirects: {
+                                //    enabled: true,
+                                //    maxCount: 5
+                                //},
                                 timeoutInMillis: 5*60000 // Check
-                                //secureSocket: {
-                                //    trustStore: {
-                                //        path: config:getAsString("eclk.hub.client.truststore.path"),
-                                //        password: config:getAsString("eclk.hub.client.truststore.password")
-                                //    }
-                                //}
                             }
                         });
 
