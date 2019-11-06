@@ -71,8 +71,11 @@ public type SubscriptionFilter object {
                 error? remResult = hubVar.removeSubscription(topic, callbackMap.get(username));
                 log:printInfo("Removing existing subscription for username: " + username);
                 if (remResult is error) {
-                    log:printError("error removing existing subscription for callback: " + callback, remResult);
+                    log:printError("error removing existing subscription for username: " + username, remResult);
                 }
+                updateUserCallback(username, callback);
+            } else {
+                saveUserCallback(username, callback);
             }
             callbackMap[username] = <@untainted> callback;
         } else {
