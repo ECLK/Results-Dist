@@ -28,6 +28,15 @@ const UPDATE_RESULT_IMAGE = "UPDATE results SET imageMediaType = ?, imageData = 
 const SELECT_RESULTS_DATA = "SELECT sequenceNo, election, code, type, jsonResult, imageMediaType, imageData FROM results";
 const DROP_RESULTS_TABLE = "DROP TABLE results";
 
+const string CREATE_CALLBACKS_TABLE = "CREATE TABLE IF NOT EXISTS callbacks (" +
+                                    "    username VARCHAR(100) NOT NULL," +
+                                    "    callback VARCHAR(200) NOT NULL," +
+                                    "    PRIMARY KEY (username, callback))";
+const INSERT_CALLBACK = "INSERT INTO callbacks (username, callback) VALUES (?, ?)";
+const UPDATE_CALLBACK = "UPDATE callbacks SET callback = ? WHERE username = ?";
+const SELECT_CALLBACKS = "SELECT * FROM callbacks";
+const DROP_CALLBACKS_TABLE = "DROP TABLE callbacks";
+
 jdbc:Client dbClient = new ({
     url: config:getAsString("eclk.hub.db.url"),
     username: config:getAsString("eclk.hub.db.username"),
@@ -47,11 +56,17 @@ type DataResult record {|
     byte[]? imageData;
 |};
 
+type UserCallback record {|
+    string username;
+    string callback;
+|};
+
 # Create database and set up at module init time and load any data in there to
 # memory for the website to show. Panic if there's any issue.
 function __init() {
     // create tables
     _ = checkpanic dbClient->update(CREATE_RESULTS_TABLE);
+    _ = checkpanic dbClient->update(CREATE_CALLBACKS_TABLE);
 
     // load any results in there to our cache - the order will match the autoincrement and will be the sequence #
     table<DataResult> ret = checkpanic dbClient->select(SELECT_RESULTS_DATA, DataResult);
@@ -77,6 +92,18 @@ function __init() {
     }
     if (count > 0) {
         log:printInfo("Loaded " + count.toString() + " previous results from database");
+    }
+
+    // load username-callback data for already added subscriptions
+    table<UserCallback> callbackRet = checkpanic dbClient->select(SELECT_CALLBACKS, UserCallback);
+    count = 0;
+    while (callbackRet.hasNext()) {
+        UserCallback userCb = <UserCallback> callbackRet.getNext();
+        callbackMap[userCb.username] = <@untainted> userCb.callback;
+        count += 1;
+    }
+    if (count > 0) {
+        log:printInfo("Loaded " + count.toString() + " registered callback(s) from database");
     }
 }
 
@@ -130,9 +157,26 @@ function saveImage(string electionCode, string resultCode, string mediaType, byt
     }
 }
 
+# Save a subscription username-calback combination.
+function saveUserCallback(string username, string callback) {
+    var r = dbClient->update(INSERT_CALLBACK, username, callback);
+    if r is error {
+        log:printError("Unable to save username-callback in database: ", r);
+    }
+}
+
+# Update a subscription username-calback combination.
+function updateUserCallback(string username, string callback) {
+    var r = dbClient->update(UPDATE_CALLBACK, callback, username);
+    if r is error {
+        log:printError("Unable to update username-callback in database: ", r);
+    }
+}
+
 # Clean everything from the DB and the in-memory cache
 # + return - error if something goes wrong
 function resetResults() returns error? {
     _ = check dbClient->update(DROP_RESULTS_TABLE);
+    _ = check dbClient->update(DROP_CALLBACKS_TABLE);
     __init();
 }

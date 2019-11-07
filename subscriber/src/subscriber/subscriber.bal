@@ -1,7 +1,8 @@
-import ballerina/log;
-import ballerina/websub;
+import ballerina/auth;
 import ballerina/http;
 import ballerina/io;
+import ballerina/log;
+import ballerina/websub;
 
 const MY_VERSION = "2019-11-02";
 
@@ -32,8 +33,12 @@ int subscriberPort = -1;
 boolean wantJson = false;
 boolean wantXml = false;
 
+http:OutboundAuthConfig? auth = ();
+
 // what formats does the user want results saved in?
 public function main (string secret,                // secret to send to the hub
+                      string? username = (),        // my username  
+                      string? password = (),        // my password  
                       boolean 'json = false,        // do I want json?
                       boolean 'xml = false,         // do I want xml?
                       string homeURL = "https://resultstest.ecdev.opensource.lk", // where do I subscribe at
@@ -71,12 +76,24 @@ public function main (string secret,                // secret to send to the hub
     // check whether this version is still supported
     hr = check hc->get("/isactive/" + MY_VERSION);
     if hr.statusCode != 200 {
-        io:println("*** This version of the subscriber is no longer supported!");
-        return;
+        return error("*** This version of the subscriber is no longer supported!");
     }
 
     // start the listener
     websub:Listener websubListener = new(subscriberPort);
+
+    if (username is string && password is string) {
+        auth:OutboundBasicAuthProvider outboundBasicAuthProvider = new ({
+            username: <@untainted> username,
+            password: <@untainted> password
+        });
+
+        http:BasicAuthHandler outboundBasicAuthHandler = 
+                new (<auth:OutboundBasicAuthProvider> outboundBasicAuthProvider);
+        auth = {
+            authHandler: outboundBasicAuthHandler
+        };
+    }
 
     // attach JSON subscriber
     subscriberService = @websub:SubscriberServiceConfig {
@@ -85,7 +102,10 @@ public function main (string secret,                // secret to send to the hub
         target: [hub, JSON_TOPIC],
         leaseSeconds: TWO_DAYS_IN_SECONDS,
         secret: subscriberSecret,
-        callback: subscriberPublicUrl.concat(JSON_PATH)
+        callback: subscriberPublicUrl.concat(JSON_PATH),
+        hubClientConfig: {
+            auth: auth
+        }
     }
     service {
         resource function onNotification(websub:Notification notification) {
