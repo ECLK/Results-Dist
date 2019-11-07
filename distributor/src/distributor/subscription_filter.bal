@@ -68,13 +68,18 @@ public type SubscriptionFilter object {
             [string, string][username, _] = result;
             
             if callbackMap.hasKey(username) {
-                error? remResult = hubVar.removeSubscription(topic, callbackMap.get(username));
-                log:printInfo("Removing existing subscription for username: " + username);
+                string existingCallback = callbackMap.get(username);
+                log:printInfo("Removing existing subscription callback: " + existingCallback + ", for username: " +
+                                username);
+                error? remResult = hubVar.removeSubscription(topic, existingCallback);
                 if (remResult is error) {
                     log:printError("error removing existing subscription for username: " + username, remResult);
                 }
+                log:printInfo("Adding a new subscription callback: " + callback + ", for username: " +
+                                username);
                 updateUserCallback(username, callback);
             } else {
+                log:printInfo("Adding a subscription callback: " + callback + ", for username: " + username);
                 saveUserCallback(username, callback);
             }
             callbackMap[username] = <@untainted> callback;
