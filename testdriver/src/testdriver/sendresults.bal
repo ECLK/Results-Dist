@@ -91,17 +91,19 @@ function publishOneSet () returns error? {
     runCount = runCount + 1;
 }
 
+type DistSummary record {
+    int valid;
+    int rejected;
+    int polled;
+    int electors;
+}; 
+
 function createEDResult (int edCode) returns map<json> | error {
     map<map<json>> byPDResults = results[edCode];
     string ed_code = "";
     string ed_name = "";
     map<json>[] distByParty = []; // array of json value each for a single party results for the district
-    record {|
-        int valid;
-        int rejected;
-        int polled;
-        int electors;
-    |} distSummary = { // aggregate results (not by_party)
+    DistSummary distSummary = { // aggregate results (not by_party)
         valid: 0, 
         rejected: 0, 
         polled: 0, 
@@ -110,11 +112,11 @@ function createEDResult (int edCode) returns map<json> | error {
     int[] votes_by_party = [];
     int pdCount = 0;
     foreach [string, json] [pdCode, pdResult] in byPDResults.entries() {
-        ed_code = pdResult.ed_code.toString();
-        ed_name = pdResult.ed_name.toString();
+        ed_code = <string> pdResult.ed_code;
+        ed_name = <string> pdResult.ed_name;
         json[] by_party = <json[]> pdResult.by_party;
         int nparties = by_party.length();
-        foreach int i in 0 ... nparties-1 {
+        foreach int i in 0 ..< nparties {
             if pdCount == 0 { // at the first PD of the ED
                 // init vote count to zero for i-th party at first PD in district
                 votes_by_party[i] = 0;
@@ -122,8 +124,8 @@ function createEDResult (int edCode) returns map<json> | error {
                 // set up 
                 distByParty[i] = {};
                 distByParty[i]["party_code"] = check by_party[i].party_code;
-                distByParty[i]["party_name"] = "Party " + distByParty[i]["party_code"].toString(); // no party_name in test data
-                distByParty[i]["candidate"] = "Candidate " + distByParty[i]["party_code"].toString(); // no candidate name in test data
+                distByParty[i]["party_name"] = "Party " + <string>distByParty[i]["party_code"]; // no party_name in test data
+                distByParty[i]["candidate"] = "Candidate " + <string>distByParty[i]["party_code"]; // no candidate name in test data
             } else if pdCount > 1 && distByParty[i].party_code != by_party[i].party_code {
                 // all parties are supposed to be in the same order in each PD
                 panic error("Unexpected problem: party codes are not in the same order across all PDs of district " +
@@ -134,13 +136,13 @@ function createEDResult (int edCode) returns map<json> | error {
         }
 
         // add up the summary results
-        json summary = <json> pdResult.summary;
-        distSummary.valid = distSummary.valid + <int> summary.valid;
-        distSummary.rejected = distSummary.rejected + <int> summary.rejected;
-        distSummary.polled = distSummary.polled + <int> summary.polled;
-        distSummary.electors = distSummary.electors + <int> summary.electors;
+        DistSummary summary = check DistSummary.constructFrom(check pdResult.summary);
+        distSummary.valid += summary.valid;
+        distSummary.rejected += summary.rejected;
+        distSummary.polled += summary.polled;
+        distSummary.electors += summary.electors;
 
-        pdCount = pdCount + 1;
+        pdCount += 1;
     }
 
     // put the vote total & percentages in the result json
@@ -156,12 +158,7 @@ function createEDResult (int edCode) returns map<json> | error {
         ed_code: ed_code,
         ed_name: ed_name,
         by_party: distByParty,
-        summary: {
-            valid: distSummary.valid,
-            rejected: distSummary.rejected,
-            polled: distSummary.polled,
-            electors: distSummary.electors
-        }
+        summary: check json.constructFrom(distSummary)
     };
 }
 
