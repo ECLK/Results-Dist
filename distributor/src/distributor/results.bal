@@ -89,7 +89,7 @@ function publishResultData(Result result) {
         }
 
         worker jsonWorker returns error? {
-            websub:WebSubHub wh = <websub:WebSubHub> hub; // safe .. working around type guard limitation
+            websub:Hub wh = <websub:Hub> hub; // safe .. working around type guard limitation
 
             // push it out with the election code and the json result as the message
             json resultAll = {
