@@ -24,7 +24,7 @@ const string CREATE_RESULTS_TABLE = "CREATE TABLE IF NOT EXISTS results (" +
                                     "    PRIMARY KEY (sequenceNo))";
 const INSERT_RESULT = "INSERT INTO results (election, code, jsonResult, type) VALUES (?, ?, ?, ?)";
 const UPDATE_RESULT_JSON = "UPDATE results SET jsonResult = ? WHERE sequenceNo = ?";
-const UPDATE_RESULT_IMAGE = "UPDATE results SET imageMediaType = ?, imageData = ? WHERE election = ?, code = ?";
+const UPDATE_RESULT_IMAGE = "UPDATE results SET imageMediaType = ?, imageData = ? WHERE election = ? AND code = ?";
 const SELECT_RESULTS_DATA = "SELECT sequenceNo, election, code, type, jsonResult, imageMediaType, imageData FROM results";
 const DROP_RESULTS_TABLE = "DROP TABLE results";
 
@@ -132,7 +132,7 @@ function saveResult(Result result) returns error? {
 
 # Save an image associated with a result
 # + return - error if unable to insert image for the given resultCode
-function saveImage(string electionCode, string resultCode, string mediaType, byte[] imageData) returns error? {
+function saveImage(string electionCode, string resultCode, string mediaType, byte[] imageData) returns Result|error? {
     // save in DB
     var ret = dbClient->update(UPDATE_RESULT_IMAGE, mediaType, imageData, electionCode, resultCode);
     if ret is jdbc:DatabaseError {
@@ -142,10 +142,12 @@ function saveImage(string electionCode, string resultCode, string mediaType, byt
 
     // update the in-memory cache of results with this image
     boolean updated = false;
+    Result? res = ();
     foreach Result r in resultsCache {
         if r.election == electionCode && r.code == resultCode {
             r.imageMediaType = mediaType;
             r.imageData = imageData;
+            res = r;
             updated = true;
             break;
         }
@@ -155,6 +157,8 @@ function saveImage(string electionCode, string resultCode, string mediaType, byt
         log:printWarn("Updating result cache for new image for election=" + electionCode + ", code='" + resultCode +
                       "' failed as result was missing. WEIRD!");
     }
+
+    return res;
 }
 
 # Save a subscription username-calback combination.

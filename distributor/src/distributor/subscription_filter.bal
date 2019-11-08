@@ -16,14 +16,14 @@ public type SubscriptionFilter object {
         map<string>|error params = request.getFormParams();
 
         if params is error {
-            log:printError("error extracting form params", params);
-            return false;
+            log:printDebug("error extracting form params: " + params.toString());
+            return true;
         }
 
         map<string> paramMap = <map<string>> params;
         if !paramMap.hasKey(HUB_TOPIC) || !paramMap.hasKey(HUB_CALLBACK) {
             log:printError("topic and/or callback not available");
-            return false;
+            return true;
         }
 
         string topic = paramMap.get(HUB_TOPIC);
@@ -36,7 +36,7 @@ public type SubscriptionFilter object {
             log:printWarn("error decoding topic, using the original form: " + topic + ". Error: " + decodedTopic.toString());
         }
 
-        if (topic != JSON_RESULTS_TOPIC) {
+        if (topic != JSON_RESULTS_TOPIC && topic != IMAGE_PDF_TOPIC) {
             log:printError("subscription request received for invalid topic " + topic);
             return false;
         }

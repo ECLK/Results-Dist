@@ -64,11 +64,19 @@ public function main() returns error? {
         var result = hubStartUpResult.registerTopic(JSON_RESULTS_TOPIC);
         if (result is error) {
             string? message = result.detail()?.message;
-            if (message is string && message.indexOf("topic already exists") != ()) {
+            if !(message is string && message.indexOf("topic already exists") != ()) {
                 // Ignore failures due to topic already being there; no harm
+                return result;
             }
-        } else {
-            return result;
+        }
+
+        result = hubStartUpResult.registerTopic(IMAGE_PDF_TOPIC);
+        if (result is error) {
+            string? message = result.detail()?.message;
+            if !(message is string && message.indexOf("topic already exists") != ()) {
+                // Ignore failures due to topic already being there; no harm
+                return result;
+            }
         }
     }
 }
