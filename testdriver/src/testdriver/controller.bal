@@ -14,11 +14,16 @@ service TestController on hl {
         http:Response hr = new;
         if alreadyRunning {
             return caller->ok("Test already running; try again later.");
+        } else {
+            // yes i know race condition possible .. need to use lock to do this better (after it becomes non experimental)
+            alreadyRunning = true;
+            check caller->ok("Test data publishing starting.");
         }
-        // yes i know race condition possible .. need to use lock to do this better (after it becomes non experimental)
-        alreadyRunning = true;
-        _ = start publishOneSet();
-        log:printInfo("New test started");
-        return caller->ok("Test data publishing started.");
+    
+        log:printInfo("Starting new test");
+        var e = publishOneSet();
+        if e is error {
+            log:printInfo("Error publishing results: " + e.toString());
+        }
     }
 }

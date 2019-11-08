@@ -68,6 +68,25 @@ function publishOneSet () returns error? {
             panic error ("World is flat - Trying to resend result for pdCode = " + pdCode.toString());
         }
         pdSent[pdCode] = true;
+
+        // add missing info in test data: party_name and candidate for each party result
+        json[] pr = <json[]>resultsByPD[pdCode]?.by_party;
+        foreach int i in 0 ..< pr.length() {
+            map<json> onePr = <map<json>>pr[i];
+            onePr["party_name"] = "Party " + <string>pr[i].party_code;
+            onePr["candidate"] = "Candidate " + <string>pr[i].party_code;
+            // change percentage to string
+            var val = trap <float>pr[i].percentage;
+            if val is error {
+                // already a string so let it go
+            } else {
+                onePr["percentage"] = io:sprintf ("%.2f", val);
+            }
+           // this line causes generated code to hang here: the cast is in error but no runtime error but just STOP!
+           // looks like updating a json property that is already there really upsets the code :(
+           //onePr["percentage"] = io:sprintf ("%.2f", <string>pr[i].percentage);
+        }
+
         string resCode = resultsByPD[pdCode]?.pd_code.toString();
         string edCodeFromPD = resultsByPD[pdCode]?.ed_code.toString();
         io:println(io:sprintf("Sending PD results for %s", resCode));
