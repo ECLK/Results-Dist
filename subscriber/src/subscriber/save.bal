@@ -1,3 +1,4 @@
+import ballerina/http;
 import ballerina/io;
 import ballerina/log;
 import ballerina/xmlutils;
@@ -16,7 +17,7 @@ function saveResult(map<json> resultAll) {
 
     string fileBase = getFileNameBase(electionCode, result);
     if wantJson {
-        string jsonfile = fileBase + ".json";
+        string jsonfile = fileBase + JSON_EXT;
         error? e = writeJson(jsonfile, result);
         if e is error {
             log:printError("Unable to write result #" + result.sequence_number.toString() + " " + jsonfile + e.reason());
@@ -25,7 +26,7 @@ function saveResult(map<json> resultAll) {
         }
     }
     if wantXml {
-        string xmlfile = fileBase + ".xml";
+        string xmlfile = fileBase + XML_EXT;
         // put the result json object into a wrapper object to get a parent element
         // NOTE: this code must match the logic in the distributor website code as 
         // both add this object wrapper with the property named "result". Bit
@@ -38,6 +39,37 @@ function saveResult(map<json> resultAll) {
         } else {
             log:printInfo("New result written: " + xmlfile);
         }
+    }
+}
+
+function saveImagePdf(map<json> imageJson) {
+    string electionCode = imageJson.election_code.toString();
+    string seqNo = imageJson.sequence_number.toString();
+
+    string pdfFile = getFileNameBase(electionCode, imageJson) + PDF_EXT;
+    http:Client cl = <http:Client> imageClient;
+    http:Response|error res = cl->get(string `/release/${electionCode}/${seqNo}`);
+
+    byte[]? pdfBytes = ();
+    if res is http:Response {
+        byte[]|error binaryContent = res.getBinaryPayload();
+        if binaryContent is byte[] {
+            pdfBytes = binaryContent;
+        } else {
+           log:printError("Error retrieving PDF binary payload", binaryContent);
+           return;
+        }
+    } else {
+        log:printError("Error retrieving PDF", res);
+        return;
+    }
+
+    error? e = writePdf(pdfFile, <byte[]> pdfBytes);
+    if e is error {
+        log:printError("Unable to write result #" + seqNo + " " + pdfFile,
+                        e);
+    } else {
+        log:printInfo("New result written: " + pdfFile);
     }
 }
 
@@ -95,10 +127,16 @@ function writeXml(string path, xml content) returns error? {
     });
 }
 
+function writePdf(string path, byte[] content) returns error? {
+    io:WritableByteChannel wbc = check io:openWritableFile(path);
+    _ = check wbc.write(content, 0); // TODO: replace check to ensure channels are closed
+    check wbc.close();
+}
+
 function writeContent(string path, function(io:WritableCharacterChannel wch) returns error? writeFunc) returns error? {
     io:WritableByteChannel wbc = check io:openWritableFile(path);
     io:WritableCharacterChannel wch = new(wbc, "UTF8");
-    check writeFunc(wch);
+    check writeFunc(wch); // TODO: replace check to ensure channels are closed
     check wch.close();
     check wbc.close(); // should use return here but there's a taint detection bug in the compiler that
                        // apparently considers this error as tainted. huh??
