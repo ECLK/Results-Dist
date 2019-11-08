@@ -88,6 +88,7 @@ function __init() {
         io:StringReader sr = new(dr.jsonResult, encoding = "UTF-8");
         map<json> jm =  <map<json>> sr.readJson();
 
+        // put results in the cache
         resultsCache.push(<Result> {
             sequenceNo: dr.sequenceNo,
             election: dr.election,

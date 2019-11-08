@@ -2,6 +2,7 @@ import ballerina/http;
 import ballerina/log;
 import ballerina/mime;
 import ballerina/websub;
+import ballerina/time;
 
 # Service for results tabulation to publish results to. We assume that results tabulation will deliver
 # a result in two separate messages - one with the json result data and another with an image of the
@@ -48,6 +49,35 @@ service receiveResults on resultsListener {
     
         // publish the received result
         publishResultData(result);
+
+        if result.jsonResult.level == "POLLING-DIVISION" {
+            // send a cumulative result with the current running totals
+            log:printInfo("Publishing cumulative result with " + electionCode +  "/" + resultType + "/" + resultCode);
+
+
+            map<json> cumJsonResult = {
+                'type: resultType, 
+                timestamp: check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ"),
+                level: "NATIONAL-INCREMENTAL", 
+                by_party: check json.constructFrom(cumulativeRes.by_party),
+                summary: check json.constructFrom(cumulativeRes.summary)  
+            };
+            Result cumResult = <@untainted> {
+                sequenceNo: -1, // wil be updated with DB sequence # upon storage
+                election: result.election,
+                'type: result.'type,
+                code: result.code,
+                jsonResult: cumJsonResult,
+                imageMediaType: (),
+                imageData: ()
+            };
+
+            // store the result in the DB against the resultCode and assign it a sequence #
+            check saveResult(cumResult);
+
+            // publish the recumulative ceived result
+            publishResultData(cumResult);
+        }
 
         // respond accepted
         return caller->accepted();

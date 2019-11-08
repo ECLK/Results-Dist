@@ -87,9 +87,11 @@ service mediaWebsite on mediaListener {
 
         // return results in reverse order
         int i = resultsCache.length();
-        while i > 0 { // show results in reverse order of release
+        while i > 0 { // show non-incremental results in reverse order of release
             i = i - 1;
-            results.push(resultsCache[i].jsonResult);
+            if resultsCache[i].jsonResult.level != "NATIONAL-INCREMENTAL" {
+                results.push(resultsCache[i].jsonResult);
+            }
         }
         return caller->ok(results);
     }
