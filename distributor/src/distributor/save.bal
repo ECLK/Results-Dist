@@ -79,7 +79,7 @@ CumulativeResult cumulativeRes = { by_party: [], summary: { valid: 0, rejected: 
 # Create database and set up at module init time and load any data in there to
 # memory for the website to show. Panic if there's any issue.
 function __init() {
-    // create tables for results
+    // create tables
     _ = checkpanic dbClient->update(CREATE_RESULTS_TABLE);
     _ = checkpanic dbClient->update(CREATE_CALLBACKS_TABLE);
     _ = checkpanic dbClient->update(CREATE_RECIPIENT_TABLE);
