@@ -19,7 +19,8 @@ twilio:TwilioConfiguration twilioConfig = {
 };
 
 twilio:Client twilioClient = new(twilioConfig);
-// Contains registered sms recipients. Values are populated in every service init and recipient registration
+
+// Keeps registered sms recipients in-memory. Values are populated in every service init and recipient registration
 string[] mobileSubscribers = [];
 string sourceMobile = config:getAsString("eclk.sms.twilio.source");
 
@@ -38,7 +39,7 @@ function createSmsRecipientsTable() {
         mobileSubscribers.push(recipient.number);
     }
     if (count > 0) {
-        log:printInfo("Loaded " + count.toString() + " SMS recipients from database");
+        log:printInfo("Loaded " + count.toString() + " previous SMS recipients from database");
     }
 }
 
@@ -56,11 +57,9 @@ function sendSMS(string electionCode, string resultCode) {
             continue;
         }
         var response = twilioClient->sendSms(sourceMobile, targetMobile, message);
-        if response is  twilio:SmsResponse {
-            log:printInfo("Successfully delivered - " + targetMobile);
-        } else {
-            log:printError(electionCode +  "/" + division + " message sending failed - " + targetMobile +
-                           " due to error:" + <string> response.detail()?.message);
+        if response is error {
+            log:printInfo(electionCode +  "/" + division + " message sending failed \'" + targetMobile +
+                           "\' due to error:" + <string> response.detail()?.message);
         }
     }
 }
@@ -73,7 +72,7 @@ function getDivision(string resultCode) returns string|error {
     return divisionCodeMap.get(resultCode);
 }
 
-# Sanitize and validate local mobile no into the proper format.(+94771234567).
+# Validate and sanitize local mobile number into the proper format.(+94771234567).
 #
 # + mobileNo - User provided mobile number
 # + return - Formatted mobile number or the error
@@ -88,31 +87,28 @@ function validate(string mobileNo) returns string|error {
         return err;
     }
 
-    if (mobile.startsWith("0")) {
+    if (mobile.startsWith("0") && mobile.length() == 10) {
         return "+94" + mobile.substring(1);
     }
-    if (mobile.startsWith("94")) {
+    if (mobile.startsWith("94") && mobile.length() == 11) {
         return "+" + mobile;
     }
-
-    if (mobile.length() != 12) {
-        error err = error(ERROR_REASON, message = "Invalid mobile number. Resend the request as follows: If the " +
-                                        "mobile no is 0771234567, send request as \"/sms/94771234567\". ");
-        return err;
-    }
-    return mobile;
+    // Allow only the local mobile numbers to register via public API. International number are avoided.
+    error err = error(ERROR_REASON, message = "Invalid mobile number. Resend the request as follows: If the " +
+                                    "mobile no is 0771234567, send request as \"/sms/94771234567\". ");
+    return err;
 }
 
-# Register recipient in the SMS publisher for SMS notification.
+# Register recipient in the mobileSubscribers list and persist in the smsRecipients db table.
 #
 # + mobileNo - The recipient number
-# + return - The status of registration
+# + return - The status of registration or operation error
 function registerAsSMSRecipient(string mobileNo) returns string|error {
 
     foreach string recipient in mobileSubscribers {
         if (recipient == mobileNo) {
-            log:printError("Registration failed: " + mobileNo + " is already registered.");
-            error err = error(ERROR_REASON, message = "Registration failed: " + mobileNo + " is already registered.");
+            log:printError("Registration failed: " + mobileNo + " is already registered");
+            error err = error(ERROR_REASON, message = "Registration failed: " + mobileNo + " is already registered");
             return err;
         }
     }
@@ -130,10 +126,10 @@ function registerAsSMSRecipient(string mobileNo) returns string|error {
     return "Successfully registered: " + mobileNo;
 }
 
-# Unregister recipient from the SMS publisher.
+# Unregister recipient from the mobileSubscribers array and remove from the smsRecipients db table.
 #
 # + mobileNo - The recipient number
-# + return - The status of deregistration
+# + return - The status of deregistration or operation error
 function unregisterAsSMSRecipient(string mobileNo) returns string|error {
 
     // Remove persisted recipient number from database
@@ -158,7 +154,7 @@ function unregisterAsSMSRecipient(string mobileNo) returns string|error {
         log:printInfo("Successfully unregistered: " + mobileNo);
         return "Successfully unregistered: " + mobileNo;
     }
-    log:printError("Failed to remove recipient from in-memory map: " + mobileNo);
-    error err = error(ERROR_REASON, message = "Unregistration failed: " + mobileNo + " is already unregistered.");
+    log:printError("Unregistration failed: " + mobileNo + " is not registered");
+    error err = error(ERROR_REASON, message = "Unregistration failed: " + mobileNo + " is not registered");
     return err;
 }

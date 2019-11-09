@@ -112,7 +112,7 @@ service mediaWebsite on mediaListener {
 
     @http:ResourceConfig {
         path: "/sms/{mobileNo}",
-        methods: ["GET", "PUT"]
+        methods: ["GET"]
     }
     resource function smsRegistration (http:Caller caller, http:Request req, string mobileNo) returns error? {
         string|error validatedNo = validate(mobileNo);
@@ -128,7 +128,7 @@ service mediaWebsite on mediaListener {
         if status is error {
             http:Response res = new;
             res.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
-            res.setPayload(<@untainted> <string> status.detail()?.message);
+            res.setPayload(<string> status.detail()?.message);
             return caller->respond(res);
         }
         return caller->ok(<string> status);
