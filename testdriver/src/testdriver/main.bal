@@ -26,7 +26,7 @@ public function main(string url = "http://resultstest.ecdev.opensource.lk:8181",
 }
 
 function loadNuwanData () returns error? {
-    map<json>[] data = <@untainted map<json>[]> check readJson("data/elections.lk.presidential.2015.json");
+    json[] data = <@untainted json[]> check readJson("data/elections.lk.presidential.2015.json");
 
     foreach json j in data { // can't use data.forEach because I want to use check in the body
         // note: sequence # will be reset by the saving logic of the distributor
@@ -34,7 +34,7 @@ function loadNuwanData () returns error? {
         // save it in the right place
         int districtCode = check 'int:fromString(j.ed_code.toString());
         string divisionCode = j.pd_code.toString().substring(2);
-        results[districtCode-1][divisionCode] = j;
-        resultsByPD.push(j);
+        results[districtCode-1][divisionCode] = <map<json>>j;
+        resultsByPD.push(<map<json>>j);
     }
 }
