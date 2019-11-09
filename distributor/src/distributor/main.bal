@@ -4,7 +4,7 @@ import ballerinax/java.jdbc;
 
 import maryamzi/websub.hub.mysqlstore;
 
-websub:WebSubHub? hub = ();
+websub:Hub? hub = ();
 
 public function main() returns error? {
     // create database connection to persist subscribers
@@ -29,7 +29,8 @@ public function main() returns error? {
     // start the hub
     var hubStartUpResult =
         websub:startHub(<@untainted> mediaListener, // weird BUG in ballerina compiler
-                        {
+                        "/websub", "/hub",
+                        hubConfiguration = {
                             hubPersistenceStore: persistenceStore,
                             clientConfig: {
                                 // TODO: finalize
@@ -53,7 +54,7 @@ public function main() returns error? {
 
     if hubStartUpResult is websub:HubStartedUpError {
         return error(ERROR_REASON, message = hubStartUpResult.message);
-    } else {
+    } else if (hubStartUpResult is websub:Hub) {
         hub = hubStartUpResult;
         var result = hubStartUpResult.registerTopic(JSON_RESULTS_TOPIC);
         if (result is error) {

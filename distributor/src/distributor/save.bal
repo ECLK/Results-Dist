@@ -49,7 +49,7 @@ type DataResult record {|
 # Create database and set up at module init time and load any data in there to
 # memory for the website to show. Panic if there's any issue.
 function __init() {
-    // create tables
+    // create tables for results
     _ = checkpanic dbClient->update(CREATE_RESULTS_TABLE);
 
     // load any results in there to our cache - the order will match the autoincrement and will be the sequence #
@@ -57,7 +57,7 @@ function __init() {
     int count = 0;
     while (ret.hasNext()) {
         DataResult dr = <DataResult> ret.getNext();
-        count = count + 1;
+        count += 1;
 
         // read json string and convert to json
         io:StringReader sr = new(dr.jsonResult, encoding = "UTF-8");
@@ -76,6 +76,9 @@ function __init() {
     if (count > 0) {
         log:printInfo("Loaded " + count.toString() + " previous results from database");
     }
+
+    // create table for sms recipients
+    createSmsRecipientsTable();
 }
 
 # Save an incoming result to make sure we don't lose it after getting it
