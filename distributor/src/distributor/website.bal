@@ -112,30 +112,25 @@ service mediaWebsite on mediaListener {
 
     @http:ResourceConfig {
         path: "/sms/{mobileNo}",
-        methods: ["GET"]
+        methods: ["GET", "PUT"]
     }
     resource function smsRegistration (http:Caller caller, http:Request req, string mobileNo) returns error? {
-        string mobile = sanitize(mobileNo);
-
-        if (mobile.length() != 11) {
+        string|error validatedNo = validate(mobileNo);
+        if validatedNo is error {
             http:Response res = new;
             res.statusCode = http:STATUS_BAD_REQUEST;
-            res.setPayload("Invalid mobile number. Resend the request as follows: If your mobile no is 0771234567," +
-                                " then send GET request to \"/sms/94771234567\"");
+            res.setPayload(<string> validatedNo.detail()?.message);
             return caller->respond(res);
         }
 
-        string|error status = "";
-        lock {
-            status = registerAsSMSRecipient("tel:" + mobile);
-        }
-        if (status is error) {
+        // If the load is high, we might need to sync following db/map update
+        string|error status = registerAsSMSRecipient(<string> validatedNo);
+        if status is error {
             http:Response res = new;
             res.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
-            res.setPayload(<string> status.detail()?.message);
+            res.setPayload(<@untainted> <string> status.detail()?.message);
             return caller->respond(res);
         }
-
         return caller->ok(<string> status);
     }
 
@@ -144,27 +139,22 @@ service mediaWebsite on mediaListener {
         methods: ["DELETE"]
     }
     resource function smsDeregistration (http:Caller caller, http:Request req, string mobileNo) returns error? {
-        string mobile = sanitize(mobileNo);
-
-        if (mobile.length() != 11) {
+        string|error validatedNo = validate(mobileNo);
+        if validatedNo is error {
             http:Response res = new;
             res.statusCode = http:STATUS_BAD_REQUEST;
-            res.setPayload("Invalid mobile number. Resend the request as follows: If your mobile no is 0771234567," +
-                                " then send DELETE request to \"/sms/94771234567\"");
+            res.setPayload(<string> validatedNo.detail()?.message);
             return caller->respond(res);
         }
 
-        string|error status = "";
-        lock {
-            status = unregisterAsSMSRecipient("tel:" + mobile);
-        }
-        if (status is error) {
+        // If the load is high, we might need to sync following db/map update
+        string|error status = unregisterAsSMSRecipient(<string> validatedNo);
+        if status is error {
             http:Response res = new;
             res.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
             res.setPayload(<string> status.detail()?.message);
             return caller->respond(res);
         }
-
         return caller->ok(<string> status);
     }
 }

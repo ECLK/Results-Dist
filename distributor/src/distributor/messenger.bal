@@ -1,12 +1,9 @@
-//import ballerina/config;
-import ballerina/io;
-import ballerina/http;
+import ballerina/config;
 import ballerina/log;
 import ballerina/stringutils;
 
-import laf/ideamart;
+import wso2/twilio;
 
-const SOURCE_ADDRESS = "tel:947778882543";
 const INVALID_NO = "Invalid no";
 const string CREATE_RECIPIENT_TABLE = "CREATE TABLE IF NOT EXISTS smsRecipients (" +
                                     "    mobileNo VARCHAR(50) NOT NULL," +
@@ -15,36 +12,16 @@ const INSERT_RECIPIENT = "INSERT INTO smsRecipients (mobileNo) VALUES (?)";
 const DELETE_RECIPIENT = "DELETE FROM smsRecipients WHERE mobileNo = ?";
 const SELECT_RECIPIENT_DATA = "SELECT mobileNo FROM smsRecipients";
 
+twilio:TwilioConfiguration twilioConfig = {
+    accountSId: config:getAsString("eclk.sms.twilio.accountSid"),
+    authToken: config:getAsString("eclk.sms.twilio.authToken"),
+    xAuthyKey: config:getAsString("eclk.sms.twilio.authyApiKey")
+};
 
+twilio:Client twilioClient = new(twilioConfig);
 // Contains registered sms recipients. Values are populated in every service init and recipient registration
 string[] mobileSubscribers = [];
-map<string> resultCodeMap = { "01A": "Colombo-North", "01B": "Colombo-Central", "01C":"BORELLA", "01D": "COLOMBO-EAST" };
-
-type Recipient record {|
-    string number;
-|};
-
-http:ClientConfiguration clientEPConfig = {
-    secureSocket: {
-        trustStore: {
-            path: "${ballerina.home}/bre/security/ballerinaTruststore.p12",
-            password: "ballerina"
-        },
-        protocol: {
-            name: "TLS"
-        },
-        ciphers: ["TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA"]
-    }
-};
-
-ideamart:IdeaMartConfiguration ideaMartConfig = {
-    applicationId : config:getAsString("eclk.sms.appId", "APP_000001"),
-    password : config:getAsString("eclk.sms.password", "password"),
-    baseURL : config:getAsString("eclk.sms.baseURL", "http://localhost:7000"),
-    clientConfig : clientEPConfig
-};
-
-ideamart:Client ideaMartClient = new(ideaMartConfig);
+string sourceMobile = config:getAsString("eclk.sms.twilio.source");
 
 # Create table with the SMS recipients and set up at module init time and load any data in there to
 # memory to the mobileSubscribers. Panic if there's any issue.
@@ -73,27 +50,17 @@ function sendSMS(string electionCode, string resultCode) {
     string|error retrievedData = getDivision(resultCode);
     string division = retrievedData is string ? retrievedData : resultCode;
     string message  = "Results will be releasing soon for " + electionCode +  "/" + division;
-    io:println(message);
 
-    foreach string mobileNo in mobileSubscribers {
-        if (mobileNo == INVALID_NO) {
+    foreach string targetMobile in mobileSubscribers {
+        if (targetMobile == INVALID_NO) {
             continue;
         }
-
-        var response = ideaMartClient->sendSMS([mobileNo], message, SOURCE_ADDRESS);
-        if (response is error) {
-            log:printError(electionCode +  "/" + division + " message has not delivered to " + mobileNo +
-                                " due to error:" + <string> response.detail()?.message);
-        }
-
-        string statusCode = <string> response;
-        if (statusCode == "E1318" || statusCode == "E1603") { // retry once for retryable status codes
-            var secondResponse = ideaMartClient->sendSMS([mobileNo], message, SOURCE_ADDRESS);
-            //TODO handle error
-        } else if (statusCode == "S1000") {
-            log:printInfo("Successfully delivered to " + mobileNo);
+        var response = twilioClient->sendSms(sourceMobile, targetMobile, message);
+        if response is  twilio:SmsResponse {
+            log:printInfo("Successfully delivered - " + targetMobile);
         } else {
-            log:printError("Message not delivered to " + mobileNo + " due to error:" + statusCode);
+            log:printError(electionCode +  "/" + division + " message sending failed - " + targetMobile +
+                           " due to error:" + <string> response.detail()?.message);
         }
     }
 }
@@ -103,20 +70,35 @@ function sendSMS(string electionCode, string resultCode) {
 # + resultCode - The predefined code for a released result
 # + return - The division name if resultCode is valid, otherwise error
 function getDivision(string resultCode) returns string|error {
-    return resultCodeMap.get(resultCode);
+    return divisionCodeMap.get(resultCode);
 }
 
-# Sanitize mobile no into valid format.(94771234567).
+# Sanitize and validate local mobile no into the proper format.(+94771234567).
 #
 # + mobileNo - User provided mobile number
-# + return - Formatted mobile number
-function sanitize(string mobileNo) returns string {
+# + return - Formatted mobile number or the error
+function validate(string mobileNo) returns string|error {
     string mobile = <@untained> mobileNo.trim();
-    if (mobile.startsWith("0")) { // Do we allow only local mobile nos?
-        return stringutils:replace(mobile, "0","94");
+
+    boolean number = stringutils:matches(mobile, "^[0-9]*$");
+
+    if !number {
+        error err = error(ERROR_REASON, message = "Invalid mobile number. Given mobile number contains non numeric " +
+                                                  "characters: " + mobile);
+        return err;
     }
-    if (mobile.startsWith("+94")) {
-        return stringutils:replace(mobile, "+94","94");
+
+    if (mobile.startsWith("0")) {
+        return "+94" + mobile.substring(1);
+    }
+    if (mobile.startsWith("94")) {
+        return "+" + mobile;
+    }
+
+    if (mobile.length() != 12) {
+        error err = error(ERROR_REASON, message = "Invalid mobile number. Resend the request as follows: If the " +
+                                        "mobile no is 0771234567, send request as \"/sms/94771234567\". ");
+        return err;
     }
     return mobile;
 }
@@ -135,9 +117,9 @@ function registerAsSMSRecipient(string mobileNo) returns string|error {
         }
     }
 
-    // Persist recipient no in database
+    // Persist recipient number in database
     var status = dbClient->update(INSERT_RECIPIENT, mobileNo);
-    if (status is error) {
+    if status is error {
         log:printError("Failed to persist recipient no in database: " + status.toString());
         return status;
     }
@@ -154,23 +136,29 @@ function registerAsSMSRecipient(string mobileNo) returns string|error {
 # + return - The status of deregistration
 function unregisterAsSMSRecipient(string mobileNo) returns string|error {
 
-    // Persist recipient no in database
+    // Remove persisted recipient number from database
     var status = dbClient->update(DELETE_RECIPIENT, mobileNo);
-    if (status is error) {
+    if status is error {
         log:printError("Failed to remove recipient from the database: " + status.toString());
         return status;
     }
 
     int index = 0;
+    boolean found = false;
     foreach string recipient in mobileSubscribers {
         if (recipient == mobileNo) {
+            found = true;
             break;
         }
-        index = index + 1;
+        index += 1;
     }
     // Assign special string to particular array element as to remove the recipient from the mobileSubscribers array
-    mobileSubscribers[index] = INVALID_NO;
-
-    log:printInfo("Successfully unregistered: " + mobileNo);
-    return "Successfully unregistered: " + mobileNo;
+    if found {
+        mobileSubscribers[index] = INVALID_NO;
+        log:printInfo("Successfully unregistered: " + mobileNo);
+        return "Successfully unregistered: " + mobileNo;
+    }
+    log:printError("Failed to remove recipient from in-memory map: " + mobileNo);
+    error err = error(ERROR_REASON, message = "Unregistration failed: " + mobileNo + " is already unregistered.");
+    return err;
 }

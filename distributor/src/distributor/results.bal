@@ -1,3 +1,4 @@
+import ballerina/config;
 import ballerina/http;
 import ballerina/log;
 import ballerina/mime;
@@ -103,9 +104,11 @@ function publishResultData(Result result, string electionCode, string resultCode
     worker smsWorker {
         // Send SMS to all subscribers.
         // TODO - should we ensure SMS is sent first?
-        if (config:getAsBoolean("eclk.sms.enable")) {
+        if (config:getAsBoolean("eclk.sms.twilio.enable")) {
             sendSMS(electionCode, resultCode);
             log:printInfo("Completed SMS delivery");
+        } else {
+            log:printError("SMS publisher is disabled. Enable using 'eclk.sms.twilio.enable' config");
         }
     }
 

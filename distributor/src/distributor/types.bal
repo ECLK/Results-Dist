@@ -65,3 +65,8 @@ type Result record {|
     string? imageMediaType;
     byte[]? imageData;
 |};
+
+// SMS recipient record
+type Recipient record {|
+    string number;
+|};
