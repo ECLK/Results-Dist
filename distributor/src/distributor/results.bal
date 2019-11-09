@@ -32,14 +32,17 @@ service receiveResults on resultsListener {
         map<json> jsonobj = check trap <map<json>> jsonResult;
 
         // make sure its a good result
-        Result result = <@untainted> check convertJsonToResult (electionCode, resultCode, jsonobj);
+        //Result result = <@untainted> check convertJsonToResult (electionCode, resultCode, jsonobj);
+        // TODO remove this
+        Result result = {sequenceNo : 123, election : "pres", code : "11A", 'type : "json", jsonResult : {a:"b"},
+        imageMediaType : (), imageData : ()};
         log:printInfo("Result data received for " + electionCode +  "/" + resultCode);
 
         // store the result in the DB against the resultCode and assign it a sequence #
         check saveResult(result);
     
         // publish the received result
-        publishResultData(result);
+        publishResultData(result, electionCode, resultCode);
 
         // respond accepted
         return caller->accepted();
@@ -96,19 +99,23 @@ function convertJsonToResult (string electionCode, string resultCode, map<json> 
 # - send SMSs to all subscribers
 # - update the website with the result
 # - deliver the result data to all subscribers
-function publishResultData(Result result) {
-        worker smsWorker {
-            // Send SMS to all subscribers.
-            // TODO - should we ensure SMS is sent first?
+function publishResultData(Result result, string electionCode, string resultCode) {
+    worker smsWorker {
+        // Send SMS to all subscribers.
+        // TODO - should we ensure SMS is sent first?
+        if (config:getAsBoolean("eclk.sms.enable")) {
+            sendSMS(electionCode, resultCode);
+            log:printInfo("Completed SMS delivery");
         }
+    }
 
-        worker jsonWorker returns error? {
-            websub:WebSubHub wh = <websub:WebSubHub> hub; // safe .. working around type guard limitation
+    worker jsonWorker returns error? {
+        websub:Hub wh = <websub:Hub> hub; // safe .. working around type guard limitation
 
-            // push it out
-            var r = wh.publishUpdate(JSON_RESULTS_TOPIC, result.jsonResult, mime:APPLICATION_JSON);
-            if r is error {
-                log:printError("Error publishing update: ", r);
-            }
+        // push it out
+        var r = wh.publishUpdate(JSON_RESULTS_TOPIC, result.jsonResult, mime:APPLICATION_JSON);
+        if r is error {
+            log:printError("Error publishing update: ", r);
         }
+    }
 }
