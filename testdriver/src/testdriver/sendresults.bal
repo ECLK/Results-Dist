@@ -105,16 +105,22 @@ function publishOneSet () returns error? {
         // delay a bit
         runtime:sleep(sleeptime);
     }
-    io:println("Published ", sentCount, " results.");
+
+    io:println("Sending national results");
+    check sendResult (rc, electionCode, PRESIDENTIAL_RESULT, "FINAL", check createNationalResult()); // "FINAL" is unused
+    io:println("Published ", sentCount+1, " results.");
     alreadyRunning = false;
     runCount = runCount + 1;
 }
 
-type DistSummary record {
+type Summary record {
     int valid;
     int rejected;
     int polled;
     int electors;
+    string percent_valid;
+    string percent_rejected;
+    string percent_polled;
 }; 
 
 function createEDResult (int edCode) returns map<json> | error {
@@ -122,11 +128,14 @@ function createEDResult (int edCode) returns map<json> | error {
     string ed_code = "";
     string ed_name = "";
     map<json>[] distByParty = []; // array of json value each for a single party results for the district
-    DistSummary distSummary = { // aggregate results (not by_party)
+    Summary distSummary = { // aggregate results (not by_party)
         valid: 0, 
         rejected: 0, 
         polled: 0, 
-        electors: 0
+        electors: 0,
+        percent_valid: "",
+        percent_rejected: "",
+        percent_polled: ""
     };
     int[] votes_by_party = [];
     int pdCount = 0;
@@ -155,7 +164,15 @@ function createEDResult (int edCode) returns map<json> | error {
         }
 
         // add up the summary results
-        DistSummary summary = check DistSummary.constructFrom(check pdResult.summary);
+        Summary summary = {
+            valid: <int>pdResult.summary.valid,
+            rejected: <int>pdResult.summary.rejected,
+            polled: <int>pdResult.summary.polled,
+            electors: <int>pdResult.summary.electors,
+            percent_polled: "",
+            percent_rejected: "",
+            percent_valid: ""
+        };
         distSummary.valid += summary.valid;
         distSummary.rejected += summary.rejected;
         distSummary.polled += summary.polled;
@@ -170,6 +187,11 @@ function createEDResult (int edCode) returns map<json> | error {
         distByParty[i]["percentage"] = io:sprintf ("%.2f", votes_by_party[i]*100.0/distSummary.valid);
     }
 
+    // set the percentages in the summary
+    distSummary.percent_valid = io:sprintf("%.2f", distSummary.valid*100.0/distSummary.polled);
+    distSummary.percent_rejected = io:sprintf("%.2f", distSummary.rejected*100.0/distSummary.polled);
+    distSummary.percent_polled = io:sprintf("%.2f", distSummary.polled*100.0/distSummary.electors);
+
     return {
         'type: "PRESIDENTIAL-FIRST", 
         timestamp: check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ"),
@@ -178,6 +200,79 @@ function createEDResult (int edCode) returns map<json> | error {
         ed_name: ed_name,
         by_party: distByParty,
         summary: check json.constructFrom(distSummary)
+    };
+}
+
+function createNationalResult () returns map<json> | error {
+    map<json>[] natByParty = []; // array of json value each for a single party results for the district
+    Summary natSummary = { // aggregate results (not by_party)
+        valid: 0, 
+        rejected: 0, 
+        polled: 0, 
+        electors: 0,
+        percent_valid: "",
+        percent_rejected: "",
+        percent_polled: ""
+    };
+    int[] votes_by_party = [];
+    int pdCount = 0;
+    foreach map<json> pdResult in resultsByPD {
+        json[] by_party = <json[]> pdResult.by_party;
+        int nparties = by_party.length();
+        foreach int i in 0 ..< nparties {
+            if pdCount == 0 { // at the first PD of the country
+                // init vote count to zero for i-th party at first PD in district
+                votes_by_party[i] = 0;
+
+                // set up 
+                natByParty[i] = {};
+                natByParty[i]["party_code"] = check by_party[i].party_code;
+                natByParty[i]["party_name"] = "Party " + <string>natByParty[i]["party_code"]; // no party_name in test data
+                natByParty[i]["candidate"] = "Candidate " + <string>natByParty[i]["party_code"]; // no candidate name in test data
+            } else if pdCount > 1 && natByParty[i].party_code != by_party[i].party_code {
+                // all parties are supposed to be in the same order in each PD
+                panic error("Unexpected problem: party codes are not in the same order across all PDs of the country " +
+                            pdResult.ed_name.toString() + "/" + pdResult.pd_name.toString());
+            }
+            // add up votes and do %ge later as totals are not yet known
+            votes_by_party[i] = votes_by_party[i] + <int>by_party[i].votes;            
+        }
+
+        // add up the summary results
+        Summary summary = {
+            valid: <int>pdResult.summary.valid,
+            rejected: <int>pdResult.summary.rejected,
+            polled: <int>pdResult.summary.polled,
+            electors: <int>pdResult.summary.electors,
+            percent_polled: "",
+            percent_rejected: "",
+            percent_valid: ""
+        };
+        natSummary.valid += summary.valid;
+        natSummary.rejected += summary.rejected;
+        natSummary.polled += summary.polled;
+        natSummary.electors += summary.electors;
+
+        pdCount += 1;
+    }
+
+    // put the vote total & percentages in the result json
+    foreach int i in 0 ..< votes_by_party.length() {
+        natByParty[i]["votes"] = votes_by_party[i];
+        natByParty[i]["percentage"] = io:sprintf ("%.2f", votes_by_party[i]*100.0/natSummary.valid);
+    }
+
+    // set the percentages in the summary
+    natSummary.percent_valid = io:sprintf("%.2f", natSummary.valid*100.0/natSummary.polled);
+    natSummary.percent_rejected = io:sprintf("%.2f", natSummary.rejected*100.0/natSummary.polled);
+    natSummary.percent_polled = io:sprintf("%.2f", natSummary.polled*100.0/natSummary.electors);
+
+    return {
+        'type: "PRESIDENTIAL-FIRST", 
+        timestamp: check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ"),
+        level: "NATIONAL-FINAL", 
+        by_party: natByParty,
+        summary: check json.constructFrom(natSummary)
     };
 }
 
