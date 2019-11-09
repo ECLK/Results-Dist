@@ -63,7 +63,7 @@ service mediaWebsite on mediaListener {
         foreach Result r in resultsCache {
             if r.election == election && r?.sequenceNo == seqNo {
                 if format == "json" {
-                    return caller->ok (r.jsonResult);
+                    return caller->ok(r.jsonResult);
                 } else {
                     // put the result json object into a wrapper object to get a parent element
                     // NOTE: this code must match the logic in the subscriber saving code as
@@ -99,7 +99,7 @@ service mediaWebsite on mediaListener {
                     hr.setContentType(imageMediaType);
                     return caller->ok(hr);
                 } else {
-                    return caller->ok ("No official release available (yet)");
+                    return caller->ok("No official release available (yet)");
                 }
             }
         }
@@ -108,6 +108,64 @@ service mediaWebsite on mediaListener {
         http:Response res = new;
         res.statusCode = http:STATUS_NOT_FOUND;
         return caller->respond(res);
+    }
+
+    @http:ResourceConfig {
+        path: "/sms/{mobileNo}",
+        methods: ["GET"]
+    }
+    resource function smsRegistration (http:Caller caller, http:Request req, string mobileNo) returns error? {
+        string mobile = sanitize(mobileNo);
+
+        if (mobile.length() != 11) {
+            http:Response res = new;
+            res.statusCode = http:STATUS_BAD_REQUEST;
+            res.setPayload("Invalid mobile number. Resend the request as follows: If your mobile no is 0771234567," +
+                                " then send GET request to \"/sms/94771234567\"");
+            return caller->respond(res);
+        }
+
+        string|error status = "";
+        lock {
+            status = registerAsSMSRecipient("tel:" + mobile);
+        }
+        if (status is error) {
+            http:Response res = new;
+            res.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
+            res.setPayload(<string> status.detail()?.message);
+            return caller->respond(res);
+        }
+
+        return caller->ok(<string> status);
+    }
+
+    @http:ResourceConfig {
+        path: "/sms/{mobileNo}",
+        methods: ["DELETE"]
+    }
+    resource function smsDeregistration (http:Caller caller, http:Request req, string mobileNo) returns error? {
+        string mobile = sanitize(mobileNo);
+
+        if (mobile.length() != 11) {
+            http:Response res = new;
+            res.statusCode = http:STATUS_BAD_REQUEST;
+            res.setPayload("Invalid mobile number. Resend the request as follows: If your mobile no is 0771234567," +
+                                " then send DELETE request to \"/sms/94771234567\"");
+            return caller->respond(res);
+        }
+
+        string|error status = "";
+        lock {
+            status = unregisterAsSMSRecipient("tel:" + mobile);
+        }
+        if (status is error) {
+            http:Response res = new;
+            res.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
+            res.setPayload(<string> status.detail()?.message);
+            return caller->respond(res);
+        }
+
+        return caller->ok(<string> status);
     }
 }
 
