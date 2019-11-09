@@ -37,6 +37,14 @@ const UPDATE_CALLBACK = "UPDATE callbacks SET callback = ? WHERE username = ?";
 const SELECT_CALLBACKS = "SELECT * FROM callbacks";
 const DROP_CALLBACKS_TABLE = "DROP TABLE callbacks";
 
+const string CREATE_RECIPIENT_TABLE = "CREATE TABLE IF NOT EXISTS smsRecipients (" +
+                                    "    mobileNo VARCHAR(50) NOT NULL," +
+                                    "    PRIMARY KEY (mobileNo))";
+const INSERT_RECIPIENT = "INSERT INTO smsRecipients (mobileNo) VALUES (?)";
+const DELETE_RECIPIENT = "DELETE FROM smsRecipients WHERE mobileNo = ?";
+const SELECT_RECIPIENT_DATA = "SELECT mobileNo FROM smsRecipients";
+const DROP_RECIPIENT_TABLE = "DROP TABLE smsRecipients";
+
 jdbc:Client dbClient = new ({
     url: config:getAsString("eclk.hub.db.url"),
     username: config:getAsString("eclk.hub.db.username"),
@@ -74,6 +82,7 @@ function __init() {
     // create tables for results
     _ = checkpanic dbClient->update(CREATE_RESULTS_TABLE);
     _ = checkpanic dbClient->update(CREATE_CALLBACKS_TABLE);
+    _ = checkpanic dbClient->update(CREATE_RECIPIENT_TABLE);
 
     // load any results in there to our cache - the order will match the autoincrement and will be the sequence #
     table<DataResult> ret = checkpanic dbClient->select(SELECT_RESULTS_DATA, DataResult);
@@ -121,8 +130,17 @@ function __init() {
         log:printInfo("Loaded " + count.toString() + " registered callback(s) from database");
     }
 
-    // create table for sms recipients
-    createSmsRecipientsTable();
+    // load sms recipients to in-memory array
+    table<Recipient> retrievedNos = checkpanic dbClient->select(SELECT_RECIPIENT_DATA, Recipient);
+    count = 0;
+    while (retrievedNos.hasNext()) {
+        Recipient recipient = <Recipient> retrievedNos.getNext();
+        mobileSubscribers.push(recipient.number);
+        count += 1;
+    }
+    if (count > 0) {
+        log:printInfo("Loaded " + count.toString() + " previous SMS recipient(s) from database");
+    }
 }
 
 # Save an incoming result to make sure we don't lose it after getting it
@@ -202,6 +220,7 @@ function updateUserCallback(string username, string callback) {
 function resetResults() returns error? {
     _ = check dbClient->update(DROP_RESULTS_TABLE);
     _ = check dbClient->update(DROP_CALLBACKS_TABLE);
+    _ = check dbClient->update(DROP_RECIPIENT_TABLE);
     __init();
 }
 

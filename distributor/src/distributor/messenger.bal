@@ -1,16 +1,9 @@
 import ballerina/config;
 import ballerina/log;
 import ballerina/stringutils;
-
 import wso2/twilio;
 
 const INVALID_NO = "Invalid no";
-const string CREATE_RECIPIENT_TABLE = "CREATE TABLE IF NOT EXISTS smsRecipients (" +
-                                    "    mobileNo VARCHAR(50) NOT NULL," +
-                                    "    PRIMARY KEY (mobileNo))";
-const INSERT_RECIPIENT = "INSERT INTO smsRecipients (mobileNo) VALUES (?)";
-const DELETE_RECIPIENT = "DELETE FROM smsRecipients WHERE mobileNo = ?";
-const SELECT_RECIPIENT_DATA = "SELECT mobileNo FROM smsRecipients";
 
 twilio:TwilioConfiguration twilioConfig = {
     accountSId: config:getAsString("eclk.sms.twilio.accountSid"),
@@ -24,33 +17,14 @@ twilio:Client twilioClient = new(twilioConfig);
 string[] mobileSubscribers = [];
 string sourceMobile = config:getAsString("eclk.sms.twilio.source");
 
-# Create table with the SMS recipients and set up at module init time and load any data in there to
-# memory to the mobileSubscribers. Panic if there's any issue.
-function createSmsRecipientsTable() {
-
-    _ = checkpanic dbClient->update(CREATE_RECIPIENT_TABLE);
-
-    // load recipients to in-memory array
-    table<Recipient> retrievedNos = checkpanic dbClient->select(SELECT_RECIPIENT_DATA, Recipient);
-    int count = 0;
-    while (retrievedNos.hasNext()) {
-        Recipient recipient = <Recipient> retrievedNos.getNext();
-        count += 1;
-        mobileSubscribers.push(recipient.number);
-    }
-    if (count > 0) {
-        log:printInfo("Loaded " + count.toString() + " previous SMS recipients from database");
-    }
-}
-
 # Send SMS notification to all the subscribers.
 #
 # + electionCode - The respective code that represents the type of election
 # + resultCode - The predefined code for a released result
 function sendSMS(string electionCode, string resultCode) {
-    string|error retrievedData = getDivision(resultCode);
+    string? retrievedData = getDivision(resultCode);
     string division = retrievedData is string ? retrievedData : resultCode;
-    string message  = "Results will be releasing soon for " + electionCode +  "/" + division;
+    string message  = "Results will be releasing soon for " + electionCode +  "/" + division + "(" + resultCode + ")";
 
     foreach string targetMobile in mobileSubscribers {
         if (targetMobile == INVALID_NO) {
@@ -58,7 +32,7 @@ function sendSMS(string electionCode, string resultCode) {
         }
         var response = twilioClient->sendSms(sourceMobile, targetMobile, message);
         if response is error {
-            log:printInfo(electionCode +  "/" + division + " message sending failed \'" + targetMobile +
+            log:printError(electionCode +  "/" + division + " message sending failed \'" + targetMobile +
                            "\' due to error:" + <string> response.detail()?.message);
         }
     }
@@ -67,9 +41,9 @@ function sendSMS(string electionCode, string resultCode) {
 # Get the respective division name for a given resultCode.
 #
 # + resultCode - The predefined code for a released result
-# + return - The division name if resultCode is valid, otherwise error
-function getDivision(string resultCode) returns string|error {
-    return divisionCodeMap.get(resultCode);
+# + return - The division name if resultCode is valid, otherwise nil
+function getDivision(string resultCode) returns string? {
+    return divisionCodeMap.hasKey(resultCode) ? divisionCodeMap.get(resultCode) : ();
 }
 
 # Validate and sanitize local mobile number into the proper format.(+94771234567).
@@ -107,7 +81,6 @@ function registerAsSMSRecipient(string mobileNo) returns string|error {
 
     foreach string recipient in mobileSubscribers {
         if (recipient == mobileNo) {
-            log:printError("Registration failed: " + mobileNo + " is already registered");
             error err = error(ERROR_REASON, message = "Registration failed: " + mobileNo + " is already registered");
             return err;
         }
@@ -122,7 +95,6 @@ function registerAsSMSRecipient(string mobileNo) returns string|error {
     // Update the mobileSubscribers array
     mobileSubscribers.push(mobileNo);
 
-    log:printInfo("Successfully registered: " + mobileNo);
     return "Successfully registered: " + mobileNo;
 }
 
@@ -151,10 +123,8 @@ function unregisterAsSMSRecipient(string mobileNo) returns string|error {
     // Assign special string to particular array element as to remove the recipient from the mobileSubscribers array
     if found {
         mobileSubscribers[index] = INVALID_NO;
-        log:printInfo("Successfully unregistered: " + mobileNo);
         return "Successfully unregistered: " + mobileNo;
     }
-    log:printError("Unregistration failed: " + mobileNo + " is not registered");
     error err = error(ERROR_REASON, message = "Unregistration failed: " + mobileNo + " is not registered");
     return err;
 }

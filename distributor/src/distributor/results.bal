@@ -76,7 +76,7 @@ service receiveResults on resultsListener {
             // store the result in the DB against the resultCode and assign it a sequence #
             check saveResult(cumResult);
 
-            // publish the recumulative ceived result
+            // publish the received cumulative result
             publishResultData(cumResult);
         }
 
@@ -113,29 +113,33 @@ service receiveResults on resultsListener {
 # - send SMSs to all subscribers
 # - update the website with the result
 # - deliver the result data to all subscribers
-function publishResultData(Result result, string electionCode, string resultCode) {
+function publishResultData(Result result, string? electionCode = (), string? resultCode = ()) {
     worker smsWorker {
         // Send SMS to all subscribers.
         // TODO - should we ensure SMS is sent first?
+
+        // Avoid sending SMSs for cumulative result
+        if electionCode is () {
+            return;
+        }
         if (config:getAsBoolean("eclk.sms.twilio.enable")) {
-            sendSMS(electionCode, resultCode);
-            log:printInfo("Completed SMS delivery");
+            sendSMS(<string> electionCode, <string> resultCode);
         } else {
             log:printError("SMS publisher is disabled. Enable using 'eclk.sms.twilio.enable' config");
         }
     }
 
-        worker jsonWorker returns error? {
-            websub:Hub wh = <websub:Hub> hub; // safe .. working around type guard limitation
+    worker jsonWorker returns error? {
+        websub:Hub wh = <websub:Hub> hub; // safe .. working around type guard limitation
 
-            // push it out with the election code and the json result as the message
-            json resultAll = {
-                election_code : result.election,
-                result : result.jsonResult
-            };
-            var r = wh.publishUpdate(JSON_RESULTS_TOPIC, resultAll, mime:APPLICATION_JSON);
-            if r is error {
-                log:printError("Error publishing update: ", r);
-            }
+        // push it out with the election code and the json result as the message
+        json resultAll = {
+            election_code : result.election,
+            result : result.jsonResult
+        };
+        var r = wh.publishUpdate(JSON_RESULTS_TOPIC, resultAll, mime:APPLICATION_JSON);
+        if r is error {
+            log:printError("Error publishing update: ", r);
         }
+    }
 }
