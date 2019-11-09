@@ -26,6 +26,16 @@ const INSERT_RESULT = "INSERT INTO results (election, code, jsonResult, type) VA
 const UPDATE_RESULT_JSON = "UPDATE results SET jsonResult = ? WHERE sequenceNo = ?";
 const UPDATE_RESULT_IMAGE = "UPDATE results SET imageMediaType = ?, imageData = ? WHERE election = ?, code = ?";
 const SELECT_RESULTS_DATA = "SELECT sequenceNo, election, code, type, jsonResult, imageMediaType, imageData FROM results";
+const DROP_RESULTS_TABLE = "DROP TABLE results";
+
+const string CREATE_CALLBACKS_TABLE = "CREATE TABLE IF NOT EXISTS callbacks (" +
+                                    "    username VARCHAR(100) NOT NULL," +
+                                    "    callback VARCHAR(200) NOT NULL," +
+                                    "    PRIMARY KEY (username, callback))";
+const INSERT_CALLBACK = "INSERT INTO callbacks (username, callback) VALUES (?, ?)";
+const UPDATE_CALLBACK = "UPDATE callbacks SET callback = ? WHERE username = ?";
+const SELECT_CALLBACKS = "SELECT * FROM callbacks";
+const DROP_CALLBACKS_TABLE = "DROP TABLE callbacks";
 
 jdbc:Client dbClient = new ({
     url: config:getAsString("eclk.hub.db.url"),
@@ -46,15 +56,30 @@ type DataResult record {|
     byte[]? imageData;
 |};
 
+type UserCallback record {|
+    string username;
+    string callback;
+|};
+
+type CumulativeResult record {|
+    PartyResult[] by_party;
+    SummaryResult summary;
+|};
+
+CumulativeResult cumulativeRes = { by_party: [], summary: { valid: 0, rejected: 0, polled: 0, electors: 0}};
+
 # Create database and set up at module init time and load any data in there to
 # memory for the website to show. Panic if there's any issue.
 function __init() {
     // create tables for results
     _ = checkpanic dbClient->update(CREATE_RESULTS_TABLE);
+    _ = checkpanic dbClient->update(CREATE_CALLBACKS_TABLE);
 
     // load any results in there to our cache - the order will match the autoincrement and will be the sequence #
     table<DataResult> ret = checkpanic dbClient->select(SELECT_RESULTS_DATA, DataResult);
     int count = 0;
+    resultsCache = [];
+    cumulativeRes = { by_party: [], summary: { valid: 0, rejected: 0, polled: 0, electors: 0}};
     while (ret.hasNext()) {
         DataResult dr = <DataResult> ret.getNext();
         count += 1;
@@ -63,6 +88,7 @@ function __init() {
         io:StringReader sr = new(dr.jsonResult, encoding = "UTF-8");
         map<json> jm =  <map<json>> sr.readJson();
 
+        // put results in the cache
         resultsCache.push(<Result> {
             sequenceNo: dr.sequenceNo,
             election: dr.election,
@@ -72,9 +98,27 @@ function __init() {
             imageMediaType: dr.imageMediaType,
             imageData: dr.imageData
         });
+
+        // add up cumulative result from all the PD results to get current cumulative total
+        if jm.level == "POLLING-DIVISION" {
+            addToCumulative (<@untainted> jm);
+        }
     }
     if (count > 0) {
         log:printInfo("Loaded " + count.toString() + " previous results from database");
+        log:printInfo("Loaded cumulative result: " + cumulativeRes.toString());
+    }
+
+    // load username-callback data for already added subscriptions
+    table<UserCallback> callbackRet = checkpanic dbClient->select(SELECT_CALLBACKS, UserCallback);
+    count = 0;
+    while (callbackRet.hasNext()) {
+        UserCallback userCb = <UserCallback> callbackRet.getNext();
+        callbackMap[userCb.username] = <@untainted> userCb.callback;
+        count += 1;
+    }
+    if (count > 0) {
+        log:printInfo("Loaded " + count.toString() + " registered callback(s) from database");
     }
 
     // create table for sms recipients
@@ -98,6 +142,12 @@ function saveResult(Result result) returns error? {
     } else {
         log:printError("Unable to save result in database: " + r.toString());
         return r;
+    }
+
+    // add up cumulative result from all the PD results to get current cumulative total
+    if result.jsonResult.level == "POLLING-DIVISION" {
+        addToCumulative (result.jsonResult);
+        //log:printInfo("Current cumulative result: " + cumulativeRes.toString());
     }
 
     // update in memory cache of all results
@@ -128,5 +178,55 @@ function saveImage(string electionCode, string resultCode, string mediaType, byt
         // shouldn't happen .. but don't want to panic and die either
         log:printWarn("Updating result cache for new image for election=" + electionCode + ", code='" + resultCode +
                       "' failed as result was missing. WEIRD!");
+    }
+}
+
+# Save a subscription username-calback combination.
+function saveUserCallback(string username, string callback) {
+    var r = dbClient->update(INSERT_CALLBACK, username, callback);
+    if r is error {
+        log:printError("Unable to save username-callback in database: ", r);
+    }
+}
+
+# Update a subscription username-calback combination.
+function updateUserCallback(string username, string callback) {
+    var r = dbClient->update(UPDATE_CALLBACK, callback, username);
+    if r is error {
+        log:printError("Unable to update username-callback in database: ", r);
+    }
+}
+
+# Clean everything from the DB and the in-memory cache
+# + return - error if something goes wrong
+function resetResults() returns error? {
+    _ = check dbClient->update(DROP_RESULTS_TABLE);
+    _ = check dbClient->update(DROP_CALLBACKS_TABLE);
+    __init();
+}
+
+# Add a polling division level result to the cumulative total
+function addToCumulative (map<json> jm) {
+    json[] pr = <json[]> checkpanic jm.by_party;
+    boolean firstResult = cumulativeRes.summary.electors == 0;
+
+    // add the summary counts
+    cumulativeRes.summary.valid += <int>jm.summary.valid;
+    cumulativeRes.summary.rejected += <int>jm.summary.rejected;
+    cumulativeRes.summary.polled += <int>jm.summary.polled;
+    cumulativeRes.summary.electors += <int>jm.summary.electors;
+
+    // if first PD being added to cumulative then just copy the party results over
+    if firstResult {
+        pr.forEach (x => cumulativeRes.by_party.push(checkpanic PartyResult.constructFrom(x)));
+    } else {
+        // record by party votes from this result (copying name etc. is silly after first hit)
+        foreach int i in 0 ..< pr.length() {
+            cumulativeRes.by_party[i].party_code = <string>pr[i].party_code;
+            cumulativeRes.by_party[i].party_name = <string>pr[i].party_name;
+            cumulativeRes.by_party[i].candidate = <string>pr[i].candidate;
+            cumulativeRes.by_party[i].votes += <int>pr[i].votes;
+            cumulativeRes.by_party[i].percentage = io:sprintf ("%.2f", ((cumulativeRes.by_party[i].votes*100.0)/cumulativeRes.summary.valid));
+        }
     }
 }

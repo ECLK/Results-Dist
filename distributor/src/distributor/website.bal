@@ -2,6 +2,12 @@ import ballerina/http;
 import ballerina/mime;
 import ballerina/time;
 import ballerina/xmlutils;
+import ballerina/file;
+
+const LEVEL_PD = "POLLING-DIVISION";
+const LEVEL_ED = "ELECTORAL-DISTRICT";
+const LEVEL_NI = "NATIONAL-INCREMENTAL";
+const LEVEL_NF = "NATIONAL-FINAL";
 
 # Show a website for media people to get a list of all released results with
 # links to each json value and the image with the signed official document.
@@ -18,18 +24,41 @@ service mediaWebsite on mediaListener {
         string body = "<body>";
         body = body + "<h1>Released Results Data for Media Partners</h1>";
         string tt = check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ");
-        body = body + "<p>List of all released results as of " + tt + "</p>";
+        body = body + "<p>Current time: " + tt + "</p>";
         
-        string tab = "<table><tr><th>Sequence No</th><th>Electoral District</th><th>Polling Division</th><th>JSON</th><th>XML</th><th>Document</th></tr>";
+        string tab = "<table><tr><th>Election</th><th>Sequence No</th><th>Release Time</th><th>Code</th><th>Level</th><th>Electoral District</th><th>Polling Division</th><th>JSON</th><th>XML</th><th>Document</th></tr>";
         int i = resultsCache.length();
         while i > 0 { // show results in reverse order of release
             i = i - 1;
             Result r = resultsCache[i];
+            string election = r.election;
             string seqNo = r.jsonResult.sequence_number.toString();
-            string edName = r.jsonResult.ed_name.toString();
-            string pdName = r.jsonResult.pd_name.toString();
+            string timestamp = r.jsonResult.timestamp.toString();
+            string code = "";
+            string level = r.jsonResult.level.toString();
+            // figure out and ED / PD name if needed
+            string edName = "";
+            string pdName = "";
+            match level {
+                LEVEL_PD => {
+                    code = r.jsonResult.pd_code.toString(); //  has 2 digit ED code and 1 letter PD code
+                    edName = r.jsonResult.ed_name.toString();
+                    pdName = r.jsonResult.pd_name.toString();
+                }
+                LEVEL_ED => {
+                    code = r.jsonResult.ed_code.toString();
+                    edName = r.jsonResult.ed_name.toString();
+                }
+                LEVEL_NI => { }
+                LEVEL_NF => { }
+            }
+
             tab = tab + "<tr>" +
+                        "<td>" + election + "</td>" +
                         "<td>" + seqNo + "</td>" +
+                        "<td>" + timestamp + "</td>" +
+                        "<td>" + code + "</td>" +
+                        "<td>" + level + "</td>" +
                         "<td>" + edName + "</td>" +
                         "<td>" + pdName + "</td>" +
                         "<td><a href='/result/" + r.election + "/" + seqNo + "?format=json'>JSON</a>" + "</td>" +
@@ -39,6 +68,11 @@ service mediaWebsite on mediaListener {
         }
         tab = tab + "</table>";
         body = body + tab;
+        body = body + "<p/>";
+        body = body + "<p>All  results released so far as single JSON value: "
+                    + "<a href='/allresults'>All Results</a>";
+        body = body + "<p>Another test run? <a href='http://resultstest.ecdev.opensource.lk:9999/start'>Start</a></p>";
+        body = body + "<p>Read subscriber startup message: <a href='info'>Here</a></p>";
         body = body + "</body>";
         string doc = "<html>" + head + body + "</html>";
 
@@ -46,6 +80,20 @@ service mediaWebsite on mediaListener {
         hr.setPayload(doc);
         hr.setContentType(mime:TEXT_HTML);
         return caller->ok(hr);
+    }
+
+    resource function allresults (http:Caller caller, http:Request req) returns error? {
+        json[] results = [];
+
+        // return results in reverse order
+        int i = resultsCache.length();
+        while i > 0 { // show non-incremental results in reverse order of release
+            i = i - 1;
+            if resultsCache[i].jsonResult.level != "NATIONAL-INCREMENTAL" {
+                results.push(resultsCache[i].jsonResult);
+            }
+        }
+        return caller->ok(results);
     }
 
     @http:ResourceConfig {
@@ -108,6 +156,33 @@ service mediaWebsite on mediaListener {
         http:Response res = new;
         res.statusCode = http:STATUS_NOT_FOUND;
         return caller->respond(res);
+    }
+
+    # Hook for subscriber to be sent some info to display. Can put some HTML content into
+    # web/info.html and it'll get shown at subscriber startup
+    # + return - error if problem
+    resource function info(http:Caller caller, http:Request request) returns error? {
+        http:Response hr = new;
+        hr.setFileAsPayload("web/info.txt", "text/plain");
+        check caller->ok(hr);
+    }
+
+    # Hook for subscriber to check whether their version is still active. If version is active
+    # then must have file web/active-{versionNo}. If its missing will return 404.
+    # + return - error if problem
+    @http:ResourceConfig {
+        path: "/isactive/{versionNo}",
+        methods: ["GET"]
+    }
+    resource function isactive(http:Caller caller, http:Request request, string versionNo) returns error? {
+        if file:exists("web/active-" + <@untainted> versionNo) {
+            return caller->ok("Still good");
+        } else {
+            http:Response hr = new;
+            hr.statusCode = http:STATUS_NOT_FOUND;
+            hr.setTextPayload("This version is no longer active; please upgrade (see status message).");
+            return caller->respond(hr);
+        }
     }
 
     @http:ResourceConfig {

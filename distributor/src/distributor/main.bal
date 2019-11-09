@@ -28,33 +28,38 @@ public function main() returns error? {
 
     // start the hub
     var hubStartUpResult =
-        websub:startHub(<@untainted> mediaListener, // weird BUG in ballerina compiler
-                        "/websub", "/hub",
-                        hubConfiguration = {
-                            hubPersistenceStore: persistenceStore,
-                            clientConfig: {
-                                // TODO: finalize
-                                retryConfig: {
-                                    count:  3,
-                                    intervalInMillis: 5000
+        check websub:startHub(<@untainted> mediaListener, // weird BUG in ballerina compiler
+                                "/websub", "/hub",
+                                serviceAuth = {
+                                    enabled: true
                                 },
-                                followRedirects: {
+                                publisherResourceAuth = {
                                     enabled: true,
-                                    maxCount: 5
+                                    scopes: ["publish"]
                                 },
-                                timeoutInMillis: 5*60000 // Check
-                                //secureSocket: {
-                                //    trustStore: {
-                                //        path: config:getAsString("eclk.hub.client.truststore.path"),
-                                //        password: config:getAsString("eclk.hub.client.truststore.password")
-                                //    }
-                                //}
-                            }
-                        });
+                                subscriptionResourceAuth = {
+                                    enabled: true,
+                                    scopes: ["subscribe"]
+                                },
+                                hubConfiguration = {
+                                    hubPersistenceStore: persistenceStore,
+                                    clientConfig: {
+                                        // TODO: finalize
+                                        retryConfig: {
+                                            count:  3,
+                                            intervalInMillis: 5000
+                                        },
+                                        //followRedirects: {
+                                        //    enabled: true,
+                                        //    maxCount: 5
+                                        //},
+                                        timeoutInMillis: 5*60000 // Check
+                                    }
+                                });
 
     if hubStartUpResult is websub:HubStartedUpError {
         return error(ERROR_REASON, message = hubStartUpResult.message);
-    } else if (hubStartUpResult is websub:Hub) {
+    } else {
         hub = hubStartUpResult;
         var result = hubStartUpResult.registerTopic(JSON_RESULTS_TOPIC);
         if (result is error) {

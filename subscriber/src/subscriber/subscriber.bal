@@ -1,5 +1,10 @@
+import ballerina/auth;
+import ballerina/http;
+import ballerina/io;
 import ballerina/log;
 import ballerina/websub;
+
+const MY_VERSION = "2019-11-02";
 
 // TODO: set correct ones once decided
 const JSON_TOPIC = "https://github.com/ECLK/Results-Dist-json";
@@ -24,30 +29,28 @@ string subscriberSecret = "";
 
 string subscriberPublicUrl = "";
 int subscriberPort = -1;
-string subscriberDirectoryPath = "";
 
 boolean wantJson = false;
 boolean wantXml = false;
 
+http:OutboundAuthConfig? auth = ();
+
 // what formats does the user want results saved in?
-public function main (string secret, string publicUrl, 
-                      boolean 'json = false, boolean 'xml = false,
-                      int port = 8080, string? certFile = (), string directoryPath = "",
-                      string hubURL = "XXX") returns error? {
+public function main (string secret,                // secret to send to the hub
+                      string? username = (),        // my username  
+                      string? password = (),        // my password  
+                      boolean 'json = false,        // do I want json?
+                      boolean 'xml = false,         // do I want xml?
+                      string homeURL = "https://resultstest.ecdev.opensource.lk", // where do I subscribe at
+                      int port = 1111,              // port I'm going to open
+                      string myURL=""          // how to reach me over the internet
+                    ) returns error? {
     subscriberSecret = <@untainted> secret;
-    subscriberPublicUrl = <@untainted> publicUrl;
+    subscriberPublicUrl = <@untainted> (myURL == "" ? string `http://localhost:${port}` : myURL);
     subscriberPort = <@untainted> port;
-    subscriberDirectoryPath = <@untainted> directoryPath;
-    hub = <@untainted> hubURL;
+    hub = <@untainted> homeURL + "/websub/hub";
 
     service subscriberService;
-
-    websub:SubscriberListenerConfiguration config = {};
-    if (certFile is string) {
-        config.httpServiceSecureSocket = {
-            certFile: certFile
-        };
-    }
 
     // check what format the user wants results in
     if 'json {
@@ -57,12 +60,40 @@ public function main (string secret, string publicUrl,
         wantXml = true;
     }
     if !(wantJson || wantXml) {
-        log:printError("No output format requested! Quitting ... ask for json or xml!");
-        return;
+        // default to giving json
+        wantJson = true;
+    }
+
+    // contact home and display message
+    http:Client hc = new(homeURL);
+    http:Response hr = check hc->get("/info");
+    if hr.statusCode == 200 {
+        string msg = check hr.getTextPayload();
+        io:println("Message from the results system:\n");
+        io:println(msg);
+    }
+
+    // check whether this version is still supported
+    hr = check hc->get("/isactive/" + MY_VERSION);
+    if hr.statusCode != 200 {
+        return error("*** This version of the subscriber is no longer supported!");
     }
 
     // start the listener
-    websub:Listener websubListener = new(subscriberPort, config);
+    websub:Listener websubListener = new(subscriberPort);
+
+    if (username is string && password is string) {
+        auth:OutboundBasicAuthProvider outboundBasicAuthProvider = new ({
+            username: <@untainted> username,
+            password: <@untainted> password
+        });
+
+        http:BasicAuthHandler outboundBasicAuthHandler = 
+                new (<auth:OutboundBasicAuthProvider> outboundBasicAuthProvider);
+        auth = {
+            authHandler: outboundBasicAuthHandler
+        };
+    }
 
     // attach JSON subscriber
     subscriberService = @websub:SubscriberServiceConfig {
@@ -71,7 +102,10 @@ public function main (string secret, string publicUrl,
         target: [hub, JSON_TOPIC],
         leaseSeconds: TWO_DAYS_IN_SECONDS,
         secret: subscriberSecret,
-        callback: subscriberPublicUrl.concat(JSON_PATH)
+        callback: subscriberPublicUrl.concat(JSON_PATH),
+        hubClientConfig: {
+            auth: auth
+        }
     }
     service {
         resource function onNotification(websub:Notification notification) {
