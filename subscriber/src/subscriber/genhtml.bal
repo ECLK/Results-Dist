@@ -22,14 +22,14 @@ map<string> electionCode2Name = {
     "2015-PRE-REPLAY-015": "PRESIDENTIAL ELECTION - 08/01/2015 RESULT REPLAY"
 };
 
-function generateHtml (string electionCode, map<json> result) returns string|error {
+function generateHtml (string electionCode, map<json> result, boolean sorted) returns string|error {
     string electionName = electionCode2Name[electionCode] ?: "Presidential Election - TEST";
     string timeNow = check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ");
     string head = "<head>";
     head += "<title>Sri Lanka Elections Commission</title>";
     head += "<link rel=\"stylesheet\" href=\"https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css\">";
     head += "</head>";
-    string body = "<body>";
+    string body = "<body style='margin: 5%'>";
     body += "<div class='container-fluid'>";
     body += "<h1>" + electionName + "</h1>";
 
@@ -42,13 +42,13 @@ function generateHtml (string electionCode, map<json> result) returns string|err
         LEVEL_NF => { resultType = "ALL ISLAND RESULT"; }
     }
     body += "<p>" + resultType.toUpperAscii() + "</p>";
-    body += "<p>Votes received by each candidate, sorted highest to least</p>";
+    body += "<p>Votes received by each candidate" + (sorted ? ", sorted highest to lowest" : "") + "</p>";
 
     body += "<table class='table'><tr><th>Name of Candidate</th><th class='text-center'>Party Abbreviaton</th><th class='text-right'>Votes Received</th><th class='text-right'>Percentage</th></tr>";
-    json[] partyResults = sortPartyResults(<json[]>result.by_party);
+    json[] partyResults = sorted ? sortPartyResults(<json[]>result.by_party) : <json[]>result.by_party;
     foreach json j in partyResults {
         map<json> pr = <map<json>> j; // value is a json object
-        body += "<tr><td>" + <string>pr.candidate + "</td><td class='text-center'>" + <string>pr.party_code + "</td><td class='text-right'>" + commaFormatInt(<int>pr.votes) + "</td><td class='text-right'>" + <string>pr.percentage + "</td></tr>";
+        body += "<tr><td>" + <string>pr.candidate + "</td><td class='text-center'>" + <string>pr.party_code + "</td><td class='text-right'>" + commaFormatInt(<int>pr.votes) + "</td><td class='text-right'>" + <string>pr.percentage + "%</td></tr>";
     }
     body += "</table>";
     body += "</div>";
@@ -56,13 +56,13 @@ function generateHtml (string electionCode, map<json> result) returns string|err
     body += "<div class='container-fluid'>";
     body += "  <div class='col-md-4 col-md-offset-2'>Total Valid Votes</div>" + 
             "    <div class='col-md-2 text-right'>" + commaFormatInt(<int>result.summary.valid) + 
-            "    </div><div class='col-md-2 text-right'>" + <string>result.summary.percent_valid + "</div><div class='col-md-2'></div>";
+            "    </div><div class='col-md-2 text-right'>" + <string>result.summary.percent_valid + "%</div><div class='col-md-2'></div>";
     body += "  <div class='col-md-4 col-md-offset-2'>Rejected Votes</div>" + 
             "    <div class='col-md-2 text-right'>" + commaFormatInt(<int>result.summary.rejected) + 
-            "    </div><div class='col-md-2 text-right'>" + <string>result.summary.percent_rejected + "</div><div class='col-md-2'></div>";
+            "    </div><div class='col-md-2 text-right'>" + <string>result.summary.percent_rejected + "%</div><div class='col-md-2'></div>";
     body += "  <div class='col-md-4 col-md-offset-2'>Total Polled</div>" + 
             "    <div class='col-md-2 text-right'>" + commaFormatInt(<int>result.summary.polled) + 
-            "    </div><div class='col-md-2 text-right'>" + <string>result.summary.percent_polled + "</div><div class='col-md-2'></div>";
+            "    </div><div class='col-md-2 text-right'>" + <string>result.summary.percent_polled + "%</div><div class='col-md-2'></div>";
     body += "  <div class='col-md-4 col-md-offset-2'>Registered No. of Electors</div>" + 
             "    <div class='col-md-2 text-right'>" + commaFormatInt(<int>result.summary.electors) + 
             "    </div><div class='col-md-2'></div>";

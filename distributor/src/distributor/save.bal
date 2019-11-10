@@ -217,7 +217,7 @@ function resetResults() returns error? {
     __init();
 }
 
-# Add a polling division level result to the cumulative total
+# Add a polling division level result to the cumulative total.
 function addToCumulative (map<json> jm) {
     json[] pr = <json[]> checkpanic jm.by_party;
     boolean firstResult = cumulativeRes.summary.electors == 0;
@@ -226,7 +226,11 @@ function addToCumulative (map<json> jm) {
     cumulativeRes.summary.valid += <int>jm.summary.valid;
     cumulativeRes.summary.rejected += <int>jm.summary.rejected;
     cumulativeRes.summary.polled += <int>jm.summary.polled;
-    cumulativeRes.summary.electors += <int>jm.summary.electors;
+    // don't add up electors from postal PDs as those are already in the district elsewhere
+    string pdCode = <string>jm.pd_code;
+    if !pdCode.endsWith("P") {
+        cumulativeRes.summary.electors += <int>jm.summary.electors;
+    }
     cumulativeRes.summary.percent_valid = io:sprintf("%.2f", cumulativeRes.summary.valid*100.0/cumulativeRes.summary.polled);
     cumulativeRes.summary.percent_rejected = io:sprintf("%.2f", cumulativeRes.summary.rejected*100.0/cumulativeRes.summary.polled);
     cumulativeRes.summary.percent_polled = io:sprintf("%.2f", cumulativeRes.summary.polled*100.0/cumulativeRes.summary.electors);
