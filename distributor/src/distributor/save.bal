@@ -61,6 +61,25 @@ type UserCallback record {|
     string callback;
 |};
 
+type CumulativeResult record {|
+    PartyResult[] by_party;
+    SummaryResult summary;
+|};
+
+CumulativeResult emptyCumResult = { 
+    by_party: [], 
+    summary: { 
+        valid: 0, 
+        rejected: 0, 
+        polled: 0, 
+        electors: 0,
+        percent_valid: "",
+        percent_rejected: "",
+        percent_polled: ""
+    }
+};
+CumulativeResult cumulativeRes = emptyCumResult.clone();
+
 # Create database and set up at module init time and load any data in there to
 # memory for the website to show. Panic if there's any issue.
 function __init() {
@@ -72,6 +91,7 @@ function __init() {
     table<DataResult> ret = checkpanic dbClient->select(SELECT_RESULTS_DATA, DataResult);
     int count = 0;
     resultsCache = [];
+    cumulativeRes = emptyCumResult.clone();
     while (ret.hasNext()) {
         DataResult dr = <DataResult> ret.getNext();
         count = count + 1;
@@ -80,6 +100,7 @@ function __init() {
         io:StringReader sr = new(dr.jsonResult, encoding = "UTF-8");
         map<json> jm =  <map<json>> sr.readJson();
 
+        // put results in the cache
         resultsCache.push(<Result> {
             sequenceNo: dr.sequenceNo,
             election: dr.election,
@@ -89,9 +110,15 @@ function __init() {
             imageMediaType: dr.imageMediaType,
             imageData: dr.imageData
         });
+
+        // add up cumulative result from all the PD results to get current cumulative total
+        if jm.level == "POLLING-DIVISION" {
+            addToCumulative (<@untainted> jm);
+        }
     }
     if (count > 0) {
         log:printInfo("Loaded " + count.toString() + " previous results from database");
+        log:printInfo("Loaded cumulative result: " + cumulativeRes.toString());
     }
 
     // load username-callback data for already added subscriptions
@@ -124,6 +151,11 @@ function saveResult(Result result) returns error? {
     } else {
         log:printError("Unable to save result in database: " + r.toString());
         return r;
+    }
+
+    // add up cumulative result from all the PD results to get current cumulative total
+    if result.jsonResult.level == "POLLING-DIVISION" {
+        addToCumulative (result.jsonResult);
     }
 
     // update in memory cache of all results
@@ -183,4 +215,33 @@ function resetResults() returns error? {
     _ = check dbClient->update(DROP_RESULTS_TABLE);
     _ = check dbClient->update(DROP_CALLBACKS_TABLE);
     __init();
+}
+
+# Add a polling division level result to the cumulative total
+function addToCumulative (map<json> jm) {
+    json[] pr = <json[]> checkpanic jm.by_party;
+    boolean firstResult = cumulativeRes.summary.electors == 0;
+
+    // add the summary counts
+    cumulativeRes.summary.valid += <int>jm.summary.valid;
+    cumulativeRes.summary.rejected += <int>jm.summary.rejected;
+    cumulativeRes.summary.polled += <int>jm.summary.polled;
+    cumulativeRes.summary.electors += <int>jm.summary.electors;
+    cumulativeRes.summary.percent_valid = io:sprintf("%.2f", cumulativeRes.summary.valid*100.0/cumulativeRes.summary.polled);
+    cumulativeRes.summary.percent_rejected = io:sprintf("%.2f", cumulativeRes.summary.rejected*100.0/cumulativeRes.summary.polled);
+    cumulativeRes.summary.percent_polled = io:sprintf("%.2f", cumulativeRes.summary.polled*100.0/cumulativeRes.summary.electors);
+
+    // if first PD being added to cumulative then just copy the party results over
+    if firstResult {
+        pr.forEach (x => cumulativeRes.by_party.push(checkpanic PartyResult.constructFrom(x)));
+    } else {
+        // record by party votes from this result (copying name etc. is silly after first hit)
+        foreach int i in 0 ..< pr.length() {
+            cumulativeRes.by_party[i].party_code = <string>pr[i].party_code;
+            cumulativeRes.by_party[i].party_name = <string>pr[i].party_name;
+            cumulativeRes.by_party[i].candidate = <string>pr[i].candidate;
+            cumulativeRes.by_party[i].votes += <int>pr[i].votes;
+            cumulativeRes.by_party[i].percentage = io:sprintf ("%.2f", ((cumulativeRes.by_party[i].votes*100.0)/cumulativeRes.summary.valid));
+        }
+    }
 }

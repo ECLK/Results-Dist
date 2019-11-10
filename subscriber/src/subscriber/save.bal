@@ -40,6 +40,20 @@ function saveResult(map<json> resultAll) {
             log:printInfo("New result written: " + xmlfile);
         }
     }
+    if wantHtml {
+        string htmlfile = fileBase + ".html";
+        string|error html = generateHtml(electionCode, result);
+        if html is error {
+            log:printError("Unable to generate HTML for result #"+ result.sequence_number.toString() + " " + html.reason());
+        } else {
+            error? e = writeString(htmlfile, html);
+            if e is error {
+                log:printError("Unable to write result #" + result.sequence_number.toString() + " " + htmlfile + e.reason());
+            } else {
+                log:printInfo("New result written: " + htmlfile);
+            }
+        }
+    }
 }
 
 function saveImagePdf(map<json> imageJson) {
@@ -131,6 +145,17 @@ function writePdf(string path, byte[] content) returns error? {
     io:WritableByteChannel wbc = check io:openWritableFile(path);
     _ = check wbc.write(content, 0); // TODO: replace check to ensure channels are closed
     check wbc.close();
+}
+
+function writeString(string path, string content) returns error? {
+    return writeContent(path, function(io:WritableCharacterChannel wch) returns error? {
+        var r = wch.write(content, 0);
+        if r is error {
+            return r;
+        } else {
+            return;
+        }
+    });
 }
 
 function writeContent(string path, function(io:WritableCharacterChannel wch) returns error? writeFunc) returns error? {
