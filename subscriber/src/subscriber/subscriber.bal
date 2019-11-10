@@ -8,6 +8,7 @@ const MY_VERSION = "2019-11-02";
 
 // TODO: set correct ones once decided
 const JSON_TOPIC = "https://github.com/ECLK/Results-Dist-json";
+const IMAGE_PDF_TOPIC = "https://github.com/ECLK/Results-Dist-image";
 
 const UNDERSOCRE = "_";
 const COLON = ":";
@@ -35,6 +36,7 @@ boolean wantXml = false;
 boolean wantHtml = false;
 
 http:OutboundAuthConfig? auth = ();
+http:Client? imageClient = ();
 
 // what formats does the user want results saved in?
 public function main (string secret,                // secret to send to the hub
@@ -42,6 +44,7 @@ public function main (string secret,                // secret to send to the hub
                       string? password = (),        // my password  
                       boolean 'json = false,        // do I want json?
                       boolean 'xml = false,         // do I want xml?
+                      boolean image = false,         // do I want the image?
                       boolean html = false,         // do I want html?
                       string homeURL = "https://resultstest.ecdev.opensource.lk", // where do I subscribe at
                       int port = 1111,              // port I'm going to open
@@ -51,8 +54,6 @@ public function main (string secret,                // secret to send to the hub
     subscriberPublicUrl = <@untainted> (myURL == "" ? string `http://localhost:${port}` : myURL);
     subscriberPort = <@untainted> port;
     hub = <@untainted> homeURL + "/websub/hub";
-
-    service subscriberService;
 
     // check what format the user wants results in
     wantJson = <@untainted>'json;
@@ -95,7 +96,7 @@ public function main (string secret,                // secret to send to the hub
     }
 
     // attach JSON subscriber
-    subscriberService = @websub:SubscriberServiceConfig {
+    service subscriberService = @websub:SubscriberServiceConfig {
         path: JSON_PATH,
         subscribeOnStartUp: true,
         target: [hub, JSON_TOPIC],
@@ -117,6 +118,34 @@ public function main (string secret,                // secret to send to the hub
         }
     };
     check websubListener.__attach(subscriberService);
+
+    if image {
+        imageClient = <@untainted> new (homeURL, {auth: auth});
+
+        // attach the image subscriber
+        service imageSubscriberService = @websub:SubscriberServiceConfig {
+           path: IMAGE_PATH,
+           subscribeOnStartUp: true,
+           target: [hub, IMAGE_PDF_TOPIC],
+           leaseSeconds: TWO_DAYS_IN_SECONDS,
+           secret: subscriberSecret,
+           callback: subscriberPublicUrl.concat(IMAGE_PATH),
+           hubClientConfig: {
+               auth: auth
+           }
+        }
+        service {
+           resource function onNotification(websub:Notification notification) {
+               json|error jsonPayload = notification.getJsonPayload();
+               if (jsonPayload is map<json>) {
+                   saveImagePdf(<@untainted> jsonPayload);
+               } else {
+                   log:printError("Expected map<json> payload, received:" + jsonPayload.toString());
+               }
+           }
+        };
+        check websubListener.__attach(imageSubscriberService);
+    }
 
     // start off
     check websubListener.__start();

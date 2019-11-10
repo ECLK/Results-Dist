@@ -61,14 +61,19 @@ public function main() returns error? {
         return error(ERROR_REASON, message = hubStartUpResult.message);
     } else {
         hub = hubStartUpResult;
-        var result = hubStartUpResult.registerTopic(JSON_RESULTS_TOPIC);
-        if (result is error) {
-            string? message = result.detail()?.message;
-            if (message is string && message.indexOf("topic already exists") != ()) {
-                // Ignore failures due to topic already being there; no harm
-            }
-        } else {
-            return result;
+        check registerTopic(hubStartUpResult, JSON_RESULTS_TOPIC);
+        check registerTopic(hubStartUpResult, IMAGE_PDF_TOPIC);
+    }
+}
+
+function registerTopic(websub:Hub hub, string topic) returns error? {
+    var result = hub.registerTopic(topic);
+    if (result is error) {
+        string? message = result.detail()?.message;
+        if (message is string && message.indexOf("topic already exists") != ()) {
+            // Ignore failures due to topic already being there; no harm
+            return;
         }
+        return result;
     }
 }

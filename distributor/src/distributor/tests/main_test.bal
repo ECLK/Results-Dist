@@ -13,7 +13,7 @@ const TWO_DAYS_IN_SECONDS = 172800;
 ///////////////////////////// The Subscriber Services /////////////////////////////
 
 // The listener to which the subscriber services are bound.
-listener websub:Listener subscriberListener = new(8181);
+listener websub:Listener subscriberListener = new(8282);
 
 @websub:SubscriberServiceConfig {
     path: "/json",
