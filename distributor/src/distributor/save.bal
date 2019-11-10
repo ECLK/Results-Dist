@@ -1,6 +1,6 @@
-import ballerina/log;
 import ballerina/config;
 import ballerina/io;
+import ballerina/log;
 import ballerinax/java.jdbc;
 
 # This variable will contain all the results received. If the server crashes it will 
@@ -36,6 +36,14 @@ const INSERT_CALLBACK = "INSERT INTO callbacks (username, callback) VALUES (?, ?
 const UPDATE_CALLBACK = "UPDATE callbacks SET callback = ? WHERE username = ?";
 const SELECT_CALLBACKS = "SELECT * FROM callbacks";
 const DROP_CALLBACKS_TABLE = "DROP TABLE callbacks";
+
+const string CREATE_RECIPIENT_TABLE = "CREATE TABLE IF NOT EXISTS smsRecipients (" +
+                                    "    mobileNo VARCHAR(50) NOT NULL," +
+                                    "    PRIMARY KEY (mobileNo))";
+const INSERT_RECIPIENT = "INSERT INTO smsRecipients (mobileNo) VALUES (?)";
+const DELETE_RECIPIENT = "DELETE FROM smsRecipients WHERE mobileNo = ?";
+const SELECT_RECIPIENT_DATA = "SELECT mobileNo FROM smsRecipients";
+const DROP_RECIPIENT_TABLE = "DROP TABLE smsRecipients";
 
 jdbc:Client dbClient = new ({
     url: config:getAsString("eclk.hub.db.url"),
@@ -86,6 +94,7 @@ function __init() {
     // create tables
     _ = checkpanic dbClient->update(CREATE_RESULTS_TABLE);
     _ = checkpanic dbClient->update(CREATE_CALLBACKS_TABLE);
+    _ = checkpanic dbClient->update(CREATE_RECIPIENT_TABLE);
 
     // load any results in there to our cache - the order will match the autoincrement and will be the sequence #
     table<DataResult> ret = checkpanic dbClient->select(SELECT_RESULTS_DATA, DataResult);
@@ -94,7 +103,7 @@ function __init() {
     cumulativeRes = emptyCumResult.clone();
     while (ret.hasNext()) {
         DataResult dr = <DataResult> ret.getNext();
-        count = count + 1;
+        count += 1;
 
         // read json string and convert to json
         io:StringReader sr = new(dr.jsonResult, encoding = "UTF-8");
@@ -131,6 +140,28 @@ function __init() {
     }
     if (count > 0) {
         log:printInfo("Loaded " + count.toString() + " registered callback(s) from database");
+    }
+
+    // load sms recipients to in-memory array
+    table<Recipient> retrievedNos = checkpanic dbClient->select(SELECT_RECIPIENT_DATA, Recipient);
+    count = 0;
+    while (retrievedNos.hasNext()) {
+        Recipient recipient = <Recipient> retrievedNos.getNext();
+        mobileSubscribers.push(recipient.number);
+        count += 1;
+    }
+    if (count > 0) {
+        log:printInfo("Loaded " + count.toString() + " previous SMS recipient(s) from database");
+    }
+    // validate twilio account
+    var account = twilioClient->getAccountDetails();
+    if account is error {
+        log:printError("SMS notification is disabled due to invalid twilio account details." +
+                         " Please provide valid 'eclk.sms.twilio.accountSid'/'authToken'/'source'(twilio mobile no):" +
+                         <string> account.detail()?.message);
+    } else {
+        validTwilioAccount = true;
+        log:printInfo("SMS notification is enabled : twilio.account.status=" + account.status.toString());
     }
 }
 
@@ -214,6 +245,7 @@ function updateUserCallback(string username, string callback) {
 function resetResults() returns error? {
     _ = check dbClient->update(DROP_RESULTS_TABLE);
     _ = check dbClient->update(DROP_CALLBACKS_TABLE);
+    _ = check dbClient->update(DROP_RECIPIENT_TABLE);
     __init();
 }
 

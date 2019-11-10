@@ -118,7 +118,7 @@ service mediaWebsite on mediaListener {
         foreach Result r in resultsCache {
             if r.election == election && r?.sequenceNo == seqNo {
                 if format == "json" {
-                    return caller->ok (r.jsonResult);
+                    return caller->ok(r.jsonResult);
                 } else if format == "html" {
                     http:Response hr = new;
                     boolean sorted = (r.jsonResult.level == LEVEL_NF) ? true : false;
@@ -160,7 +160,7 @@ service mediaWebsite on mediaListener {
                     hr.setContentType(imageMediaType);
                     return caller->ok(hr);
                 } else {
-                    return caller->ok ("No official release available (yet)");
+                    return caller->ok("No official release available (yet)");
                 }
             }
         }
@@ -192,10 +192,58 @@ service mediaWebsite on mediaListener {
             return caller->ok("Still good");
         } else {
             http:Response hr = new;
-            hr.statusCode = 404;
+            hr.statusCode = http:STATUS_NOT_FOUND;
             hr.setTextPayload("This version is no longer active; please upgrade (see status message).");
             return caller->respond(hr);
         }
+    }
+
+    @http:ResourceConfig {
+        path: "/sms/{mobileNo}",
+        methods: ["GET"]
+    }
+    resource function smsRegistration (http:Caller caller, http:Request req, string mobileNo) returns error? {
+        string|error validatedNo = validate(mobileNo);
+        if validatedNo is error {
+            http:Response res = new;
+            res.statusCode = http:STATUS_BAD_REQUEST;
+            res.setPayload(<string> validatedNo.detail()?.message);
+            return caller->respond(res);
+        }
+
+        // If the load is high, we might need to sync following db/map update
+        string|error status = registerAsSMSRecipient(<string> validatedNo);
+        if status is error {
+            http:Response res = new;
+            res.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
+            res.setPayload(<string> status.detail()?.message);
+            return caller->respond(res);
+        }
+        return caller->ok(<string> status);
+    }
+
+    @http:ResourceConfig {
+        path: "/sms/{mobileNo}",
+        methods: ["DELETE"]
+    }
+    resource function smsDeregistration (http:Caller caller, http:Request req, string mobileNo) returns error? {
+        string|error validatedNo = validate(mobileNo);
+        if validatedNo is error {
+            http:Response res = new;
+            res.statusCode = http:STATUS_BAD_REQUEST;
+            res.setPayload(<string> validatedNo.detail()?.message);
+            return caller->respond(res);
+        }
+
+        // If the load is high, we might need to sync following db/map update
+        string|error status = unregisterAsSMSRecipient(<string> validatedNo);
+        if status is error {
+            http:Response res = new;
+            res.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
+            res.setPayload(<string> status.detail()?.message);
+            return caller->respond(res);
+        }
+        return caller->ok(<string> status);
     }
 }
 

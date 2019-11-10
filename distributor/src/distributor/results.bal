@@ -2,8 +2,8 @@ import ballerina/http;
 import ballerina/io;
 import ballerina/log;
 import ballerina/mime;
-import ballerina/websub;
 import ballerina/time;
+import ballerina/websub;
 
 # Service for results tabulation to publish results to. We assume that results tabulation will deliver
 # a result in two separate messages - one with the json result data and another with an image of the
@@ -28,7 +28,7 @@ service receiveResults on resultsListener {
         path: "/data/{electionCode}/{resultType}/{resultCode}",
         body: "jsonResult"
     }
-    resource function receiveData(http:Caller caller, http:Request req, string electionCode, string resultType, 
+    resource function receiveData(http:Caller caller, http:Request req, string electionCode, string resultType,
                                   string resultCode, json jsonResult) returns error? {
         // payload is supposed to be a json object - its ok to get upset if not
         map<json> jsonobj = check trap <map<json>> jsonResult;
@@ -49,7 +49,7 @@ service receiveResults on resultsListener {
         check saveResult(result);
     
         // publish the received result
-        publishResultData(result);
+        publishResultData(result, electionCode, resultCode);
 
         if result.jsonResult.level == "POLLING-DIVISION" {
             // send a cumulative result with the current running totals
@@ -57,11 +57,11 @@ service receiveResults on resultsListener {
 
 
             map<json> cumJsonResult = {
-                'type: resultType, 
+                'type: resultType,
                 timestamp: check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ"),
-                level: "NATIONAL-INCREMENTAL", 
+                level: "NATIONAL-INCREMENTAL",
                 by_party: check json.constructFrom(cumulativeRes.by_party),
-                summary: check json.constructFrom(cumulativeRes.summary)  
+                summary: check json.constructFrom(cumulativeRes.summary)
             };
             Result cumResult = <@untainted> {
                 sequenceNo: -1, // wil be updated with DB sequence # upon storage
@@ -76,7 +76,7 @@ service receiveResults on resultsListener {
             // store the result in the DB against the resultCode and assign it a sequence #
             check saveResult(cumResult);
 
-            // publish the recumulative ceived result
+            // publish the received cumulative result
             publishResultData(cumResult);
         }
 
@@ -130,25 +130,33 @@ service receiveResults on resultsListener {
 # - send SMSs to all subscribers
 # - update the website with the result
 # - deliver the result data to all subscribers
-function publishResultData(Result result) {
-        worker smsWorker {
-            // Send SMS to all subscribers.
-            // TODO - should we ensure SMS is sent first?
-        }
+function publishResultData(Result result, string? electionCode = (), string? resultCode = ()) {
+    worker smsWorker {
+        // Send SMS to all subscribers.
+        // TODO - should we ensure SMS is sent first?
 
-        worker jsonWorker returns error? {
-            websub:Hub wh = <websub:Hub> hub; // safe .. working around type guard limitation
-
-            // push it out with the election code and the json result as the message
-            json resultAll = {
-                election_code : result.election,
-                result : result.jsonResult
-            };
-            var r = wh.publishUpdate(JSON_RESULTS_TOPIC, resultAll, mime:APPLICATION_JSON);
-            if r is error {
-                log:printError("Error publishing update: ", r);
-            }
+        // Avoid sending SMSs for cumulative result
+        if electionCode is () {
+            return;
         }
+        if validTwilioAccount {
+            sendSMS(<string> electionCode, <string> resultCode);
+        }
+    }
+
+    worker jsonWorker returns error? {
+        websub:Hub wh = <websub:Hub> hub; // safe .. working around type guard limitation
+
+        // push it out with the election code and the json result as the message
+        json resultAll = {
+            election_code : result.election,
+            result : result.jsonResult
+        };
+        var r = wh.publishUpdate(JSON_RESULTS_TOPIC, resultAll, mime:APPLICATION_JSON);
+        if r is error {
+            log:printError("Error publishing update: ", r);
+        }
+    }
 }
 
 # Publish results image.
