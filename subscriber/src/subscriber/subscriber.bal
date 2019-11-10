@@ -4,7 +4,7 @@ import ballerina/io;
 import ballerina/log;
 import ballerina/websub;
 
-const MY_VERSION = "2019-11-02";
+const MY_VERSION = "2019-11-10";
 
 // TODO: set correct ones once decided
 const JSON_TOPIC = "https://github.com/ECLK/Results-Dist-json";
