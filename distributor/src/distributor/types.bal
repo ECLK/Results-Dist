@@ -18,6 +18,9 @@ type SummaryResult record {|
     int rejected;
     int polled;
     int electors;
+    string percent_valid;
+    string percent_rejected;
+    string percent_polled;
 |};
 
 const PRESIDENTIAL_RESULT = "PRESIDENTIAL-FIRST";
