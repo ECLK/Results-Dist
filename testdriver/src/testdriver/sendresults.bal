@@ -172,7 +172,10 @@ function createEDResult (int edCode) returns map<json> | error {
         distSummary.valid += <int>pdResult.summary.valid;
         distSummary.rejected += <int>pdResult.summary.rejected;
         distSummary.polled += <int>pdResult.summary.polled;
-        distSummary.electors += <int>pdResult.summary.electors;
+        // don't add up electors from postal PDs as those are already in the district elsewhere
+        if !pdCode.endsWith("P") {
+            distSummary.electors += <int>pdResult.summary.electors;
+        }
 
         pdCount += 1;
     }
@@ -237,8 +240,11 @@ function createNationalResult () returns map<json> | error {
         natSummary.valid += <int>pdResult.summary.valid;
         natSummary.rejected += <int>pdResult.summary.rejected;
         natSummary.polled += <int>pdResult.summary.polled;
-        natSummary.electors += <int>pdResult.summary.electors;
-
+        // don't add up electors from postal PDs as those are already in the district elsewhere
+        string pdCode = <string>pdResult.pd_code;
+        if !pdCode.endsWith("P") {
+            natSummary.electors += <int>pdResult.summary.electors;
+        }
         pdCount += 1;
     }
 
