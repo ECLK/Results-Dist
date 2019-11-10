@@ -1,9 +1,8 @@
-import ballerina/config;
 import ballerina/http;
 import ballerina/log;
 import ballerina/mime;
-import ballerina/websub;
 import ballerina/time;
+import ballerina/websub;
 
 # Service for results tabulation to publish results to. We assume that results tabulation will deliver
 # a result in two separate messages - one with the json result data and another with an image of the
@@ -122,10 +121,8 @@ function publishResultData(Result result, string? electionCode = (), string? res
         if electionCode is () {
             return;
         }
-        if (config:getAsBoolean("eclk.sms.twilio.enable")) {
+        if validTwilioAccount {
             sendSMS(<string> electionCode, <string> resultCode);
-        } else {
-            log:printError("SMS publisher is disabled. Enable using 'eclk.sms.twilio.enable' config");
         }
     }
 

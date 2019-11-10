@@ -1,6 +1,6 @@
-import ballerina/log;
 import ballerina/config;
 import ballerina/io;
+import ballerina/log;
 import ballerinax/java.jdbc;
 
 # This variable will contain all the results received. If the server crashes it will 
@@ -140,6 +140,16 @@ function __init() {
     }
     if (count > 0) {
         log:printInfo("Loaded " + count.toString() + " previous SMS recipient(s) from database");
+    }
+    // validate twilio account
+    var account = twilioClient->getAccountDetails();
+    if account is error {
+        log:printError("SMS notification is disabled due to invalid twilio account details." +
+                         " Please provide valid 'eclk.sms.twilio.accountSid'/'authToken'/'source'(twilio mobile no):" +
+                         <string> account.detail()?.message);
+    } else {
+        validTwilioAccount = true;
+        log:printInfo("SMS notification is enabled : twilio.account.status=" + account.status.toString());
     }
 }
 

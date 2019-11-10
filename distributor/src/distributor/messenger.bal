@@ -8,7 +8,7 @@ const INVALID_NO = "Invalid no";
 twilio:TwilioConfiguration twilioConfig = {
     accountSId: config:getAsString("eclk.sms.twilio.accountSid"),
     authToken: config:getAsString("eclk.sms.twilio.authToken"),
-    xAuthyKey: config:getAsString("eclk.sms.twilio.authyApiKey")
+    xAuthyKey: config:getAsString("eclk.sms.twilio.authyApiKey", "") // required only if Authy related APIs are used
 };
 
 twilio:Client twilioClient = new(twilioConfig);
@@ -16,6 +16,7 @@ twilio:Client twilioClient = new(twilioConfig);
 // Keeps registered sms recipients in-memory. Values are populated in every service init and recipient registration
 string[] mobileSubscribers = [];
 string sourceMobile = config:getAsString("eclk.sms.twilio.source");
+boolean validTwilioAccount = false;
 
 # Send SMS notification to all the subscribers.
 #
