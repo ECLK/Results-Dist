@@ -87,6 +87,12 @@ function publishOneSet () returns error? {
            //onePr["percentage"] = io:sprintf ("%.2f", <string>pr[i].percentage);
         }
 
+        // set the percentages in the summary
+        map<json> summary = <map<json>>resultsByPD[pdCode].summary;
+        summary["percent_valid"] = io:sprintf("%.2f", <int>resultsByPD[pdCode].summary.valid*100.0/<int>resultsByPD[pdCode].summary.polled);
+        summary["percent_rejected"] = io:sprintf("%.2f", <int>resultsByPD[pdCode].summary.rejected*100.0/<int>resultsByPD[pdCode].summary.polled);
+        summary["percent_polled"] = io:sprintf("%.2f", <int>resultsByPD[pdCode].summary.polled*100.0/<int>resultsByPD[pdCode].summary.electors);
+
         string resCode = resultsByPD[pdCode]?.pd_code.toString();
         string edCodeFromPD = resultsByPD[pdCode]?.ed_code.toString();
         io:println(io:sprintf("Sending PD results for %s", resCode));
@@ -163,20 +169,13 @@ function createEDResult (int edCode) returns map<json> | error {
             votes_by_party[i] = votes_by_party[i] + <int>by_party[i].votes;            
         }
 
-        // add up the summary results
-        Summary summary = {
-            valid: <int>pdResult.summary.valid,
-            rejected: <int>pdResult.summary.rejected,
-            polled: <int>pdResult.summary.polled,
-            electors: <int>pdResult.summary.electors,
-            percent_polled: "",
-            percent_rejected: "",
-            percent_valid: ""
-        };
-        distSummary.valid += summary.valid;
-        distSummary.rejected += summary.rejected;
-        distSummary.polled += summary.polled;
-        distSummary.electors += summary.electors;
+        distSummary.valid += <int>pdResult.summary.valid;
+        distSummary.rejected += <int>pdResult.summary.rejected;
+        distSummary.polled += <int>pdResult.summary.polled;
+        // don't add up electors from postal PDs as those are already in the district elsewhere
+        if !pdCode.endsWith("P") {
+            distSummary.electors += <int>pdResult.summary.electors;
+        }
 
         pdCount += 1;
     }
@@ -238,21 +237,14 @@ function createNationalResult () returns map<json> | error {
             votes_by_party[i] = votes_by_party[i] + <int>by_party[i].votes;            
         }
 
-        // add up the summary results
-        Summary summary = {
-            valid: <int>pdResult.summary.valid,
-            rejected: <int>pdResult.summary.rejected,
-            polled: <int>pdResult.summary.polled,
-            electors: <int>pdResult.summary.electors,
-            percent_polled: "",
-            percent_rejected: "",
-            percent_valid: ""
-        };
-        natSummary.valid += summary.valid;
-        natSummary.rejected += summary.rejected;
-        natSummary.polled += summary.polled;
-        natSummary.electors += summary.electors;
-
+        natSummary.valid += <int>pdResult.summary.valid;
+        natSummary.rejected += <int>pdResult.summary.rejected;
+        natSummary.polled += <int>pdResult.summary.polled;
+        // don't add up electors from postal PDs as those are already in the district elsewhere
+        string pdCode = <string>pdResult.pd_code;
+        if !pdCode.endsWith("P") {
+            natSummary.electors += <int>pdResult.summary.electors;
+        }
         pdCount += 1;
     }
 

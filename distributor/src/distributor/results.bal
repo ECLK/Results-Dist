@@ -1,4 +1,5 @@
 import ballerina/http;
+import ballerina/io;
 import ballerina/log;
 import ballerina/mime;
 import ballerina/time;
@@ -94,8 +95,25 @@ service receiveResults on resultsListener {
 
         string mediaType = req.getContentType();
 
-        // store the image in the DB against the resultCode
-        check saveImage(<@untainted> electionCode, <@untainted> resultCode, <@untainted> mediaType, <@untainted> imageData);
+        // store the image in the DB against the resultCode and retrieve the relevant result
+        Result? res = check saveImage(<@untainted> electionCode, <@untainted> resultCode, <@untainted> mediaType,
+                                      <@untainted> imageData);
+
+        if (res is Result) {
+            int sequenceNo = <int> res.sequenceNo;
+
+            map<json> update = {
+                election_code: electionCode,
+                sequence_number: io:sprintf("%04d", sequenceNo),
+                'type: res.'type,
+                level: res.jsonResult.level.toString(),
+                pd_code: res.jsonResult.pd_code.toString(),
+                ed_code: res.jsonResult.ed_code.toString(),
+                pd_name: res.jsonResult.pd_name.toString(),
+                ed_name: res.jsonResult.ed_name.toString()
+            };
+            publishResultImage(update);
+        }
 
         // respond accepted
         return caller->accepted();
@@ -138,5 +156,14 @@ function publishResultData(Result result, string? electionCode = (), string? res
         if r is error {
             log:printError("Error publishing update: ", r);
         }
+    }
+}
+
+# Publish results image.
+function publishResultImage(map<json> imageData) {
+    websub:Hub wh = <websub:Hub> hub;
+    var r = wh.publishUpdate(IMAGE_PDF_TOPIC, imageData, mime:APPLICATION_JSON);
+    if r is error {
+        log:printError("Error publishing update: ", r);
     }
 }
