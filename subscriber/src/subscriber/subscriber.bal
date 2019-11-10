@@ -34,6 +34,7 @@ int subscriberPort = -1;
 boolean wantJson = false;
 boolean wantXml = false;
 boolean wantHtml = false;
+boolean sortedHtml = false;
 
 http:OutboundAuthConfig? auth = ();
 http:Client? imageClient = ();
@@ -44,11 +45,12 @@ public function main (string secret,                // secret to send to the hub
                       string? password = (),        // my password  
                       boolean 'json = false,        // do I want json?
                       boolean 'xml = false,         // do I want xml?
-                      boolean image = false,         // do I want the image?
-                      boolean html = false,         // do I want html?
+                      boolean image = false,        // do I want the image?
+                      boolean html = false,         // do I want HTML?
+                      boolean sorted = true,        // do I want HTML results sorted highest to lowest
                       string homeURL = "https://resultstest.ecdev.opensource.lk", // where do I subscribe at
                       int port = 1111,              // port I'm going to open
-                      string myURL=""               // how to reach me over the internet
+                      string myURL = ""             // how to reach me over the internet
                     ) returns error? {
     subscriberSecret = <@untainted> secret;
     subscriberPublicUrl = <@untainted> (myURL == "" ? string `http://localhost:${port}` : myURL);
@@ -59,10 +61,11 @@ public function main (string secret,                // secret to send to the hub
     wantJson = <@untainted>'json;
     wantXml = <@untainted>'xml;
     wantHtml = <@untainted>html;
-    if !(wantJson || wantXml) {
+    if !(wantJson || wantXml || wantHtml) {
         // default to giving json
         wantJson = true;
     }
+    sortedHtml = <@untainted>sorted;
 
     // contact home and display message
     http:Client hc = new(homeURL);

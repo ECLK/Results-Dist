@@ -25,7 +25,7 @@ service mediaWebsite on mediaListener {
         head += "<link rel=\"stylesheet\" href=\"https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css\">";
         head += "</head>";
 
-        string body = "<body>";
+        string body = "<body style='margin: 5%'>";
         body += "<div class='container-fluid'>";
         body = body + "<h1>Released Results Data for Media Partners</h1>";
         string tt = check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ");
@@ -121,7 +121,8 @@ service mediaWebsite on mediaListener {
                     return caller->ok (r.jsonResult);
                 } else if format == "html" {
                     http:Response hr = new;
-                    hr.setTextPayload(check generateHtml(election, r.jsonResult));
+                    boolean sorted = (r.jsonResult.level == LEVEL_NF) ? true : false;
+                    hr.setTextPayload(check generateHtml(election, r.jsonResult, sorted));
                     hr.setContentType("text/html");
                     return caller->ok(hr);
                 } else { // xml

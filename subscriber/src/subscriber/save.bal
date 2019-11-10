@@ -42,7 +42,7 @@ function saveResult(map<json> resultAll) {
     }
     if wantHtml {
         string htmlfile = fileBase + ".html";
-        string|error html = generateHtml(electionCode, result);
+        string|error html = generateHtml(electionCode, result, sortedHtml);
         if html is error {
             log:printError("Unable to generate HTML for result #"+ result.sequence_number.toString() + " " + html.reason());
         } else {
