@@ -20,13 +20,18 @@ service mediaWebsite on mediaListener {
         methods: ["GET"]
     }
     resource function showAll (http:Caller caller, http:Request req) returns error? {
-        string head = "<head><title>Sri Lanka Elections Commission</title></head>";
+        string head = "<head>";
+        head += "<title>Sri Lanka Elections Commission</title>";
+        head += "<link rel=\"stylesheet\" href=\"https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css\">";
+        head += "</head>";
+
         string body = "<body>";
+        body += "<div class='container-fluid'>";
         body = body + "<h1>Released Results Data for Media Partners</h1>";
         string tt = check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ");
         body = body + "<p>Current time: " + tt + "</p>";
         
-        string tab = "<table><tr><th>Election</th><th>Sequence No</th><th>Release Time</th><th>Code</th><th>Level</th><th>Electoral District</th><th>Polling Division</th><th>JSON</th><th>XML</th><th>Document</th></tr>";
+        string tab = "<table class='table'><tr><th>Election</th><th>Sequence No</th><th>Release Time</th><th>Code</th><th>Level</th><th>Electoral District</th><th>Polling Division</th><th>JSON</th><th>XML</th><th>HTML</th><th>Document</th></tr>";
         int i = resultsCache.length();
         while i > 0 { // show results in reverse order of release
             i = i - 1;
@@ -63,6 +68,7 @@ service mediaWebsite on mediaListener {
                         "<td>" + pdName + "</td>" +
                         "<td><a href='/result/" + r.election + "/" + seqNo + "?format=json'>JSON</a>" + "</td>" +
                         "<td><a href='/result/" + r.election + "/" + seqNo + "?format=xml'>XML</a>" + "</td>" +
+                        "<td><a href='/result/" + r.election + "/" + seqNo + "?format=html'>HTML</a>" + "</td>" +
                         "<td><a href='/release/" + r.election + "/" + seqNo + "'>Release</a>" + "</td>" +
                         "</tr>";
         }
@@ -73,6 +79,7 @@ service mediaWebsite on mediaListener {
                     + "<a href='/allresults'>All Results</a>";
         body = body + "<p>Another test run? <a href='http://resultstest.ecdev.opensource.lk:9999/start'>Start</a></p>";
         body = body + "<p>Read subscriber startup message: <a href='info'>Here</a></p>";
+        body = body + "</div>";
         body = body + "</body>";
         string doc = "<html>" + head + body + "</html>";
 
@@ -103,7 +110,7 @@ service mediaWebsite on mediaListener {
     resource function data (http:Caller caller, http:Request req, string election, int seqNo) returns error? {
         // what's the format they want? we'll default to json if they don't say or get messy
         string format = req.getQueryParamValue ("format") ?: "json";
-        if format != "xml" && format != "json" {
+        if format != "xml" && format != "json" && format != "html" {
             format = "json";
         }
 
@@ -112,7 +119,12 @@ service mediaWebsite on mediaListener {
             if r.election == election && r?.sequenceNo == seqNo {
                 if format == "json" {
                     return caller->ok (r.jsonResult);
-                } else {
+                } else if format == "html" {
+                    http:Response hr = new;
+                    hr.setTextPayload(check generateHtml(election, r.jsonResult));
+                    hr.setContentType("text/html");
+                    return caller->ok(hr);
+                } else { // xml
                     // put the result json object into a wrapper object to get a parent element
                     // NOTE: this code must match the logic in the subscriber saving code as
                     // both add this object wrapper with the property named "result". Bit

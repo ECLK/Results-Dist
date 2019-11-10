@@ -32,6 +32,7 @@ int subscriberPort = -1;
 
 boolean wantJson = false;
 boolean wantXml = false;
+boolean wantHtml = false;
 
 http:OutboundAuthConfig? auth = ();
 
@@ -41,9 +42,10 @@ public function main (string secret,                // secret to send to the hub
                       string? password = (),        // my password  
                       boolean 'json = false,        // do I want json?
                       boolean 'xml = false,         // do I want xml?
+                      boolean html = false,         // do I want html?
                       string homeURL = "https://resultstest.ecdev.opensource.lk", // where do I subscribe at
                       int port = 1111,              // port I'm going to open
-                      string myURL=""          // how to reach me over the internet
+                      string myURL=""               // how to reach me over the internet
                     ) returns error? {
     subscriberSecret = <@untainted> secret;
     subscriberPublicUrl = <@untainted> (myURL == "" ? string `http://localhost:${port}` : myURL);
@@ -53,12 +55,9 @@ public function main (string secret,                // secret to send to the hub
     service subscriberService;
 
     // check what format the user wants results in
-    if 'json {
-        wantJson = true;
-    }
-    if 'xml {
-        wantXml = true;
-    }
+    wantJson = <@untainted>'json;
+    wantXml = <@untainted>'xml;
+    wantHtml = <@untainted>html;
     if !(wantJson || wantXml) {
         // default to giving json
         wantJson = true;

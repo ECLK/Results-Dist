@@ -66,7 +66,19 @@ type CumulativeResult record {|
     SummaryResult summary;
 |};
 
-CumulativeResult cumulativeRes = { by_party: [], summary: { valid: 0, rejected: 0, polled: 0, electors: 0}};
+CumulativeResult emptyCumResult = { 
+    by_party: [], 
+    summary: { 
+        valid: 0, 
+        rejected: 0, 
+        polled: 0, 
+        electors: 0,
+        percent_valid: "",
+        percent_rejected: "",
+        percent_polled: ""
+    }
+};
+CumulativeResult cumulativeRes = emptyCumResult.clone();
 
 # Create database and set up at module init time and load any data in there to
 # memory for the website to show. Panic if there's any issue.
@@ -79,7 +91,7 @@ function __init() {
     table<DataResult> ret = checkpanic dbClient->select(SELECT_RESULTS_DATA, DataResult);
     int count = 0;
     resultsCache = [];
-    cumulativeRes = { by_party: [], summary: { valid: 0, rejected: 0, polled: 0, electors: 0}};
+    cumulativeRes = emptyCumResult.clone();
     while (ret.hasNext()) {
         DataResult dr = <DataResult> ret.getNext();
         count = count + 1;
@@ -144,7 +156,6 @@ function saveResult(Result result) returns error? {
     // add up cumulative result from all the PD results to get current cumulative total
     if result.jsonResult.level == "POLLING-DIVISION" {
         addToCumulative (result.jsonResult);
-        //log:printInfo("Current cumulative result: " + cumulativeRes.toString());
     }
 
     // update in memory cache of all results
@@ -212,6 +223,9 @@ function addToCumulative (map<json> jm) {
     cumulativeRes.summary.rejected += <int>jm.summary.rejected;
     cumulativeRes.summary.polled += <int>jm.summary.polled;
     cumulativeRes.summary.electors += <int>jm.summary.electors;
+    cumulativeRes.summary.percent_valid = io:sprintf("%.2f", cumulativeRes.summary.valid*100.0/cumulativeRes.summary.polled);
+    cumulativeRes.summary.percent_rejected = io:sprintf("%.2f", cumulativeRes.summary.rejected*100.0/cumulativeRes.summary.polled);
+    cumulativeRes.summary.percent_polled = io:sprintf("%.2f", cumulativeRes.summary.polled*100.0/cumulativeRes.summary.electors);
 
     // if first PD being added to cumulative then just copy the party results over
     if firstResult {
