@@ -20,12 +20,10 @@ boolean validTwilioAccount = false;
 
 # Send SMS notification to all the subscribers.
 #
+# + message - The message to send
 # + electionCode - The respective code that represents the type of election
-# + resultCode - The predefined code for a released result
-function sendSMS(string electionCode, string resultCode) {
-    string division = DIVISION_CODES[resultCode] ?: resultCode;
-    string message  = "Await results for " + electionCode +  "/" + division + "(" + resultCode + ")";
-
+# + division - The relevant division
+function sendSMS(string message, string electionCode, string division) {
     foreach string targetMobile in mobileSubscribers {
         if (targetMobile == INVALID_NO) {
             continue;

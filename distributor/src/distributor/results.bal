@@ -131,7 +131,9 @@ service receiveResults on resultsListener {
 # - update the website with the result
 # - deliver the result data to all subscribers
 function publishResultData(Result result, string? electionCode = (), string? resultCode = ()) {
-    worker smsWorker {
+    websub:Hub wh = <websub:Hub> hub; // safe .. working around type guard limitation
+
+    worker awaitResultsWorker {
         // Send SMS to all subscribers.
         // TODO - should we ensure SMS is sent first?
 
@@ -139,20 +141,31 @@ function publishResultData(Result result, string? electionCode = (), string? res
         if electionCode is () {
             return;
         }
+
+        string resultCodeStr = <string> resultCode;
+        string division = DIVISION_CODES[resultCodeStr] ?: resultCodeStr;
+        string electionCodeStr = <string> electionCode;
+        string message  = "Await results for " + electionCodeStr +  "/" + division + "(" + resultCodeStr + ")";
+
+        // TODO: check if we should make this block an async call
+        var r = wh.publishUpdate(AWAIT_RESULTS_TOPIC, message);
+        if r is error {
+            log:printError("Error publishing update: ", r);
+        }
+
         if validTwilioAccount {
-            sendSMS(<string> electionCode, <string> resultCode);
+            sendSMS(message, electionCodeStr, division);
         }
     }
 
     worker jsonWorker returns error? {
-        websub:Hub wh = <websub:Hub> hub; // safe .. working around type guard limitation
 
         // push it out with the election code and the json result as the message
         json resultAll = {
             election_code : result.election,
             result : result.jsonResult
         };
-        var r = wh.publishUpdate(JSON_RESULTS_TOPIC, resultAll, mime:APPLICATION_JSON);
+        var r = wh.publishUpdate(JSON_TOPIC, resultAll, mime:APPLICATION_JSON);
         if r is error {
             log:printError("Error publishing update: ", r);
         }

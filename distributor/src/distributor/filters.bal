@@ -11,6 +11,7 @@ const HUB_CALLBACK = "hub.callback";
 
 map<string> resultCallbackMap = {};
 map<string> imageCallbackMap = {};
+map<string> awaitResultsCallbackMap = {};
 
 # Filter to challenge authentication.
 public type AuthChallengeFilter object {
@@ -72,11 +73,14 @@ public type SubscriptionFilter object {
 
         map<string> callbackMap = resultCallbackMap;
         match topic {
-            JSON_RESULTS_TOPIC => {
+            JSON_TOPIC => {
                 callbackMap = resultCallbackMap;
             }
             IMAGE_PDF_TOPIC => {
                 callbackMap = imageCallbackMap;
+            }
+            AWAIT_RESULTS_TOPIC => {
+                callbackMap = awaitResultsCallbackMap;
             }
             _ => {
                 log:printError("subscription request received for invalid topic " + topic);
