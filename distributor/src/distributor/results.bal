@@ -23,6 +23,22 @@ import ballerina/websub;
     }
 }
 service receiveResults on resultsListener {
+
+    @http:ResourceConfig {
+        methods: ["POST"],
+        path: "/notification/{electionCode}/{resultType}/{resultCode}"
+    }
+    resource function receiveUpcomingResultNotification(http:Caller caller, http:Request req, string electionCode,
+                                                        string resultType, string resultCode) returns error? {
+        if validTwilioAccount {
+            _ = start sendSMS(<string> electionCode, <string> resultCode);
+        }
+
+        // respond accepted
+        return caller->accepted();
+    }
+
+
     @http:ResourceConfig {
         methods: ["POST"],
         path: "/data/{electionCode}/{resultType}/{resultCode}",
@@ -127,35 +143,19 @@ service receiveResults on resultsListener {
 }
 
 # Publish the results as follows:
-# - send SMSs to all subscribers
 # - update the website with the result
 # - deliver the result data to all subscribers
 function publishResultData(Result result, string? electionCode = (), string? resultCode = ()) {
-    worker smsWorker {
-        // Send SMS to all subscribers.
-        // TODO - should we ensure SMS is sent first?
+    websub:Hub wh = <websub:Hub> hub; // safe .. working around type guard limitation
 
-        // Avoid sending SMSs for cumulative result
-        if electionCode is () {
-            return;
-        }
-        if validTwilioAccount {
-            sendSMS(<string> electionCode, <string> resultCode);
-        }
-    }
-
-    worker jsonWorker returns error? {
-        websub:Hub wh = <websub:Hub> hub; // safe .. working around type guard limitation
-
-        // push it out with the election code and the json result as the message
-        json resultAll = {
-            election_code : result.election,
-            result : result.jsonResult
-        };
-        var r = wh.publishUpdate(JSON_RESULTS_TOPIC, resultAll, mime:APPLICATION_JSON);
-        if r is error {
-            log:printError("Error publishing update: ", r);
-        }
+    // push it out with the election code and the json result as the message
+    json resultAll = {
+        election_code : result.election,
+        result : result.jsonResult
+    };
+    var r = wh.publishUpdate(JSON_RESULTS_TOPIC, resultAll, mime:APPLICATION_JSON);
+    if r is error {
+        log:printError("Error publishing update: ", r);
     }
 }
 
