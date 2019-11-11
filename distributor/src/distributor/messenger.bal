@@ -41,13 +41,13 @@ function sendSMS(Result result) {
     }
 
     map<string> currentMobileSubscribers = mobileSubscribers;
-    currentMobileSubscribers.forEach(function (string recipientUsername) {
-        var response = twilioClient->sendSms(sourceMobile, currentMobileSubscribers[recipientUsername], message);
+    foreach string targetMobile in currentMobileSubscribers {
+        var response = twilioClient->sendSms(sourceMobile, targetMobile, message);
         if response is error {
-            log:printError(electionCode +  "/" + division + " message sending failed for \'" + targetMobile +
-                           "\' due to error:" + <string> response.detail()?.message);
+            log:printError("Message sending failed for \'" + targetMobile + "\' due to error:" +
+                                        <string> response.detail()?.message);
         }
-    });
+    }
 }
 
 # Validate and sanitize local mobile number into the proper format.(+94771234567).
