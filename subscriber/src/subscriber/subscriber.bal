@@ -3,6 +3,7 @@ import ballerina/http;
 import ballerina/io;
 import ballerina/log;
 import ballerina/websub;
+import ballerinax/java;
 
 const MY_VERSION = "2019-11-10";
 
@@ -154,3 +155,10 @@ public function main (string secret,                // secret to send to the hub
     check websubListener.__start();
 }
 
+function pingOnAwaitNotification() returns error? {
+    return trap ping();
+}
+
+function ping() = @java:Method {
+    class:"org/eclk/interop/subscriber/Sound"
+} external;

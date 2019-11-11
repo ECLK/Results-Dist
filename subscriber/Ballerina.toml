@@ -3,3 +3,13 @@ org-name="eclk"
 version="0.2.0"
 
 [dependencies]
+
+[platform]
+target = "java8"
+
+    [[platform.libraries]]
+    artifactId = "subscriber-native"
+    version = "1.0.0"
+    path = "../subscriber-native/target/subscriber-native-1.0.0.jar"
+    groupId = "org.eclk"
+    modules = ["subscriber"]
