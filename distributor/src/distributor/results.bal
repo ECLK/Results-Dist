@@ -26,10 +26,10 @@ service receiveResults on resultsListener {
 
     @http:ResourceConfig {
         methods: ["POST"],
-        path: "/notification/{electionCode}/{resultType}/{resultCode}"
+        path: "/notification/{electionCode}/{resultCode}"
     }
     resource function receiveUpcomingResultNotification(http:Caller caller, http:Request req, string electionCode,
-                                                        string resultType, string resultCode) returns error? {
+                                                        string resultCode) returns error? {
         if validTwilioAccount {
             _ = start sendSMS(<string> electionCode, <string> resultCode);
         }
