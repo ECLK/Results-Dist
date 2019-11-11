@@ -10,6 +10,7 @@ const MY_VERSION = "2019-11-10";
 // TODO: set correct ones once decided
 const JSON_TOPIC = "https://github.com/ECLK/Results-Dist-json";
 const IMAGE_PDF_TOPIC = "https://github.com/ECLK/Results-Dist-image";
+const AWAIT_RESULTS_TOPIC = "https://github.com/ECLK/Results-Dist-await";
 
 const UNDERSOCRE = "_";
 const COLON = ":";
@@ -21,8 +22,8 @@ const PDF_EXT = ".pdf";
 
 const JSON_PATH = "/json";
 const XML_PATH = "/xml";
-const TEXT_PATH = "/txt";
 const IMAGE_PATH = "/image";
+const AWAIT_PATH = "/await";
 
 const TWO_DAYS_IN_SECONDS = 172800;
 
@@ -44,6 +45,7 @@ http:Client? imageClient = ();
 public function main (string secret,                // secret to send to the hub
                       string? username = (),        // my username  
                       string? password = (),        // my password  
+                      boolean await = false,        // do I want the await results notification?
                       boolean 'json = false,        // do I want json?
                       boolean 'xml = false,         // do I want xml?
                       boolean image = false,        // do I want the image?
@@ -122,6 +124,37 @@ public function main (string secret,                // secret to send to the hub
         }
     };
     check websubListener.__attach(subscriberService);
+
+    if await {
+        // attach the await results subscriber
+        service awaitResultsSubscriberService = @websub:SubscriberServiceConfig {
+           path: AWAIT_PATH,
+           subscribeOnStartUp: true,
+           target: [hub, AWAIT_RESULTS_TOPIC],
+           leaseSeconds: TWO_DAYS_IN_SECONDS,
+           secret: subscriberSecret,
+           callback: subscriberPublicUrl.concat(AWAIT_PATH),
+           hubClientConfig: {
+               auth: auth
+           }
+        }
+        service {
+           resource function onNotification(websub:Notification notification) {
+               string|error textPayload = notification.getTextPayload();
+               if (textPayload is string) {
+                   log:printInfo("Await results notification received: " + textPayload);
+                   error? pingStatus = pingOnAwaitNotification();
+                   if !(pingStatus is ()) {
+                       log:printError("Error pinging on await notification", pingStatus);
+
+                   }
+               } else {
+                   log:printError("Expected text payload, received:" + textPayload.toString());
+               }
+           }
+        };
+        check websubListener.__attach(awaitResultsSubscriberService);
+    }
 
     if image {
         imageClient = <@untainted> new (homeURL, {auth: auth});
