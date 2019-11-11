@@ -9,7 +9,8 @@ const WWW_AUTHENTICATE_HEADER = "WWW-Authenticate";
 const HUB_TOPIC = "hub.topic";
 const HUB_CALLBACK = "hub.callback";
 
-map<string> callbackMap = {};
+map<string> resultCallbackMap = {};
+map<string> imageCallbackMap = {};
 
 # Filter to challenge authentication.
 public type AuthChallengeFilter object {
@@ -68,9 +69,19 @@ public type SubscriptionFilter object {
             log:printWarn("error decoding topic, using the original form: " + topic + ". Error: " + decodedTopic.toString());
         }
 
-        if (topic != JSON_RESULTS_TOPIC && topic != IMAGE_PDF_TOPIC) {
-            log:printError("subscription request received for invalid topic " + topic);
-            return false;
+
+        map<string> callbackMap = resultCallbackMap;
+        match topic {
+            JSON_RESULTS_TOPIC => {
+                callbackMap = resultCallbackMap;
+            }
+            IMAGE_PDF_TOPIC => {
+                callbackMap = imageCallbackMap;
+            }
+            _ => {
+                log:printError("subscription request received for invalid topic " + topic);
+                return false;
+            }
         }
 
         string|error decodedCallback = encoding:decodeUriComponent(callback, "UTF-8");
@@ -98,17 +109,18 @@ public type SubscriptionFilter object {
             if callbackMap.hasKey(username) {
                 string existingCallback = callbackMap.get(username);
                 log:printInfo("Removing existing subscription callback: " + existingCallback + ", for username: " +
-                                username);
+                                username + ", and topic: " + topic);
                 error? remResult = hubVar.removeSubscription(topic, existingCallback);
                 if (remResult is error) {
                     log:printError("error removing existing subscription for username: " + username, remResult);
                 }
                 log:printInfo("Adding a new subscription callback: " + callback + ", for username: " +
-                                username);
-                updateUserCallback(username, callback);
+                                username + ", and topic: " + topic);
+                updateUserCallback(username, topic, callback);
             } else {
-                log:printInfo("Adding a subscription callback: " + callback + ", for username: " + username);
-                saveUserCallback(username, callback);
+                log:printInfo("Adding a subscription callback: " + callback + ", for username: " + username +
+                                ", and topic: " + topic);
+                saveUserCallback(username, topic, callback);
             }
             callbackMap[username] = <@untainted> callback;
         } else {
