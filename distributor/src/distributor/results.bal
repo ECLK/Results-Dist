@@ -49,7 +49,7 @@ service receiveResults on resultsListener {
         check saveResult(result);
     
         // publish the received result
-        publishResultData(result, electionCode, resultCode);
+        publishResultData(result);
 
         if result.jsonResult.level == "POLLING-DIVISION" {
             // send a cumulative result with the current running totals
@@ -130,17 +130,17 @@ service receiveResults on resultsListener {
 # - send SMSs to all subscribers
 # - update the website with the result
 # - deliver the result data to all subscribers
-function publishResultData(Result result, string? electionCode = (), string? resultCode = ()) {
+function publishResultData(Result result) {
     worker smsWorker {
         // Send SMS to all subscribers.
         // TODO - should we ensure SMS is sent first?
 
         // Avoid sending SMSs for cumulative result
-        if electionCode is () {
+        if result.jsonResult.level == "NATIONAL-INCREMENTAL" {
             return;
         }
         if validTwilioAccount {
-            sendSMS(<string> electionCode, <string> resultCode);
+            sendSMS(result);
         }
     }
 

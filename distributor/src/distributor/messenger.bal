@@ -18,22 +18,35 @@ boolean validTwilioAccount = false;
 
 # Send SMS notification to all the subscribers.
 #
-# + electionCode - The respective code that represents the type of election
-# + edName - The name of the electoral district
-# + pdName - The name of the polling division
-function sendSMS(string electionCode, string? edName, string? pdName) {
-    string electoralDistrict = edName is () ? "" : "/" + edName;
-    string pollingDivision = pdName is () ? "" : "/" + pdName;
-    string message  = "Await results for " + electionCode + electoralDistrict + pollingDivision;
+# + result - The inbund results
+function sendSMS(Result result) {
+    string electionCode = result.election;
+    string electionType = "/" + result.'type;
+    string level = result.jsonResult.level is error ? "": <string> result.jsonResult.level;
+    string message = "";
+
+    if level == "POLLING-DIVISION" {
+        string electoralDistrict = "/" + result.jsonResult.ed_name.toString();
+        string pollingDivision = "/" + result.jsonResult.pd_name.toString();
+        message  = "Await polling division results for " + electionCode + electionType + electoralDistrict + pollingDivision;
+
+    } else if level == "ELECTORAL-DISTRICT" {
+        string electoralDistrict = "/" + result.jsonResult.ed_name.toString();
+        message  = "Await electoral results for " + electionCode + electionType + electoralDistrict;
+
+    } else if level == "NATIONAL-FINAL" {
+        message  = "Await NATIONAL-FINAL results for " + electionCode + electionType;
+    } else {
+        message  = "Await results for " + electionCode + electionType + "/" + result.code;
+    }
 
     map<string> currentMobileSubscribers = mobileSubscribers;
     currentMobileSubscribers.forEach(function (string recipientUsername) {
-        //var response = twilioClient->sendSms(sourceMobile, currentMobileSubscribers[recipientUsername], message);
-        //if response is error {
-        //    log:printError(electionCode +  "/" + division + " message sending failed for \'" + targetMobile +
-        //                   "\' due to error:" + <string> response.detail()?.message);
-        //}
-        log:printInfo("Sending sms - " + message);
+        var response = twilioClient->sendSms(sourceMobile, currentMobileSubscribers[recipientUsername], message);
+        if response is error {
+            log:printError(electionCode +  "/" + division + " message sending failed for \'" + targetMobile +
+                           "\' due to error:" + <string> response.detail()?.message);
+        }
     });
 }
 
