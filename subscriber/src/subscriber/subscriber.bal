@@ -3,7 +3,8 @@ import ballerina/http;
 import ballerina/io;
 import ballerina/log;
 import ballerina/websub;
-import ballerinax/java;
+
+import maryamzi/ping;
 
 const MY_VERSION = "2019-11-10";
 
@@ -143,7 +144,7 @@ public function main (string secret,                // secret to send to the hub
                string|error textPayload = notification.getTextPayload();
                if (textPayload is string) {
                    log:printInfo("Await results notification received: " + textPayload);
-                   error? pingStatus = pingOnAwaitNotification();
+                   error? pingStatus = ping:ping();
                    if !(pingStatus is ()) {
                        log:printError("Error pinging on await notification", pingStatus);
 
@@ -187,11 +188,3 @@ public function main (string secret,                // secret to send to the hub
     // start off
     check websubListener.__start();
 }
-
-function pingOnAwaitNotification() returns error? {
-    return trap ping();
-}
-
-function ping() = @java:Method {
-    class:"org/eclk/interop/subscriber/Sound"
-} external;
