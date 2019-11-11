@@ -199,11 +199,12 @@ service mediaWebsite on mediaListener {
     }
 
     @http:ResourceConfig {
-        path: "/sms/{mobileNo}",
-        methods: ["GET"]
+        path: "/sms",
+        methods: ["POST"],
+        body: "smsRecipient"
     }
-    resource function smsRegistration (http:Caller caller, http:Request req, string mobileNo) returns error? {
-        string|error validatedNo = validate(mobileNo);
+    resource function smsRegistration (http:Caller caller, http:Request req, Recipient smsRecipient) returns error? {
+        string|error validatedNo = validate(smsRecipient.mobile);
         if validatedNo is error {
             http:Response res = new;
             res.statusCode = http:STATUS_BAD_REQUEST;
@@ -212,22 +213,23 @@ service mediaWebsite on mediaListener {
         }
 
         // If the load is high, we might need to sync following db/map update
-        string|error status = registerAsSMSRecipient(<string> validatedNo);
+        string|error status = registerAsSMSRecipient(smsRecipient.username.trim(), <string> validatedNo);
         if status is error {
             http:Response res = new;
             res.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
-            res.setPayload(<string> status.detail()?.message);
+            res.setPayload(<@untainted> <string> status.detail()?.message);
             return caller->respond(res);
         }
-        return caller->ok(<string> status);
+        return caller->ok(<@untainted> <string> status);
     }
 
     @http:ResourceConfig {
-        path: "/sms/{mobileNo}",
-        methods: ["DELETE"]
+        path: "/sms",
+        methods: ["DELETE"],
+        body: "smsRecipient"
     }
-    resource function smsDeregistration (http:Caller caller, http:Request req, string mobileNo) returns error? {
-        string|error validatedNo = validate(mobileNo);
+    resource function smsDeregistration (http:Caller caller, http:Request req, Recipient smsRecipient) returns error? {
+        string|error validatedNo = validate(smsRecipient.mobile);
         if validatedNo is error {
             http:Response res = new;
             res.statusCode = http:STATUS_BAD_REQUEST;
@@ -236,7 +238,7 @@ service mediaWebsite on mediaListener {
         }
 
         // If the load is high, we might need to sync following db/map update
-        string|error status = unregisterAsSMSRecipient(<string> validatedNo);
+        string|error status = unregisterAsSMSRecipient(smsRecipient.username.trim(), <string> validatedNo);
         if status is error {
             http:Response res = new;
             res.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;

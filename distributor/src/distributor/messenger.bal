@@ -3,8 +3,6 @@ import ballerina/log;
 import ballerina/stringutils;
 import wso2/twilio;
 
-const INVALID_NO = "Invalid no";
-
 twilio:TwilioConfiguration twilioConfig = {
     accountSId: config:getAsString("eclk.sms.twilio.accountSid"),
     authToken: config:getAsString("eclk.sms.twilio.authToken"),
@@ -14,28 +12,29 @@ twilio:TwilioConfiguration twilioConfig = {
 twilio:Client twilioClient = new(twilioConfig);
 
 // Keeps registered sms recipients in-memory. Values are populated in every service init and recipient registration
-string[] mobileSubscribers = [];
+map<string> mobileSubscribers = {};
 string sourceMobile = config:getAsString("eclk.sms.twilio.source");
 boolean validTwilioAccount = false;
 
 # Send SMS notification to all the subscribers.
 #
 # + electionCode - The respective code that represents the type of election
-# + resultCode - The predefined code for a released result
-function sendSMS(string electionCode, string resultCode) {
-    string division = DIVISION_CODES[resultCode] ?: resultCode;
-    string message  = "Await results for " + electionCode +  "/" + division + "(" + resultCode + ")";
+# + edName - The name of the electoral district
+# + pdName - The name of the polling division
+function sendSMS(string electionCode, string? edName, string? pdName) {
+    string electoralDistrict = edName is () ? "" : "/" + edName;
+    string pollingDivision = pdName is () ? "" : "/" + pdName;
+    string message  = "Await results for " + electionCode + electoralDistrict + pollingDivision;
 
-    foreach string targetMobile in mobileSubscribers {
-        if (targetMobile == INVALID_NO) {
-            continue;
-        }
-        var response = twilioClient->sendSms(sourceMobile, targetMobile, message);
-        if response is error {
-            log:printError(electionCode +  "/" + division + " message sending failed for \'" + targetMobile +
-                           "\' due to error:" + <string> response.detail()?.message);
-        }
-    }
+    map<string> currentMobileSubscribers = mobileSubscribers;
+    currentMobileSubscribers.forEach(function (string recipientUsername) {
+        //var response = twilioClient->sendSms(sourceMobile, currentMobileSubscribers[recipientUsername], message);
+        //if response is error {
+        //    log:printError(electionCode +  "/" + division + " message sending failed for \'" + targetMobile +
+        //                   "\' due to error:" + <string> response.detail()?.message);
+        //}
+        log:printInfo("Sending sms - " + message);
+    });
 }
 
 # Validate and sanitize local mobile number into the proper format.(+94771234567).
@@ -60,59 +59,58 @@ function validate(string mobileNo) returns string|error {
     }
     // Allow only the local mobile numbers to register via public API. International number are avoided.
     return error(ERROR_REASON, message = "Invalid mobile number. Resend the request as follows: If the " +
-                                    "mobile no is 0771234567, send request as \"/sms/94771234567\". ");
+                                    "mobile no is 0771234567, send POST request to  \'/sms\' with JSON payload " +
+                                    "\'{\"username\":\"myuser\", \"mobile\":\"0771234567\"}\'");
 }
 
 # Register recipient in the mobileSubscribers list and persist in the smsRecipients db table.
 #
+# + username - The recipient username
 # + mobileNo - The recipient number
 # + return - The status of registration or operation error
-function registerAsSMSRecipient(string mobileNo) returns string|error {
+function registerAsSMSRecipient(string username, string mobileNo) returns string|error {
 
-    foreach string recipient in mobileSubscribers {
-        if (recipient == mobileNo) {
-            return error(ERROR_REASON, message = "Registration failed: " + mobileNo + " is already registered");
-        }
+    if mobileSubscribers.hasKey(username) {
+        string errMsg = "Registration failed: username:" + username + " is already registered with mobile:" + mobileNo;
+        log:printError(errMsg);
+        return error(ERROR_REASON, message = errMsg);
     }
 
     // Persist recipient number in database
-    var status = dbClient->update(INSERT_RECIPIENT, mobileNo);
+    var status = dbClient->update(INSERT_RECIPIENT, username, mobileNo);
     if status is error {
-        log:printError("Failed to persist recipient no in database: " + status.toString());
-        return status;
+        log:printError("Failed to persist recipient no in database", status);
+        //return status;
+        return error(ERROR_REASON, message = "Registration failed: username:" + username + " mobile:" + mobileNo + ": " +
+                                            <string> status.detail()?.message);
     }
-    // Update the mobileSubscribers array
-    mobileSubscribers.push(mobileNo);
+    mobileSubscribers[username] = mobileNo;
 
-    return "Successfully registered: " + mobileNo;
+    return "Successfully registered: username:" + username + " mobile:"  + mobileNo;
 }
 
-# Unregister recipient from the mobileSubscribers array and remove from the smsRecipients db table.
+# Unregister recipient from the mobileSubscribers map and remove from the smsRecipients db table.
 #
+# + username - The recipient username
 # + mobileNo - The recipient number
 # + return - The status of deregistration or operation error
-function unregisterAsSMSRecipient(string mobileNo) returns string|error {
+function unregisterAsSMSRecipient(string username, string mobileNo) returns string|error {
 
     // Remove persisted recipient number from database
-    var status = dbClient->update(DELETE_RECIPIENT, mobileNo);
+    var status = dbClient->update(DELETE_RECIPIENT, username, mobileNo);
     if status is error {
-        log:printError("Failed to remove recipient from the database: " + status.toString());
-        return status;
+        log:printError("Failed to remove recipient from the database", status);
+        return error(ERROR_REASON, message = "Unregistration failed: username:" + username + " mobile:" + mobileNo + ": " +
+                                                    <string> status.detail()?.message);
     }
 
-    int index = 0;
-    boolean found = false;
-    foreach string recipient in mobileSubscribers {
-        if (recipient == mobileNo) {
-            found = true;
-            break;
+    if mobileSubscribers.hasKey(username) {
+        if (mobileSubscribers.get(username) == mobileNo) {
+            return "Successfully unregistered: username:" + username + " mobile:" + mobileSubscribers.remove(username);
         }
-        index += 1;
     }
-    // Assign special string to particular array element as to remove the recipient from the mobileSubscribers array
-    if found {
-        mobileSubscribers[index] = INVALID_NO;
-        return "Successfully unregistered: " + mobileNo;
-    }
-    return error(ERROR_REASON, message = "Unregistration failed: " + mobileNo + " is not registered");
+
+    string errMsg = "Unregistration failed: No entry found for username:" + username + " mobile:"  + mobileNo;
+    log:printError(errMsg);
+    return error(ERROR_REASON, message = errMsg);
 }

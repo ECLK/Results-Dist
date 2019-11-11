@@ -71,5 +71,6 @@ type Result record {|
 
 // SMS recipient record
 type Recipient record {|
-    string number;
+    string username;
+    string mobile;
 |};
