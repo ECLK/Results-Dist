@@ -23,6 +23,32 @@ import ballerina/websub;
     }
 }
 service receiveResults on resultsListener {
+
+    @http:ResourceConfig {
+        methods: ["POST"],
+        path: "/notification/{electionCode}/{resultCode}"
+    }
+    resource function receiveUpcomingResultNotification(http:Caller caller, http:Request req, string electionCode,
+                                                        string resultCode) returns error? {
+        string division = DIVISION_CODES[resultCode] ?: resultCode;
+        string message  = "Await results for " + electionCode +  "/" + division + "(" + resultCode + ")";
+
+        // TODO: check if we should make this block an async call
+        websub:Hub wh = <websub:Hub> hub;
+        var r = wh.publishUpdate(AWAIT_RESULTS_TOPIC, message);
+        if r is error {
+            log:printError("Error publishing update: ", r);
+        }
+
+        if validTwilioAccount {
+            _ = start sendSMS(message, electionCode, division);
+        }
+
+        // respond accepted
+        return caller->accepted();
+    }
+
+
     @http:ResourceConfig {
         methods: ["POST"],
         path: "/data/{electionCode}/{resultType}/{resultCode}",
@@ -127,48 +153,19 @@ service receiveResults on resultsListener {
 }
 
 # Publish the results as follows:
-# - send SMSs to all subscribers
 # - update the website with the result
 # - deliver the result data to all subscribers
 function publishResultData(Result result, string? electionCode = (), string? resultCode = ()) {
     websub:Hub wh = <websub:Hub> hub; // safe .. working around type guard limitation
 
-    worker awaitResultsWorker {
-        // Send SMS to all subscribers.
-        // TODO - should we ensure SMS is sent first?
-
-        // Avoid sending SMSs for cumulative result
-        if electionCode is () {
-            return;
-        }
-
-        string resultCodeStr = <string> resultCode;
-        string division = DIVISION_CODES[resultCodeStr] ?: resultCodeStr;
-        string electionCodeStr = <string> electionCode;
-        string message  = "Await results for " + electionCodeStr +  "/" + division + "(" + resultCodeStr + ")";
-
-        // TODO: check if we should make this block an async call
-        var r = wh.publishUpdate(AWAIT_RESULTS_TOPIC, message);
-        if r is error {
-            log:printError("Error publishing update: ", r);
-        }
-
-        if validTwilioAccount {
-            sendSMS(message, electionCodeStr, division);
-        }
-    }
-
-    worker jsonWorker returns error? {
-
-        // push it out with the election code and the json result as the message
-        json resultAll = {
-            election_code : result.election,
-            result : result.jsonResult
-        };
-        var r = wh.publishUpdate(JSON_TOPIC, resultAll, mime:APPLICATION_JSON);
-        if r is error {
-            log:printError("Error publishing update: ", r);
-        }
+    // push it out with the election code and the json result as the message
+    json resultAll = {
+        election_code : result.election,
+        result : result.jsonResult
+    };
+    var r = wh.publishUpdate(JSON_TOPIC, resultAll, mime:APPLICATION_JSON);
+    if r is error {
+        log:printError("Error publishing update: ", r);
     }
 }
 
