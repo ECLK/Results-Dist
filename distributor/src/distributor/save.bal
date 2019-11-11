@@ -30,10 +30,11 @@ const DROP_RESULTS_TABLE = "DROP TABLE results";
 
 const string CREATE_CALLBACKS_TABLE = "CREATE TABLE IF NOT EXISTS callbacks (" +
                                     "    username VARCHAR(100) NOT NULL," +
+                                    "    topic VARCHAR(100) NOT NULL," +
                                     "    callback VARCHAR(200) NOT NULL," +
-                                    "    PRIMARY KEY (username, callback))";
-const INSERT_CALLBACK = "INSERT INTO callbacks (username, callback) VALUES (?, ?)";
-const UPDATE_CALLBACK = "UPDATE callbacks SET callback = ? WHERE username = ?";
+                                    "    PRIMARY KEY (username, topic))";
+const INSERT_CALLBACK = "INSERT INTO callbacks (username, topic, callback) VALUES (?, ?, ?)";
+const UPDATE_CALLBACK = "UPDATE callbacks SET callback = ? WHERE username = ? AND topic = ?";
 const SELECT_CALLBACKS = "SELECT * FROM callbacks";
 const DROP_CALLBACKS_TABLE = "DROP TABLE callbacks";
 
@@ -66,6 +67,7 @@ type DataResult record {|
 
 type UserCallback record {|
     string username;
+    string topic;
     string callback;
 |};
 
@@ -135,7 +137,15 @@ function __init() {
     count = 0;
     while (callbackRet.hasNext()) {
         UserCallback userCb = <UserCallback> callbackRet.getNext();
-        callbackMap[userCb.username] = <@untainted> userCb.callback;
+
+        if (userCb.topic == JSON_RESULTS_TOPIC) {
+            resultCallbackMap[userCb.username] = <@untainted> userCb.callback;
+        } else if (userCb.topic == IMAGE_PDF_TOPIC) {
+            imageCallbackMap[userCb.username] = <@untainted> userCb.callback;
+        } else {
+            panic error("UnknownTopic!"); // temporary
+        }
+
         count += 1;
     }
     if (count > 0) {
@@ -225,16 +235,16 @@ function saveImage(string electionCode, string resultCode, string mediaType, byt
 }
 
 # Save a subscription username-calback combination.
-function saveUserCallback(string username, string callback) {
-    var r = dbClient->update(INSERT_CALLBACK, username, callback);
+function saveUserCallback(string username, string topic, string callback) {
+    var r = dbClient->update(INSERT_CALLBACK, username, topic, callback);
     if r is error {
         log:printError("Unable to save username-callback in database: ", r);
     }
 }
 
 # Update a subscription username-calback combination.
-function updateUserCallback(string username, string callback) {
-    var r = dbClient->update(UPDATE_CALLBACK, callback, username);
+function updateUserCallback(string username, string topic, string callback) {
+    var r = dbClient->update(UPDATE_CALLBACK, callback, username, topic);
     if r is error {
         log:printError("Unable to update username-callback in database: ", r);
     }
