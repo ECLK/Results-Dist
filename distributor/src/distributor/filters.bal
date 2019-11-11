@@ -4,26 +4,59 @@ import ballerina/http;
 import ballerina/log;
 import ballerina/websub;
 
+const WWW_AUTHENTICATE_HEADER = "WWW-Authenticate";
+
 const HUB_TOPIC = "hub.topic";
 const HUB_CALLBACK = "hub.callback";
 
-map<string> callbackMap = {};
+map<string> resultCallbackMap = {};
+map<string> imageCallbackMap = {};
 
+# Filter to challenge authentication.
+public type AuthChallengeFilter object {
+    *http:RequestFilter;
+
+    public function filterRequest(http:Caller caller, http:Request request, http:FilterContext context) 
+                        returns boolean {
+        if request.hasHeader(http:AUTH_HEADER) || request.rawPath != "/" {
+            return true;
+        }
+
+        http:Response res = new;
+        res.statusCode = 401;
+        res.addHeader(WWW_AUTHENTICATE_HEADER, "Basic realm=\"EC Media Results Delivery\"");
+        error? err =  caller->respond(res);
+        if (err is error) {
+            log:printError("error responding with auth challenge", err);
+        }
+        return false;
+    }
+};
+
+# Filter to remove an existing subscription for a user, when a new subscription request is sent.
 public type SubscriptionFilter object {
     *http:RequestFilter;
 
     public function filterRequest(http:Caller caller, http:Request request, http:FilterContext context) returns boolean {
+        if request.rawPath != "/websub/hub" {
+            return true;
+        }
+
+        if (!request.hasHeader(http:AUTH_HEADER)) {
+            return false;
+        }
+
         map<string>|error params = request.getFormParams();
 
         if params is error {
-            log:printDebug("error extracting form params: " + params.toString());
-            return true;
+            log:printError("error extracting form params: " + params.toString());
+            return false;
         }
 
         map<string> paramMap = <map<string>> params;
         if !paramMap.hasKey(HUB_TOPIC) || !paramMap.hasKey(HUB_CALLBACK) {
             log:printError("topic and/or callback not available");
-            return true;
+            return false;
         }
 
         string topic = paramMap.get(HUB_TOPIC);
@@ -36,9 +69,19 @@ public type SubscriptionFilter object {
             log:printWarn("error decoding topic, using the original form: " + topic + ". Error: " + decodedTopic.toString());
         }
 
-        if (topic != JSON_RESULTS_TOPIC && topic != IMAGE_PDF_TOPIC) {
-            log:printError("subscription request received for invalid topic " + topic);
-            return false;
+
+        map<string> callbackMap = resultCallbackMap;
+        match topic {
+            JSON_RESULTS_TOPIC => {
+                callbackMap = resultCallbackMap;
+            }
+            IMAGE_PDF_TOPIC => {
+                callbackMap = imageCallbackMap;
+            }
+            _ => {
+                log:printError("subscription request received for invalid topic " + topic);
+                return false;
+            }
         }
 
         string|error decodedCallback = encoding:decodeUriComponent(callback, "UTF-8");
@@ -49,10 +92,6 @@ public type SubscriptionFilter object {
         }
 
         websub:Hub hubVar = <websub:Hub> hub;
-
-        if (!request.hasHeader(http:AUTH_HEADER)) {
-            return false;
-        }
 
         string headerValue = request.getHeader(http:AUTH_HEADER);
         
@@ -70,17 +109,18 @@ public type SubscriptionFilter object {
             if callbackMap.hasKey(username) {
                 string existingCallback = callbackMap.get(username);
                 log:printInfo("Removing existing subscription callback: " + existingCallback + ", for username: " +
-                                username);
+                                username + ", and topic: " + topic);
                 error? remResult = hubVar.removeSubscription(topic, existingCallback);
                 if (remResult is error) {
                     log:printError("error removing existing subscription for username: " + username, remResult);
                 }
                 log:printInfo("Adding a new subscription callback: " + callback + ", for username: " +
-                                username);
-                updateUserCallback(username, callback);
+                                username + ", and topic: " + topic);
+                updateUserCallback(username, topic, callback);
             } else {
-                log:printInfo("Adding a subscription callback: " + callback + ", for username: " + username);
-                saveUserCallback(username, callback);
+                log:printInfo("Adding a subscription callback: " + callback + ", for username: " + username +
+                                ", and topic: " + topic);
+                saveUserCallback(username, topic, callback);
             }
             callbackMap[username] = <@untainted> callback;
         } else {

@@ -18,27 +18,30 @@ boolean validTwilioAccount = false;
 
 # Send SMS notification to all the subscribers.
 #
-# + result - The inbund results
-function sendSMS(Result result) {
-    string electionCode = result.election;
-    string electionType = "/" + result.'type;
-    string level = result.jsonResult.level is error ? "": <string> result.jsonResult.level;
+# + notification - The result notification record
+function sendSMS(Notification notification) {
+    string electionCode = notification.electionCode;
+    string electionType = "/" + notification.'type;
+    string level = notification.level;
+
     string message = "";
 
     if level == "POLLING-DIVISION" {
-        string electoralDistrict = "/" + result.jsonResult.ed_name.toString();
-        string pollingDivision = "/" + result.jsonResult.pd_name.toString();
-        message  = "Await polling division results for " + electionCode + electionType + electoralDistrict + pollingDivision;
+        string electoralDistrict = "/" + notification["ed_name"].toString();
+        string pollingDivision = "/" + notification["pd_name"].toString();
 
+        message  = "Await POLLING-DIVISION results for " + electionCode + electionType + electoralDistrict + pollingDivision;
     } else if level == "ELECTORAL-DISTRICT" {
-        string electoralDistrict = "/" + result.jsonResult.ed_name.toString();
-        message  = "Await electoral results for " + electionCode + electionType + electoralDistrict;
+        string electoralDistrict = "/" + notification["ed_name"].toString();
 
+        message  = "Await ELECTORAL-DISTRICT results for " + electionCode + electionType + electoralDistrict;
     } else if level == "NATIONAL-FINAL" {
         message  = "Await NATIONAL-FINAL results for " + electionCode + electionType;
     } else {
-        message  = "Await results for " + electionCode + electionType + "/" + result.code;
+        message  = "Await results for " + electionCode + electionType + "/" + notification.resultCode;
     }
+
+    message = message + "(" + notification.resultCode + ")";
 
     map<string> currentMobileSubscribers = mobileSubscribers;
     foreach string targetMobile in currentMobileSubscribers {
