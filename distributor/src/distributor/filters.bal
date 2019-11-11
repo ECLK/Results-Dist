@@ -4,26 +4,58 @@ import ballerina/http;
 import ballerina/log;
 import ballerina/websub;
 
+const WWW_AUTHENTICATE_HEADER = "WWW-Authenticate";
+
 const HUB_TOPIC = "hub.topic";
 const HUB_CALLBACK = "hub.callback";
 
 map<string> callbackMap = {};
 
+# Filter to challenge authentication.
+public type AuthChallengeFilter object {
+    *http:RequestFilter;
+
+    public function filterRequest(http:Caller caller, http:Request request, http:FilterContext context) 
+                        returns boolean {
+        if request.hasHeader(http:AUTH_HEADER) || request.rawPath != "/" {
+            return true;
+        }
+
+        http:Response res = new;
+        res.statusCode = 401;
+        res.addHeader(WWW_AUTHENTICATE_HEADER, "Basic realm=\"EC Media Results Delivery\"");
+        error? err =  caller->respond(res);
+        if (err is error) {
+            log:printError("error responding with auth challenge", err);
+        }
+        return false;
+    }
+};
+
+# Filter to remove an existing subscription for a user, when a new subscription request is sent.
 public type SubscriptionFilter object {
     *http:RequestFilter;
 
     public function filterRequest(http:Caller caller, http:Request request, http:FilterContext context) returns boolean {
+        if request.rawPath != "/websub/hub" {
+            return true;
+        }
+
+        if (!request.hasHeader(http:AUTH_HEADER)) {
+            return false;
+        }
+
         map<string>|error params = request.getFormParams();
 
         if params is error {
-            log:printDebug("error extracting form params: " + params.toString());
-            return true;
+            log:printError("error extracting form params: " + params.toString());
+            return false;
         }
 
         map<string> paramMap = <map<string>> params;
         if !paramMap.hasKey(HUB_TOPIC) || !paramMap.hasKey(HUB_CALLBACK) {
             log:printError("topic and/or callback not available");
-            return true;
+            return false;
         }
 
         string topic = paramMap.get(HUB_TOPIC);
@@ -49,10 +81,6 @@ public type SubscriptionFilter object {
         }
 
         websub:Hub hubVar = <websub:Hub> hub;
-
-        if (!request.hasHeader(http:AUTH_HEADER)) {
-            return false;
-        }
 
         string headerValue = request.getHeader(http:AUTH_HEADER);
         
