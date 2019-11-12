@@ -4,6 +4,7 @@ import ballerina/log;
 import ballerina/mime;
 import ballerina/time;
 import ballerina/websub;
+import ballerina/lang.'int;
 
 # Service for results tabulation to publish results to. We assume that results tabulation will deliver
 # a result in two separate messages - one with the json result data and another with an image of the
@@ -30,6 +31,7 @@ service receiveResults on resultsListener {
     }
     resource function receiveUpcomingResultNotification(http:Caller caller, http:Request req, string electionCode,
                                                         string resultCode) returns error? {
+        log:printInfo("Result notification received for " + electionCode + "/" + resultCode);
         if validTwilioAccount {
             _ = start sendSMS(<string> electionCode, <string> resultCode);
         }
@@ -48,6 +50,10 @@ service receiveResults on resultsListener {
                                   string resultCode, json jsonResult) returns error? {
         // payload is supposed to be a json object - its ok to get upset if not
         map<json> jsonobj = check trap <map<json>> jsonResult;
+
+        // check and convert numbers to ints if they're strings
+        cleanupJson(jsonobj);
+        log:printError(jsonobj.toJsonString());
 
         // save everything in a convenient way
         Result result = <@untainted> {
@@ -167,3 +173,28 @@ function publishResultImage(map<json> imageData) {
         log:printError("Error publishing update: ", r);
     }
 }
+
+function cleanupJson(map<json> jin) {
+    log:printError(jin.toJsonString());
+    json[] by_party = <json[]> jin.by_party;
+    foreach json j2 in by_party {
+        map<json> j = <map<json>> j2;
+        if j.votes is string {
+            j["votes"] = <int>'int:fromString(<string>j.votes);
+        }
+    }
+    map<json> js = <map<json>>jin.summary;
+    if js.valid is string {
+        js["valid"] = (js.valid == "") ? 0 : <int>'int:fromString(<string>js.valid);
+    }
+    if js.rejected is string {
+        js["rejected"] = (js.rejected == "") ? 0 : <int>'int:fromString(<string>js.rejected);
+    }
+    if js.polled is string {
+        js["polled"] = (js.polled == "") ? 0 : <int>'int:fromString(<string>js.polled);
+    }
+    if js.electors is string {
+        js["electors"] = (js.electors == "") ? 0 : <int>'int:fromString(<string>js.electors);
+    }
+}
+
