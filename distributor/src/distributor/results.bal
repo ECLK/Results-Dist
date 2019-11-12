@@ -33,6 +33,8 @@ service receiveResults on resultsListener {
     resource function receiveUpcomingResultNotification(http:Caller caller, http:Request req, Notification data) returns error? {
         log:printInfo("Result notification received for " + data.toString());
 
+        [string, string] [message, resultId] = getAwaitResultsMessage(data);
+
         // TODO: check if we should make this block an async call
         websub:Hub wh = <websub:Hub> hub;
         var r = wh.publishUpdate(AWAIT_RESULTS_TOPIC, message);
@@ -41,7 +43,7 @@ service receiveResults on resultsListener {
         }
 
         if validTwilioAccount {
-            _ = start sendSMS(data);
+            _ = start sendSMS(message, resultId);
         }
 
         // respond accepted

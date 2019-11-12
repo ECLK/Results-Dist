@@ -132,7 +132,7 @@ public function main (string secret,                // secret to send to the hub
            path: AWAIT_PATH,
            subscribeOnStartUp: true,
            target: [hub, AWAIT_RESULTS_TOPIC],
-           leaseSeconds: TWO_DAYS_IN_SECONDS,
+           leaseSeconds: ONE_WEEK_IN_SECONDS,
            secret: subscriberSecret,
            callback: subscriberPublicUrl.concat(AWAIT_PATH),
            hubClientConfig: {
