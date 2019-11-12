@@ -39,11 +39,12 @@ const SELECT_CALLBACKS = "SELECT * FROM callbacks";
 const DROP_CALLBACKS_TABLE = "DROP TABLE callbacks";
 
 const string CREATE_RECIPIENT_TABLE = "CREATE TABLE IF NOT EXISTS smsRecipients (" +
+                                    "    username VARCHAR(100) NOT NULL," +
                                     "    mobileNo VARCHAR(50) NOT NULL," +
-                                    "    PRIMARY KEY (mobileNo))";
-const INSERT_RECIPIENT = "INSERT INTO smsRecipients (mobileNo) VALUES (?)";
-const DELETE_RECIPIENT = "DELETE FROM smsRecipients WHERE mobileNo = ?";
-const SELECT_RECIPIENT_DATA = "SELECT mobileNo FROM smsRecipients";
+                                    "    PRIMARY KEY (username))";
+const INSERT_RECIPIENT = "INSERT INTO smsRecipients (username, mobileNo) VALUES (?, ?)";
+const DELETE_RECIPIENT = "DELETE FROM smsRecipients WHERE username = ? AND mobileNo = ?";
+const SELECT_RECIPIENT_DATA = "SELECT * FROM smsRecipients";
 const DROP_RECIPIENT_TABLE = "DROP TABLE smsRecipients";
 
 jdbc:Client dbClient = new ({
@@ -158,7 +159,7 @@ function __init() {
     count = 0;
     while (retrievedNos.hasNext()) {
         Recipient recipient = <Recipient> retrievedNos.getNext();
-        mobileSubscribers.push(recipient.number);
+        mobileSubscribers[recipient.username] = <@untainted> recipient.mobile;
         count += 1;
     }
     if (count > 0) {
@@ -167,8 +168,8 @@ function __init() {
     // validate twilio account
     var account = twilioClient->getAccountDetails();
     if account is error {
-        log:printError("SMS notification is disabled due to invalid twilio account details." +
-                         " Please provide valid 'eclk.sms.twilio.accountSid'/'authToken'/'source'(twilio mobile no):" +
+        log:printError("SMS notification is disabled due to invalid twilio account details. " +
+                        "Please provide valid 'eclk.sms.twilio.accountSid'/'authToken'/'source'(twilio mobile no):" +
                          <string> account.detail()?.message);
     } else {
         validTwilioAccount = true;

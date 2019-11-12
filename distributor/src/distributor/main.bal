@@ -42,11 +42,12 @@ public function main() returns error? {
                                     scopes: ["subscribe"]
                                 },
                                 hubConfiguration = {
+                                    leaseSeconds: 604800,
                                     hubPersistenceStore: persistenceStore,
                                     clientConfig: {
                                         // TODO: finalize
                                         retryConfig: {
-                                            count:  3,
+                                            count:  1,
                                             intervalInMillis: 5000
                                         },
                                         //followRedirects: {
