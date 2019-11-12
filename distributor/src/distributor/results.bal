@@ -27,19 +27,19 @@ service receiveResults on resultsListener {
 
     @http:ResourceConfig {
         methods: ["POST"],
-        path: "/notification/{electionCode}/{resultCode}"
+        path: "/notification",
+        body: "nofication"
     }
-    resource function receiveUpcomingResultNotification(http:Caller caller, http:Request req, string electionCode,
-                                                        string resultCode) returns error? {
-        log:printInfo("Result notification received for " + electionCode + "/" + resultCode);
+    resource function receiveUpcomingResultNotification(http:Caller caller, http:Request req, Notification
+                                                        nofication) returns error? {
+        log:printInfo("Result notification received for " + electionCode + "/" + notification.toJsonString());
         if validTwilioAccount {
-            _ = start sendSMS(<string> electionCode, <string> resultCode);
+            _ = start sendSMS(nofication);
         }
 
         // respond accepted
         return caller->accepted();
     }
-
 
     @http:ResourceConfig {
         methods: ["POST"],
@@ -71,7 +71,7 @@ service receiveResults on resultsListener {
         check saveResult(result);
     
         // publish the received result
-        publishResultData(result, electionCode, resultCode);
+        publishResultData(result);
 
         if result.jsonResult.level == "POLLING-DIVISION" {
             // send a cumulative result with the current running totals

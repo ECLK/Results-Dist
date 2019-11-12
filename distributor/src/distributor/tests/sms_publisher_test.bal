@@ -1,17 +1,29 @@
+import ballerina/auth;
+import ballerina/http;
 import ballerina/stringutils;
 import ballerina/test;
-import ballerina/http;
 
-@test:Config {}
+// Before enabling following test, update ballerina.conf with auth users
+//
+// [b7a.users.test]
+// password="password"
+@test:Config { enable: false }
 function testSubscriberRegistration() {
-    http:Client httpEndpoint = new("http://localhost:9090");
-
-    // Send a GET request to register
-    var response = httpEndpoint->get("/sms/0771234567");
+    auth:OutboundBasicAuthProvider outboundBasicAuthProvider1 = new({ username: "test", password: "password" });
+    http:BasicAuthHandler outboundBasicAuthHandler1 = new(outboundBasicAuthProvider1);
+    http:Client httpEndpoint = new("http://localhost:9090", {
+        auth: {
+            authHandler: outboundBasicAuthHandler1
+        }
+    });
+    http:Request req = new;
+    req.setJsonPayload({username : "newuser", mobile : "0771234567"});
+    // Send a POST request to register
+    var response = httpEndpoint->post("/sms", req);
     if (response is http:Response) {
         var result = response.getTextPayload();
         if (result is string) {
-            test:assertEquals(result, "Successfully registered: +94771234567");
+            test:assertEquals(result, "Successfully registered: username:newuser mobile:+94771234567");
         } else {
             test:assertFail(msg = "Invalid response message:");
         }
@@ -19,12 +31,15 @@ function testSubscriberRegistration() {
         test:assertFail(msg = "Failed to call the endpoint:");
     }
 
+    req = new;
+    req.setJsonPayload({username : "newuser", mobile : "0771234567"});
     // Register the same number for the second time
-    response = httpEndpoint->get("/sms/94771234567");
+    response = httpEndpoint->post("/sms", req);
     if (response is http:Response) {
         var result = response.getTextPayload();
         if (result is string) {
-            test:assertEquals(result, "Registration failed: +94771234567 is already registered");
+            test:assertEquals(result, "Registration failed: username:newuser is already registered with "
+                                        + "mobile:+94771234567");
         } else {
             test:assertFail(msg = "Invalid response message:");
         }
@@ -32,25 +47,44 @@ function testSubscriberRegistration() {
         test:assertFail(msg = "Failed to call the endpoint:");
     }
 
-    // Send a DELETE request to unregister
-    response = httpEndpoint->delete("/sms/0771234567");
-    if (response is http:Response) {
-        var result = response.getTextPayload();
-        if (result is string) {
-            test:assertEquals(result, "Successfully unregistered: +94771234567");
-        } else {
-            test:assertFail(msg = "Invalid response message:");
-        }
-    } else {
-        test:assertFail(msg = "Failed to call the endpoint:");
-    }
-
+    req = new;
+    req.setJsonPayload({username : "newuser", mobile : "0711234567"});
     // Send a DELETE request to unregister unavailable number
-    response = httpEndpoint->delete("/sms/0711234567");
+    response = httpEndpoint->delete("/sms", req);
     if (response is http:Response) {
         var result = response.getTextPayload();
         if (result is string) {
-            test:assertEquals(result, "Unregistration failed: +94711234567 is not registered");
+            test:assertEquals(result, "Unregistration failed: No entry found for username:newuser mobile:+94711234567");
+        } else {
+            test:assertFail(msg = "Invalid response message:");
+        }
+    } else {
+        test:assertFail(msg = "Failed to call the endpoint:");
+    }
+
+    req = new;
+    req.setJsonPayload({username : "myuser", mobile : "0771234567"});
+    // Send a DELETE request to unregister unavailable username
+    response = httpEndpoint->delete("/sms", req);
+    if (response is http:Response) {
+        var result = response.getTextPayload();
+        if (result is string) {
+            test:assertEquals(result, "Unregistration failed: No entry found for username:myuser mobile:+94771234567");
+        } else {
+            test:assertFail(msg = "Invalid response message:");
+        }
+    } else {
+        test:assertFail(msg = "Failed to call the endpoint:");
+    }
+
+    req = new;
+    req.setJsonPayload({username : "newuser", mobile : "0771234567"});
+    // Send a DELETE request to unregister successfully
+    response = httpEndpoint->delete("/sms", req);
+    if (response is http:Response) {
+        var result = response.getTextPayload();
+        if (result is string) {
+            test:assertEquals(result, "Successfully unregistered: username:newuser mobile:+94771234567");
         } else {
             test:assertFail(msg = "Invalid response message:");
         }
@@ -72,7 +106,8 @@ function testValidateFunction() {
     error err = <error> validate("07161811948979870");
     string detail = <string> err.detail()?.message;
     test:assertTrue(stringutils:contains(detail, "Invalid mobile number. Resend the request as follows: If the " +
-                                                    "mobile no is 0771234567, send request as \"/sms/94771234567\"."));
+            "mobile no is 0771234567, send POST request to  '/sms' with JSON payload '{\"username\":\"myuser\", " +
+            "\"mobile\":\"0771234567\"}'"));
 
     // validate invalid local numbers with non numeric chars
     err = <error> validate("07161811AB");
@@ -86,4 +121,41 @@ function testValidateFunction() {
     //log:printInfo(detail);
     test:assertTrue(stringutils:contains(detail, "Invalid mobile number. Given mobile number contains non numeric " +
                                                     "characters: 9471 618*19"));
+}
+
+@test:Config {}
+function testNotificationResource() {
+    http:Client httpEndpoint = new("http://localhost:8181");
+    http:Request req = new;
+    req.setJsonPayload({electionCode:"2015-PRE-REPLAY-000", 'type:"PRESIDENTIAL-FIRST", resultCode:"07A",
+                        level:"POLLING-DIVISION", ed_name:"Galle", pd_name:"Balapitiya"});
+    // Send a POST with notification json of polling division
+    var response = httpEndpoint->post("/result/notification", req);
+    if (response is http:Response) {
+        test:assertEquals(response.statusCode, 202);
+    } else {
+        test:assertFail(msg = "Failed to call the endpoint:");
+    }
+
+    req = new;
+    req.setJsonPayload({electionCode:"2015-PRE-REPLAY-000", 'type:"PRESIDENTIAL-FIRST", resultCode:"07",
+                        level:"ELECTORAL-DISTRICT", ed_name:"Galle"});
+    // Send a POST with notification json of electoral district
+    response = httpEndpoint->post("/result/notification", req);
+    if (response is http:Response) {
+        test:assertEquals(response.statusCode, 202);
+    } else {
+        test:assertFail(msg = "Failed to call the endpoint:");
+    }
+
+    req = new;
+    req.setJsonPayload({electionCode:"2015-PRE-REPLAY-000", 'type:"PRESIDENTIAL-FIRST", resultCode:"AIVOT",
+                        level:"NATIONAL-FINAL"});
+    // Send a POST with notification json of national final
+    response = httpEndpoint->post("/result/notification", req);
+    if (response is http:Response) {
+        test:assertEquals(response.statusCode, 202);
+    } else {
+        test:assertFail(msg = "Failed to call the endpoint:");
+    }
 }
