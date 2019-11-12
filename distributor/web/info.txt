@@ -1,0 +1,13 @@
+*** Start Message
+
+The results system is up and running.
+
+There is a new version of the subscriber out! Please download
+	subscriber-2019-11-02.jar
+from XXX.
+
+Run it as follows:
+
+java -jar subscriber-2019-11-02.jar "your own personal secret" -port=NNNN -myURL="my public URL"
+
+*** End Message
