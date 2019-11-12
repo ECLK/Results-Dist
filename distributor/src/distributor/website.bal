@@ -29,53 +29,10 @@ service mediaWebsite on mediaListener {
         body += "<div class='container-fluid'>";
         body = body + "<h1>Released Results Data for Media Partners</h1>";
         string tt = check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ");
-        body = body + "<p>Current time: " + tt + "</p>";
+        body += "<p>Current time: " + tt + "</p>";
         
-        string tab = "<table class='table'><tr><th>Election</th><th>Sequence No</th><th>Release Time</th><th>Code</th><th>Level</th><th>Electoral District</th><th>Polling Division</th><th>JSON</th><th>XML</th><th>HTML</th><th>Document</th></tr>";
-        int i = resultsCache.length();
-        while i > 0 { // show results in reverse order of release
-            i = i - 1;
-            Result r = resultsCache[i];
-            string election = r.election;
-            string seqNo = r.jsonResult.sequence_number.toString();
-            string timestamp = r.jsonResult.timestamp.toString();
-            string code = "";
-            string level = r.jsonResult.level.toString();
-            // figure out and ED / PD name if needed
-            string edName = "";
-            string pdName = "";
-            match level {
-                LEVEL_PD => { 
-                    code = r.jsonResult.pd_code.toString(); //  has 2 digit ED code and 1 letter PD code
-                    edName = r.jsonResult.ed_name.toString();
-                    pdName = r.jsonResult.pd_name.toString();
-                }
-                LEVEL_ED => { 
-                    code = r.jsonResult.ed_code.toString();
-                    edName = r.jsonResult.ed_name.toString();
-                }
-                LEVEL_NI => { }
-                LEVEL_NF => {
-                    code = r.code.toString();
-                 }
-            }
-
-            tab = tab + "<tr>" +
-                        "<td>" + election + "</td>" +
-                        "<td>" + seqNo + "</td>" +
-                        "<td>" + timestamp + "</td>" +
-                        "<td>" + code + "</td>" +
-                        "<td>" + level + "</td>" +
-                        "<td>" + edName + "</td>" +
-                        "<td>" + pdName + "</td>" +
-                        "<td><a href='/result/" + r.election + "/" + seqNo + "?format=json'>JSON</a>" + "</td>" +
-                        "<td><a href='/result/" + r.election + "/" + seqNo + "?format=xml'>XML</a>" + "</td>" +
-                        "<td><a href='/result/" + r.election + "/" + seqNo + "?format=html'>HTML</a>" + "</td>" +
-                        "<td><a href='/release/" + r.election + "/" + seqNo + "'>Release</a>" + "</td>" +
-                        "</tr>";
-        }
-        tab = tab + "</table>";
-        body = body + tab;
+        body += generateResultsTable(PRESIDENTIAL_PREFS_RESULT);
+        body += generateResultsTable(PRESIDENTIAL_RESULT);
         body = body + "<p/>";
         body = body + "<p>All  results released so far as single JSON value: "
                     + "<a href='/allresults'>All Results</a>";
@@ -251,4 +208,63 @@ service mediaWebsite on mediaListener {
     }
 }
 
+# Print the results
+# 
+# + return - HTML string for results of the given type from the results cache
+function generateResultsTable(string 'type) returns string {
+    string tab = "";
+    int i = resultsCache.length();
+    while i > 0 { // show results in reverse order of release
+        i = i - 1;
+        Result r = resultsCache[i];
+        if r.'type != 'type {
+            continue;
+        }
+        if i == 0 {
+            match 'type {
+                PRESIDENTIAL_RESULT => { tab = "<h2>First Preference Results</h2>"; }
+                PRESIDENTIAL_PREFS_RESULT => { tab = "<h2>Revised Results with Second/Third Preferences</h2>"; }
+            }
+            tab += "<table class='table'><tr><th>Election</th><th>Sequence No</th><th>Release Time</th><th>Code</th><th>Level</th><th>Electoral District</th><th>Polling Division</th><th>JSON</th><th>XML</th><th>HTML</th><th>Document</th></tr>";
+        }
+        string election = r.election;
+        string seqNo = r.jsonResult.sequence_number.toString();
+        string timestamp = r.jsonResult.timestamp.toString();
+        string code = "";
+        string level = r.jsonResult.level.toString();
+        // figure out and ED / PD name if needed
+        string edName = "";
+        string pdName = "";
+        match level {
+            LEVEL_PD => { 
+                code = r.jsonResult.pd_code.toString(); //  has 2 digit ED code and 1 letter PD code
+                edName = r.jsonResult.ed_name.toString();
+                pdName = r.jsonResult.pd_name.toString();
+            }
+            LEVEL_ED => { 
+                code = r.jsonResult.ed_code.toString();
+                edName = r.jsonResult.ed_name.toString();
+            }
+            LEVEL_NI => { }
+            LEVEL_NF => {
+                code = r.code.toString();
+            }
+        }
 
+        tab = tab + "<tr>" +
+                    "<td>" + election + "</td>" +
+                    "<td>" + seqNo + "</td>" +
+                    "<td>" + timestamp + "</td>" +
+                    "<td>" + code + "</td>" +
+                    "<td>" + level + "</td>" +
+                    "<td>" + edName + "</td>" +
+                    "<td>" + pdName + "</td>" +
+                    "<td><a href='/result/" + r.election + "/" + seqNo + "?format=json'>JSON</a>" + "</td>" +
+                    "<td><a href='/result/" + r.election + "/" + seqNo + "?format=xml'>XML</a>" + "</td>" +
+                    "<td><a href='/result/" + r.election + "/" + seqNo + "?format=html'>HTML</a>" + "</td>" +
+                    "<td><a href='/release/" + r.election + "/" + seqNo + "'>Release</a>" + "</td>" +
+                    "</tr>";
+    }
+    tab = tab + "</table>";
+    return tab;
+}
