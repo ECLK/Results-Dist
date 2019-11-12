@@ -26,19 +26,24 @@ function sendSMS(Notification notification) {
 
     string message = "";
 
-    if level == "POLLING-DIVISION" {
-        string electoralDistrict = "/" + notification["ed_name"].toString();
-        string pollingDivision = "/" + notification["pd_name"].toString();
+    match level {
+        LEVEL_PD => {
+            string electoralDistrict = "/" + notification["ed_name"].toString();
+            string pollingDivision = "/" + notification["pd_name"].toString();
 
-        message  = "Await POLLING-DIVISION results for " + electionCode + electionType + electoralDistrict + pollingDivision;
-    } else if level == "ELECTORAL-DISTRICT" {
-        string electoralDistrict = "/" + notification["ed_name"].toString();
+            message  = "Await POLLING-DIVISION results for " + electionCode + electionType + electoralDistrict + pollingDivision;
+        }
+        LEVEL_ED => {
+            string electoralDistrict = "/" + notification["ed_name"].toString();
 
-        message  = "Await ELECTORAL-DISTRICT results for " + electionCode + electionType + electoralDistrict;
-    } else if level == "NATIONAL-FINAL" {
-        message  = "Await NATIONAL-FINAL results for " + electionCode + electionType;
-    } else {
-        message  = "Await results for " + electionCode + electionType + "/" + notification.resultCode;
+            message  = "Await ELECTORAL-DISTRICT results for " + electionCode + electionType + electoralDistrict;
+        }
+        LEVEL_NF => {
+            message  = "Await NATIONAL-FINAL results for " + electionCode + electionType;
+        }
+        _ => {
+            message  = "Await results for " + electionCode + electionType + "/" + notification.resultCode;
+        }
     }
 
     message = message + "(" + notification.resultCode + ")";

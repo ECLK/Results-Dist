@@ -32,7 +32,7 @@ service receiveResults on resultsListener {
     resource function receiveUpcomingResultNotification(http:Caller caller, http:Request req, Notification
                                                         nofication) returns error? {
         if validTwilioAccount {
-            sendSMS(nofication);
+            _ = start sendSMS(nofication);
         }
 
         // respond accepted
