@@ -23,7 +23,7 @@ const XML_PATH = "/xml";
 const TEXT_PATH = "/txt";
 const IMAGE_PATH = "/image";
 
-const TWO_DAYS_IN_SECONDS = 172800;
+const ONE_WEEK_IN_SECONDS = 604800;
 
 string hub = "";
 string subscriberSecret = "";
@@ -103,7 +103,7 @@ public function main (string secret,                // secret to send to the hub
         path: JSON_PATH,
         subscribeOnStartUp: true,
         target: [hub, JSON_TOPIC],
-        leaseSeconds: TWO_DAYS_IN_SECONDS,
+        leaseSeconds: ONE_WEEK_IN_SECONDS,
         secret: subscriberSecret,
         callback: subscriberPublicUrl.concat(JSON_PATH),
         hubClientConfig: {
@@ -130,7 +130,7 @@ public function main (string secret,                // secret to send to the hub
            path: IMAGE_PATH,
            subscribeOnStartUp: true,
            target: [hub, IMAGE_PDF_TOPIC],
-           leaseSeconds: TWO_DAYS_IN_SECONDS,
+           leaseSeconds: ONE_WEEK_IN_SECONDS,
            secret: subscriberSecret,
            callback: subscriberPublicUrl.concat(IMAGE_PATH),
            hubClientConfig: {
