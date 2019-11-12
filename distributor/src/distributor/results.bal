@@ -28,13 +28,12 @@ service receiveResults on resultsListener {
     @http:ResourceConfig {
         methods: ["POST"],
         path: "/notification",
-        body: "nofication"
+        body: "data"
     }
-    resource function receiveUpcomingResultNotification(http:Caller caller, http:Request req, Notification
-                                                        nofication) returns error? {
-        log:printInfo("Result notification received for " + electionCode + "/" + notification.toJsonString());
+    resource function receiveUpcomingResultNotification(http:Caller caller, http:Request req, Notification data) returns error? {
+        log:printInfo("Result notification received for " + data.toString());
         if validTwilioAccount {
-            _ = start sendSMS(nofication);
+            _ = start sendSMS(data);
         }
 
         // respond accepted
