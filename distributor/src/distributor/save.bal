@@ -89,7 +89,8 @@ CumulativeResult emptyCumResult = {
         percent_polled: ""
     }
 };
-CumulativeResult cumulativeRes = emptyCumResult.clone();
+CumulativeResult cumulativeRes = emptyCumResult;
+CumulativeResult prefsCumulativeRes = emptyCumResult;
 
 # Create database and set up at module init time and load any data in there to
 # memory for the website to show. Panic if there's any issue.
@@ -104,6 +105,7 @@ function __init() {
     int count = 0;
     resultsCache = [];
     cumulativeRes = emptyCumResult.clone();
+    prefsCumulativeRes = emptyCumResult.clone();
     while (ret.hasNext()) {
         DataResult dr = <DataResult> ret.getNext();
         count += 1;
@@ -130,7 +132,6 @@ function __init() {
     }
     if (count > 0) {
         log:printInfo("Loaded " + count.toString() + " previous results from database");
-        log:printInfo("Loaded cumulative result: " + cumulativeRes.toString());
     }
 
     // load username-callback data for already added subscriptions
@@ -262,33 +263,61 @@ function resetResults() returns error? {
 
 # Add a polling division level result to the cumulative total.
 function addToCumulative (map<json> jm) {
+    boolean firstRound = jm.'type == PRESIDENTIAL_RESULT;
+    boolean firstResult = false;
     json[] pr = <json[]> checkpanic jm.by_party;
-    boolean firstResult = cumulativeRes.summary.electors == 0;
 
-    // add the summary counts
-    cumulativeRes.summary.valid += <int>jm.summary.valid;
-    cumulativeRes.summary.rejected += <int>jm.summary.rejected;
-    cumulativeRes.summary.polled += <int>jm.summary.polled;
-    // don't add up electors from postal PDs as those are already in the district elsewhere
-    string pdCode = <string>jm.pd_code;
-    if !pdCode.endsWith("P") {
-        cumulativeRes.summary.electors += <int>jm.summary.electors;
+    CumulativeResult accum = emptyCumResult;
+    if firstRound {
+        accum = cumulativeRes;
+        firstResult = accum.summary.electors == 0;
+    } else {
+        if prefsCumulativeRes.summary.electors == 0 {
+            firstResult = true;
+            // just starting round 2 - copy over summary data from the previous cumulative
+            // total as that's where we start for round 2
+            io:println("*** loading prefs summary: " + cumulativeRes.summary.toString());
+            prefsCumulativeRes.summary = cumulativeRes.summary;
+        }
+        accum = prefsCumulativeRes;
     }
-    cumulativeRes.summary.percent_valid = io:sprintf("%.2f", cumulativeRes.summary.valid*100.0/cumulativeRes.summary.polled);
-    cumulativeRes.summary.percent_rejected = io:sprintf("%.2f", cumulativeRes.summary.rejected*100.0/cumulativeRes.summary.polled);
-    cumulativeRes.summary.percent_polled = io:sprintf("%.2f", cumulativeRes.summary.polled*100.0/cumulativeRes.summary.electors);
+
+    // add the summary counts in round 1. N/A when adding up 2nd/3rd prefs
+    if firstRound {
+        accum.summary.valid += <int>jm.summary.valid;
+        accum.summary.rejected += <int>jm.summary.rejected;
+        accum.summary.polled += <int>jm.summary.polled;
+        // don't add up electors from postal PDs as those are already in the district elsewhere
+        string pdCode = <string>jm.pd_code;
+        if !pdCode.endsWith("P") {
+            accum.summary.electors += <int>jm.summary.electors;
+        }
+        accum.summary.percent_valid = io:sprintf("%.2f", accum.summary.valid*100.0/accum.summary.polled);
+        accum.summary.percent_rejected = io:sprintf("%.2f", accum.summary.rejected*100.0/accum.summary.polled);
+        accum.summary.percent_polled = io:sprintf("%.2f", accum.summary.polled*100.0/accum.summary.electors);
+    }
 
     // if first PD being added to cumulative then just copy the party results over
     if firstResult {
-        pr.forEach (x => cumulativeRes.by_party.push(checkpanic PartyResult.constructFrom(x)));
+        pr.forEach (x => accum.by_party.push(checkpanic PartyResult.constructFrom(x)));
     } else {
         // record by party votes from this result (copying name etc. is silly after first hit)
         foreach int i in 0 ..< pr.length() {
-            cumulativeRes.by_party[i].party_code = <string>pr[i].party_code;
-            cumulativeRes.by_party[i].party_name = <string>pr[i].party_name;
-            cumulativeRes.by_party[i].candidate = <string>pr[i].candidate;
-            cumulativeRes.by_party[i].votes += <int>pr[i].votes;
-            cumulativeRes.by_party[i].percentage = io:sprintf ("%.2f", ((cumulativeRes.by_party[i].votes*100.0)/cumulativeRes.summary.valid));
+            accum.by_party[i].party_code = <string>pr[i].party_code;
+            accum.by_party[i].party_name = <string>pr[i].party_name;
+            accum.by_party[i].candidate = <string>pr[i].candidate;
+            accum.by_party[i].votes += <int>pr[i].votes;
+            if !firstRound {
+                accum.by_party[i]["votes1st"] = (accum.by_party[i]["votes1st"] ?: 0) + <int>pr[i].votes1st;
+                accum.by_party[i]["votes2nd"] = (accum.by_party[i]["votes2nd"] ?: 0) + <int>pr[i].votes2nd;
+                accum.by_party[i]["votes3rd"] = (accum.by_party[i]["votes3rd"] ?: 0) + <int>pr[i].votes3rd;
+            }
+            accum.by_party[i].percentage = io:sprintf ("%.2f", ((accum.by_party[i].votes*100.0)/accum.summary.valid));
         }
+    }
+    if firstRound {
+        cumulativeRes = accum;
+    } else {
+        prefsCumulativeRes = accum;
     }
 }

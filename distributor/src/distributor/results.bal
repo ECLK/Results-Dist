@@ -47,12 +47,13 @@ service receiveResults on resultsListener {
     }
     resource function receiveData(http:Caller caller, http:Request req, string electionCode, string resultType,
                                   string resultCode, json jsonResult) returns error? {
+        boolean firstRound = (resultType == PRESIDENTIAL_RESULT);
+
         // payload is supposed to be a json object - its ok to get upset if not
         map<json> jsonobj = check trap <map<json>> jsonResult;
 
         // check and convert numbers to ints if they're strings
         cleanupJson(jsonobj);
-        log:printError(jsonobj.toJsonString());
 
         // save everything in a convenient way
         Result result = <@untainted> {
@@ -81,8 +82,8 @@ service receiveResults on resultsListener {
                 'type: resultType,
                 timestamp: check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ"),
                 level: "NATIONAL-INCREMENTAL",
-                by_party: check json.constructFrom(cumulativeRes.by_party),
-                summary: check json.constructFrom(cumulativeRes.summary)
+                by_party: check json.constructFrom(firstRound ? cumulativeRes.by_party : prefsCumulativeRes.by_party),
+                summary: check json.constructFrom(firstRound ? cumulativeRes.summary : prefsCumulativeRes.summary)
             };
             Result cumResult = <@untainted> {
                 sequenceNo: -1, // wil be updated with DB sequence # upon storage
@@ -174,12 +175,20 @@ function publishResultImage(map<json> imageData) {
 }
 
 function cleanupJson(map<json> jin) {
-    log:printError(jin.toJsonString());
     json[] by_party = <json[]> jin.by_party;
     foreach json j2 in by_party {
         map<json> j = <map<json>> j2;
         if j.votes is string {
-            j["votes"] = <int>'int:fromString(<string>j.votes);
+            j["votes"] = (j.votes == "") ? 0 : <int>'int:fromString(<string>j.votes);
+        }
+        if j.votes1st is string {
+            j["votes1st"] = (j.votes1st == "") ? 0 : <int>'int:fromString(<string>j.votes1st);
+        }
+        if j.votes2nd is string {
+            j["votes2nd"] = (j.votes2nd == "") ? 0 : <int>'int:fromString(<string>j.votes2nd);
+        }
+        if j.votes3rd is string {
+            j["votes3rd"] = (j.votes3rd == "") ? 0 : <int>'int:fromString(<string>j.votes3rd);
         }
     }
     map<json> js = <map<json>>jin.summary;
