@@ -214,13 +214,15 @@ service mediaWebsite on mediaListener {
 function generateResultsTable(string 'type) returns string {
     string tab = "";
     int i = resultsCache.length();
+    boolean first = true;
     while i > 0 { // show results in reverse order of release
         i = i - 1;
         Result r = resultsCache[i];
         if r.'type != 'type {
             continue;
         }
-        if i == 0 {
+        if first {
+            first = false;
             match 'type {
                 PRESIDENTIAL_RESULT => { tab = "<h2>First Preference Results</h2>"; }
                 PRESIDENTIAL_PREFS_RESULT => { tab = "<h2>Revised Results with Second/Third Preferences</h2>"; }
