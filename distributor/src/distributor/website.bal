@@ -55,7 +55,9 @@ service mediaWebsite on mediaListener {
                     edName = r.jsonResult.ed_name.toString();
                 }
                 LEVEL_NI => { }
-                LEVEL_NF => { }
+                LEVEL_NF => {
+                    code = r.code.toString();
+                 }
             }
 
             tab = tab + "<tr>" +
