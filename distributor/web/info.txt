@@ -1,13 +1,33 @@
 *** Start Message
 
-The results system is up and running.
+The results dissemination system has been updated! New features include:
+- HTML generation
+- incremental (cumulative) result generation
+- national final result generation
 
-There is a new version of the subscriber out! Please download
-	subscriber-2019-11-02.jar
-from XXX.
+****** IMPORTANT *******
+**
+** There is a new version of the subscriber out! Please download
+** 	subscriber-20191110.jar
+** from https://github.com/ECLK/Results-Dist/releases/tag/v2019-11-10
+**
+****** IMPORTANT *******
 
 Run it as follows:
 
-java -jar subscriber-2019-11-02.jar "your own personal secret" -port=NNNN -myURL="my public URL"
+java -jar subscriber-20191110.jar "your own personal secret" [options]
+
+where options are:
+	-port=NNNN		port number to use (default: 1111)
+	-myURL=URL		URL to reach me from Internet (default: http://localhost:1111)
+	-username=name		my username for authentication
+	-password=password	my password for authentication
+	-json=true|false	do I want JSON output (default: false)
+	-xml=true|false		do I want XML output (default: false)
+	-html=true|false	do I want HTML output (default: false)
+	-sorted=true|false	sort results in order of votes in html? (default: true)
+	-image=true|false	do I want release proof image (default: false)
+	-homeURL=URL		subscription URL (default: https://resultstest.ecdev.opensource.lk)
+
 
 *** End Message

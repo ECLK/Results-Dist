@@ -23,8 +23,12 @@ map<string> electionCode2Name = {
 };
 
 function generateHtml (string electionCode, map<json> result, boolean sorted) returns string|error {
+    boolean firstRound = (result.'type == PRESIDENTIAL_RESULT);
     string electionName = electionCode2Name[electionCode] ?: "Presidential Election - TEST";
+    electionName +=  firstRound ? " (FIRST PREFERENCES)" : " (REVISED WITH 2nd/3rd PREFERENCES)";
+
     string timeNow = check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+
     string head = "<head>";
     head += "<title>Sri Lanka Elections Commission</title>";
     head += "<link rel=\"stylesheet\" href=\"https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css\">";
@@ -44,11 +48,19 @@ function generateHtml (string electionCode, map<json> result, boolean sorted) re
     body += "<p>" + resultType.toUpperAscii() + "</p>";
     body += "<p>Votes received by each candidate" + (sorted ? ", sorted highest to lowest" : "") + "</p>";
 
-    body += "<table class='table'><tr><th>Name of Candidate</th><th class='text-center'>Party Abbreviaton</th><th class='text-right'>Votes Received</th><th class='text-right'>Percentage</th></tr>";
+    if firstRound {
+        body += "<table class='table'><tr><th>Name of Candidate</th><th class='text-center'>Party Abbreviaton</th><th class='text-right'>Votes Received</th><th class='text-right'>Percentage</th></tr>";
+    } else {
+        body += "<table class='table'><tr><th>Name of Candidate</th><th class='text-center'>Party Abbreviaton</th><th class='text-right'>1st Preferences</th><th class='text-right'>2nd Preferences</th><th class='text-right'>3rd Preferences/th><th class='text-right'>Total Votes Received</th><th class='text-right'>Percentage</th></tr>";
+    }
     json[] partyResults = sorted ? sortPartyResults(<json[]>result.by_party) : <json[]>result.by_party;
     foreach json j in partyResults {
         map<json> pr = <map<json>> j; // value is a json object
-        body += "<tr><td>" + <string>pr.candidate + "</td><td class='text-center'>" + <string>pr.party_code + "</td><td class='text-right'>" + commaFormatInt(<int>pr.votes) + "</td><td class='text-right'>" + <string>pr.percentage + "%</td></tr>";
+        if firstRound {
+            body += "<tr><td>" + <string>pr.candidate + "</td><td class='text-center'>" + <string>pr.party_code + "</td><td class='text-right'>" + commaFormatInt(<int>pr.votes) + "</td><td class='text-right'>" + <string>pr.percentage + "%</td></tr>";
+        } else {
+            body += "<tr><td>" + <string>pr.candidate + "</td><td class='text-center'>" + <string>pr.party_code + "</td><td class='text-right'>" + commaFormatInt(<int>pr.votes1st) + "</td><td class='text-right'>" + commaFormatInt(<int>pr.votes2nd) + "</td><td class='text-right'>" + commaFormatInt(<int>pr.votes3rd) + "</td><td class='text-right'>" + commaFormatInt(<int>pr.votes) + "</td><td class='text-right'>" + <string>pr.percentage + "%</td></tr>";
+        }
     }
     body += "</table>";
     body += "</div>";
