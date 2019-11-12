@@ -32,7 +32,8 @@ function sendSMS(Notification notification) {
             string electoralDistrict = "/" + notification["ed_name"].toString();
             string pollingDivision = "/" + notification["pd_name"].toString();
 
-            message  = "Await POLLING-DIVISION results for " + electionCode + electionType + electoralDistrict + pollingDivision;
+            message  = "Await POLLING-DIVISION results for " + electionCode + electionType + electoralDistrict +
+                        pollingDivision;
         }
         LEVEL_ED => {
             string electoralDistrict = "/" + notification["ed_name"].toString();
@@ -57,7 +58,7 @@ function sendSMS(Notification notification) {
         var response = twilioClient->sendSms(sourceMobile, targetMobile, message);
         if response is error {
             log:printError("Message sending failed for \'" + targetMobile + "\' due to error:" +
-                                        <string> response.detail()?.message);
+                            <string> response.detail()?.message);
         }
     }
 }
@@ -73,7 +74,7 @@ function validate(string mobileNo) returns string|error {
 
     if !number {
         return error(ERROR_REASON, message = "Invalid mobile number. Given mobile number contains non numeric " +
-                                                  "characters: " + mobile);
+                                              "characters: " + mobile);
     }
 
     if (mobile.startsWith("0") && mobile.length() == 10) {
@@ -84,8 +85,8 @@ function validate(string mobileNo) returns string|error {
     }
     // Allow only the local mobile numbers to register via public API. International number are avoided.
     return error(ERROR_REASON, message = "Invalid mobile number. Resend the request as follows: If the " +
-                                    "mobile no is 0771234567, send POST request to  \'/sms\' with JSON payload " +
-                                    "\'{\"username\":\"myuser\", \"mobile\":\"0771234567\"}\'");
+                                        "mobile no is 0771234567, send POST request to  \'/sms\' with JSON payload " +
+                                        "\'{\"username\":\"myuser\", \"mobile\":\"0771234567\"}\'");
 }
 
 # Register recipient in the mobileSubscribers list and persist in the smsRecipients db table.
@@ -105,9 +106,8 @@ function registerAsSMSRecipient(string username, string mobileNo) returns string
     var status = dbClient->update(INSERT_RECIPIENT, username, mobileNo);
     if status is error {
         log:printError("Failed to persist recipient no in database", status);
-        //return status;
-        return error(ERROR_REASON, message = "Registration failed: username:" + username + " mobile:" + mobileNo + ": " +
-                                            <string> status.detail()?.message);
+        return error(ERROR_REASON, message = "Registration failed: username:" + username + " mobile:" + mobileNo
+                                            + ": " + <string> status.detail()?.message);
     }
     mobileSubscribers[username] = mobileNo;
 
@@ -125,14 +125,12 @@ function unregisterAsSMSRecipient(string username, string mobileNo) returns stri
     var status = dbClient->update(DELETE_RECIPIENT, username, mobileNo);
     if status is error {
         log:printError("Failed to remove recipient from the database", status);
-        return error(ERROR_REASON, message = "Unregistration failed: username:" + username + " mobile:" + mobileNo + ": " +
-                                                    <string> status.detail()?.message);
+        return error(ERROR_REASON, message = "Unregistration failed: username:" + username + " mobile:" + mobileNo +
+                                            ": " + <string> status.detail()?.message);
     }
 
-    if mobileSubscribers.hasKey(username) {
-        if (mobileSubscribers.get(username) == mobileNo) {
-            return "Successfully unregistered: username:" + username + " mobile:" + mobileSubscribers.remove(username);
-        }
+    if mobileSubscribers.hasKey(username) && mobileSubscribers.get(username) == mobileNo {
+        return "Successfully unregistered: username:" + username + " mobile:" + mobileSubscribers.remove(username);
     }
 
     string errMsg = "Unregistration failed: No entry found for username:" + username + " mobile:"  + mobileNo;

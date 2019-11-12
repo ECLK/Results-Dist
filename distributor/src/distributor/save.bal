@@ -167,8 +167,8 @@ function __init() {
     // validate twilio account
     var account = twilioClient->getAccountDetails();
     if account is error {
-        log:printError("SMS notification is disabled due to invalid twilio account details." +
-                         " Please provide valid 'eclk.sms.twilio.accountSid'/'authToken'/'source'(twilio mobile no):" +
+        log:printError("SMS notification is disabled due to invalid twilio account details. " +
+                        "Please provide valid 'eclk.sms.twilio.accountSid'/'authToken'/'source'(twilio mobile no):" +
                          <string> account.detail()?.message);
     } else {
         validTwilioAccount = true;
