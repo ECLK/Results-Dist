@@ -203,7 +203,10 @@ service mediaWebsite on mediaListener {
     @http:ResourceConfig {
         path: "/sms",
         methods: ["POST"],
-        body: "smsRecipient"
+        body: "smsRecipient",
+        auth: {
+            scopes: ["ECAdmin"]
+        }
     }
     resource function smsRegistration (http:Caller caller, http:Request req, Recipient smsRecipient) returns error? {
         string|error validatedNo = validate(smsRecipient.mobile);
@@ -228,7 +231,10 @@ service mediaWebsite on mediaListener {
     @http:ResourceConfig {
         path: "/sms",
         methods: ["DELETE"],
-        body: "smsRecipient"
+        body: "smsRecipient",
+        auth: {
+            scopes: ["ECAdmin"]
+        }
     }
     resource function smsDeregistration (http:Caller caller, http:Request req, Recipient smsRecipient) returns error? {
         string|error validatedNo = validate(smsRecipient.mobile);
