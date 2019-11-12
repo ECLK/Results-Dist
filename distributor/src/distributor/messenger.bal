@@ -22,6 +22,7 @@ boolean validTwilioAccount = false;
 function sendSMS(Notification notification) {
     string electionCode = notification.electionCode;
     string electionType = "/" + notification.'type;
+    string resultCode = notification.resultCode;
     string level = notification.level;
 
     string message = "";
@@ -42,13 +43,16 @@ function sendSMS(Notification notification) {
             message  = "Await NATIONAL-FINAL results for " + electionCode + electionType;
         }
         _ => {
-            message  = "Await results for " + electionCode + electionType + "/" + notification.resultCode;
+            message  = "Await results for " + electionCode + electionType + "/" + resultCode;
         }
     }
 
-    message = message + "(" + notification.resultCode + ")";
+    message = message + "(" + resultCode + ")";
 
     map<string> currentMobileSubscribers = mobileSubscribers;
+    if (currentMobileSubscribers.length() > 0) {
+        log:printInfo("Sending SMS for " + electionCode +  electionType + "/" + resultCode);
+    }
     foreach string targetMobile in currentMobileSubscribers {
         var response = twilioClient->sendSms(sourceMobile, targetMobile, message);
         if response is error {
