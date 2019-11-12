@@ -10,6 +10,9 @@ type PartyResult record {|
     string party_name;
     string candidate;
     int votes;
+    int votes1st?;
+    int votes2nd?;
+    int votes3rd?;
     string percentage;
 |};
 
