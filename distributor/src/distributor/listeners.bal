@@ -3,7 +3,11 @@ import ballerina/config;
 import ballerina/http;
 
 # Listener for results tabulation to deliver results to us.
-listener http:Listener resultsListener = new (config:getAsInt("eclk.pub.port", 8181));
+listener http:Listener resultsListener = new (config:getAsInt("eclk.pub.port", 8181), {
+    http1Settings: {
+        maxEntityBodySize: 4194304
+    }
+});
 
 http:BasicAuthHandler inboundBasicAuthHandler = new (new auth:InboundBasicAuthProvider());
 
