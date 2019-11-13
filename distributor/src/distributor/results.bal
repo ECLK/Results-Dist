@@ -33,11 +33,18 @@ service receiveResults on resultsListener {
                                           string resultCode) returns error? {
         log:printInfo("Result notification received for " + electionCode +  "/" + resultType + "/" + resultCode);
 
-        string level = check (req.getQueryParamValue("level") ?: error("Missing required 'level' query param for notificaiton"));
+        var levelQueryParam = req.getQueryParamValue("level");
+        if levelQueryParam is () {
+            http:Response res = new;
+            res.statusCode = http:STATUS_BAD_REQUEST;
+            res.setPayload("Missing required 'level' query param for notification");
+            return caller->respond(res);
+        }
+
+        string level = <string> levelQueryParam;
         string? ed_name = req.getQueryParamValue("ed_name");
         string? pd_name = req.getQueryParamValue("pd_name");
-        [string, string] [message, resultId] = getAwaitResultsMessage(electionCode, resultType, resultCode, level, 
-                                                                      ed_name, pd_name);
+        string message = getAwaitResultsMessage(electionCode, "/" + resultType, resultCode, level, ed_name, pd_name);
 
         // TODO: check if we should make this block an async call
         websub:Hub wh = <websub:Hub> hub;
@@ -47,7 +54,7 @@ service receiveResults on resultsListener {
         }
 
         if validTwilioAccount {
-            _ = start sendSMS(message, resultId);
+            _ = start sendSMS(message, electionCode + "/" + resultType + "/" + resultCode);
         }
 
         // respond accepted

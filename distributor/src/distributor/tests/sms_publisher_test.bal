@@ -127,10 +127,10 @@ function testValidateFunction() {
 function testNotificationResource() {
     http:Client httpEndpoint = new("http://localhost:8181");
     http:Request req = new;
-    req.setJsonPayload({electionCode:"2015-PRE-REPLAY-000", 'type:"PRESIDENTIAL-FIRST", resultCode:"07A",
-                        level:"POLLING-DIVISION", ed_name:"Galle", pd_name:"Balapitiya"});
-    // Send a POST with notification json of polling division
-    var response = httpEndpoint->post("/result/notification", req);
+    string path = "/result/notification/2015-PRE-REPLAY-000/PRESIDENTIAL-FIRST/07A" +
+                  "?level=POLLING-DIVISION&ed_name=Galle&pd_name=Balapitiya";
+
+    var response = httpEndpoint->post(path, req);
     if (response is http:Response) {
         test:assertEquals(response.statusCode, 202);
     } else {
@@ -138,10 +138,9 @@ function testNotificationResource() {
     }
 
     req = new;
-    req.setJsonPayload({electionCode:"2015-PRE-REPLAY-000", 'type:"PRESIDENTIAL-FIRST", resultCode:"07",
-                        level:"ELECTORAL-DISTRICT", ed_name:"Galle"});
-    // Send a POST with notification json of electoral district
-    response = httpEndpoint->post("/result/notification", req);
+    path = "/result/notification/2015-PRE-REPLAY-000/PRESIDENTIAL-FIRST/02?level=ELECTORAL-DISTRICT&ed_name=Gampaha";
+
+    response = httpEndpoint->post(path, req);
     if (response is http:Response) {
         test:assertEquals(response.statusCode, 202);
     } else {
@@ -149,12 +148,22 @@ function testNotificationResource() {
     }
 
     req = new;
-    req.setJsonPayload({electionCode:"2015-PRE-REPLAY-000", 'type:"PRESIDENTIAL-FIRST", resultCode:"AIVOT",
-                        level:"NATIONAL-FINAL"});
-    // Send a POST with notification json of national final
-    response = httpEndpoint->post("/result/notification", req);
+    path = "/result/notification/2015-PRE-REPLAY-000/PRESIDENTIAL-FIRST/FINAL?level=NATIONAL-FINAL";
+
+    response = httpEndpoint->post(path, req);
     if (response is http:Response) {
         test:assertEquals(response.statusCode, 202);
+    } else {
+        test:assertFail(msg = "Failed to call the endpoint:");
+    }
+
+    // Negative case with dropping "level" query param
+    req = new;
+    path = "/result/notification/2015-PRE-REPLAY-000/PRESIDENTIAL-FIRST/02?ed_name=Gampaha";
+
+    response = httpEndpoint->post(path, req);
+    if (response is http:Response) {
+        test:assertEquals(response.statusCode, 400);
     } else {
         test:assertFail(msg = "Failed to call the endpoint:");
     }
