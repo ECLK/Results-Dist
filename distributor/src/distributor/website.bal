@@ -38,8 +38,7 @@ service mediaWebsite on mediaListener {
                     + "<a href='/allresults'>All Results</a>";
         body = body + "<p>Another test run?</p>";
         body += "<ul>";
-        body += "<li><a href='http://resultstest.ecdev.opensource.lk:9999/start'>Start 2015 Playback</a></p>";
-        body += "<li><a href='http://resultstest.ecdev.opensource.lk:9999/start?2019=true'>Start 2019 EMPTY</a></p>";
+        body += "<li><a href='http://resultstest.ecdev.opensource.lk:9999/start?2019=true'>Start 2019 EMPTY</a>";
         body += "</ul>";
         body = body + "<p>Read subscriber startup message: <a href='info'>Here</a></p>";
         body = body + "</div>";
