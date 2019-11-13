@@ -77,13 +77,3 @@ type Recipient record {|
     string username;
     string mobile;
 |};
-
-// SMS notification record
-type Notification record {|
-    string electionCode;
-    string 'type;
-    string resultCode;
-    ResultLevel level;
-    string ed_name?;
-    string pd_name?;
-|};

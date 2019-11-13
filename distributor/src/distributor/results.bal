@@ -27,13 +27,17 @@ service receiveResults on resultsListener {
 
     @http:ResourceConfig {
         methods: ["POST"],
-        path: "/notification",
-        body: "data"
+        path: "/notification/{electionCode}/{resultType}/{resultCode}"
     }
-    resource function receiveUpcomingResultNotification(http:Caller caller, http:Request req, Notification data) returns error? {
-        log:printInfo("Result notification received for " + data.toString());
+    resource function receiveNotification(http:Caller caller, http:Request req, string electionCode, string resultType,
+                                          string resultCode) returns error? {
+        log:printInfo("Result notification received for " + electionCode +  "/" + resultType + "/" + resultCode);
 
-        [string, string] [message, resultId] = getAwaitResultsMessage(data);
+        string level = check (req.getQueryParamValue("level") ?: error("Missing required 'level' query param for notificaiton"));
+        string? ed_name = req.getQueryParamValue("ed_name");
+        string? pd_name = req.getQueryParamValue("pd_name");
+        [string, string] [message, resultId] = getAwaitResultsMessage(electionCode, resultType, resultCode, level, 
+                                                                      ed_name, pd_name);
 
         // TODO: check if we should make this block an async call
         websub:Hub wh = <websub:Hub> hub;
