@@ -140,12 +140,13 @@ function __init() {
     while (callbackRet.hasNext()) {
         UserCallback userCb = <UserCallback> callbackRet.getNext();
 
-        if (userCb.topic == JSON_RESULTS_TOPIC) {
+        if (userCb.topic == JSON_TOPIC) {
             resultCallbackMap[userCb.username] = <@untainted> userCb.callback;
         } else if (userCb.topic == IMAGE_PDF_TOPIC) {
             imageCallbackMap[userCb.username] = <@untainted> userCb.callback;
         } else {
-            panic error("UnknownTopic!"); // temporary
+            // assume AWAIT_RESULTS_TOPIC
+            awaitResultsCallbackMap[userCb.username] = <@untainted> userCb.callback;
         }
 
         count += 1;

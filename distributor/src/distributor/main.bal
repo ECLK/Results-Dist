@@ -62,8 +62,9 @@ public function main() returns error? {
         return error(ERROR_REASON, message = hubStartUpResult.message);
     } else {
         hub = hubStartUpResult;
-        check registerTopic(hubStartUpResult, JSON_RESULTS_TOPIC);
+        check registerTopic(hubStartUpResult, JSON_TOPIC);
         check registerTopic(hubStartUpResult, IMAGE_PDF_TOPIC);
+        check registerTopic(hubStartUpResult, AWAIT_RESULTS_TOPIC);
     }
 }
 
