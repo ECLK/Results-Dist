@@ -20,7 +20,7 @@ const string CREATE_RESULTS_TABLE = "CREATE TABLE IF NOT EXISTS results (" +
                                     "    type VARCHAR(100) NOT NULL," +
                                     "    jsonResult VARCHAR(60000) NOT NULL," +
                                     "    imageMediaType VARCHAR(50) DEFAULT NULL," +
-                                    "    imageData BLOB DEFAULT NULL," + 
+                                    "    imageData MEDIUMBLOB DEFAULT NULL," + 
                                     "    PRIMARY KEY (sequenceNo))";
 const INSERT_RESULT = "INSERT INTO results (election, code, jsonResult, type) VALUES (?, ?, ?, ?)";
 const UPDATE_RESULT_JSON = "UPDATE results SET jsonResult = ? WHERE sequenceNo = ?";
