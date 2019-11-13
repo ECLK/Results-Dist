@@ -36,7 +36,11 @@ service mediaWebsite on mediaListener {
         body = body + "<p/>";
         body = body + "<p>All  results released so far as single JSON value: "
                     + "<a href='/allresults'>All Results</a>";
-        body = body + "<p>Another test run? <a href='http://resultstest.ecdev.opensource.lk:9999/start'>Start</a></p>";
+        body = body + "<p>Another test run?</p>";
+        body += "<ul>";
+        body += "<li><a href='http://resultstest.ecdev.opensource.lk:9999/start'>Start 2015 Playback</a></p>";
+        body += "<li><a href='http://resultstest.ecdev.opensource.lk:9999/start?2019=true'>Start 2019 EMPTY</a></p>";
+        body += "</ul>";
         body = body + "<p>Read subscriber startup message: <a href='info'>Here</a></p>";
         body = body + "</div>";
         body = body + "</body>";

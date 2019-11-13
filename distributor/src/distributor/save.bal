@@ -18,7 +18,7 @@ const string CREATE_RESULTS_TABLE = "CREATE TABLE IF NOT EXISTS results (" +
                                     "    election VARCHAR(50) NOT NULL," +
                                     "    code VARCHAR(100) NOT NULL," +
                                     "    type VARCHAR(100) NOT NULL," +
-                                    "    jsonResult VARCHAR(10000) NOT NULL," +
+                                    "    jsonResult VARCHAR(60000) NOT NULL," +
                                     "    imageMediaType VARCHAR(50) DEFAULT NULL," +
                                     "    imageData BLOB DEFAULT NULL," + 
                                     "    PRIMARY KEY (sequenceNo))";
@@ -73,11 +73,13 @@ type UserCallback record {|
 |};
 
 type CumulativeResult record {|
+    int nadded;
     PartyResult[] by_party;
     SummaryResult summary;
 |};
 
 CumulativeResult emptyCumResult = { 
+    nadded: 0,
     by_party: [], 
     summary: { 
         valid: 0, 
@@ -265,16 +267,13 @@ function resetResults() returns error? {
 # Add a polling division level result to the cumulative total.
 function addToCumulative (map<json> jm) {
     boolean firstRound = jm.'type == PRESIDENTIAL_RESULT;
-    boolean firstResult = false;
     json[] pr = <json[]> checkpanic jm.by_party;
 
-    CumulativeResult accum = emptyCumResult;
+    CumulativeResult accum = emptyCumResult; // avoiding optional
     if firstRound {
         accum = cumulativeRes;
-        firstResult = accum.summary.electors == 0;
     } else {
         if prefsCumulativeRes.summary.electors == 0 {
-            firstResult = true;
             // just starting round 2 - copy over summary data from the previous cumulative
             // total as that's where we start for round 2
             io:println("*** loading prefs summary: " + cumulativeRes.summary.toString());
@@ -293,13 +292,13 @@ function addToCumulative (map<json> jm) {
         if !pdCode.endsWith("P") {
             accum.summary.electors += <int>jm.summary.electors;
         }
-        accum.summary.percent_valid = io:sprintf("%.2f", accum.summary.valid*100.0/accum.summary.polled);
-        accum.summary.percent_rejected = io:sprintf("%.2f", accum.summary.rejected*100.0/accum.summary.polled);
-        accum.summary.percent_polled = io:sprintf("%.2f", accum.summary.polled*100.0/accum.summary.electors);
+        accum.summary.percent_valid = (accum.summary.polled == 0) ? "0.00%" : io:sprintf("%.2f", accum.summary.valid*100.0/accum.summary.polled);
+        accum.summary.percent_rejected = (accum.summary.polled == 0) ? "0.00%" : io:sprintf("%.2f", accum.summary.rejected*100.0/accum.summary.polled);
+        accum.summary.percent_polled = (accum.summary.electors == 0) ? "0.00%" : io:sprintf("%.2f", accum.summary.polled*100.0/accum.summary.electors);
     }
 
     // if first PD being added to cumulative then just copy the party results over
-    if firstResult {
+    if accum.nadded == 0 {
         pr.forEach (x => accum.by_party.push(checkpanic PartyResult.constructFrom(x)));
     } else {
         // record by party votes from this result (copying name etc. is silly after first hit)
@@ -313,9 +312,10 @@ function addToCumulative (map<json> jm) {
                 accum.by_party[i]["votes2nd"] = (accum.by_party[i]["votes2nd"] ?: 0) + <int>pr[i].votes2nd;
                 accum.by_party[i]["votes3rd"] = (accum.by_party[i]["votes3rd"] ?: 0) + <int>pr[i].votes3rd;
             }
-            accum.by_party[i].percentage = io:sprintf ("%.2f", ((accum.by_party[i].votes*100.0)/accum.summary.valid));
+            accum.by_party[i].percentage = (accum.summary.valid == 0) ? "0.00%" : io:sprintf ("%.2f", ((accum.by_party[i].votes*100.0)/accum.summary.valid));
         }
     }
+    accum.nadded += 1;
     if firstRound {
         cumulativeRes = accum;
     } else {

@@ -158,7 +158,7 @@ service receiveResults on resultsListener {
     resource function reset(http:Caller caller, http:Request req) returns error? {
         log:printInfo("Resetting all results ..");
         check resetResults();
-        return  caller->accepted();
+        return caller->accepted();
     }
 }
 
