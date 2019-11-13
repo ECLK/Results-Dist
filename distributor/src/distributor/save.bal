@@ -312,7 +312,7 @@ function addToCumulative (map<json> jm) {
                 accum.by_party[i]["votes2nd"] = (accum.by_party[i]["votes2nd"] ?: 0) + <int>pr[i].votes2nd;
                 accum.by_party[i]["votes3rd"] = (accum.by_party[i]["votes3rd"] ?: 0) + <int>pr[i].votes3rd;
             }
-            accum.by_party[i].percentage = (accum.summary.valid == 0) ? "0.00% : io:sprintf ("%.2f", ((accum.by_party[i].votes*100.0)/accum.summary.valid));
+            accum.by_party[i].percentage = (accum.summary.valid == 0) ? "0.00" : io:sprintf ("%.2f", ((accum.by_party[i].votes*100.0)/accum.summary.valid));
         }
     }
     accum.nadded += 1;
