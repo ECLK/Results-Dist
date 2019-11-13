@@ -16,9 +16,8 @@ map<string> mobileSubscribers = {};
 string sourceMobile = config:getAsString("eclk.sms.twilio.source");
 boolean validTwilioAccount = false;
 
-
 function getAwaitResultsMessage(string electionCode, string resultType, string resultCode, string level, 
-                                string? ed_name, string? pd_name) returns [string, string] {
+                                string? ed_name, string? pd_name) returns string {
     string message;
 
     match level {
@@ -42,12 +41,13 @@ function getAwaitResultsMessage(string electionCode, string resultType, string r
         }
     }
 
-    return [message + "(" + resultCode + ")", electionCode +  resultType + "/" + resultCode];
+    return message + "(" + resultCode + ")";
 }
 
 # Send SMS notification to all the subscribers.
 #
 # + message - The message to send
+# + resultId - The message identification
 function sendSMS(string message, string resultId) {
     map<string> currentMobileSubscribers = mobileSubscribers;
     if (currentMobileSubscribers.length() > 0) {
