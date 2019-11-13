@@ -17,36 +17,32 @@ string sourceMobile = config:getAsString("eclk.sms.twilio.source");
 boolean validTwilioAccount = false;
 
 
-function getAwaitResultsMessage(Notification notification) returns [string, string] {
-    string electionCode = notification.electionCode;
-    string electionType = "/" + notification.'type;
-    string resultCode = notification.resultCode;
-    string level = notification.level;
-
+function getAwaitResultsMessage(string electionCode, string resultType, string resultCode, string level, 
+                                string? ed_name, string? pd_name) returns [string, string] {
     string message;
 
     match level {
         LEVEL_PD => {
-            string electoralDistrict = "/" + notification["ed_name"].toString();
-            string pollingDivision = "/" + notification["pd_name"].toString();
+            string electoralDistrict = "/" + (ed_name ?: "<unknown electoral district>");
+            string pollingDivision = "/" + (pd_name ?: "<unknown polling division>");
 
-            message  = "Await POLLING-DIVISION results for " + electionCode + electionType + electoralDistrict +
+            message  = "Await POLLING-DIVISION results for " + electionCode + resultType + electoralDistrict +
                         pollingDivision;
         }
         LEVEL_ED => {
-            string electoralDistrict = "/" + notification["ed_name"].toString();
+            string electoralDistrict = "/" + (ed_name ?: "<unknown electoral district>");
 
-            message  = "Await ELECTORAL-DISTRICT results for " + electionCode + electionType + electoralDistrict;
+            message  = "Await ELECTORAL-DISTRICT results for " + electionCode + resultType + electoralDistrict;
         }
         LEVEL_NF => {
-            message  = "Await NATIONAL-FINAL results for " + electionCode + electionType;
+            message  = "Await NATIONAL-FINAL results for " + electionCode + resultType;
         }
         _ => {
-            message  = "Await results for " + electionCode + electionType + "/" + resultCode;
+            message  = "Await results for " + electionCode + resultType + "/" + resultCode;
         }
     }
 
-    return [message + "(" + resultCode + ")", electionCode +  electionType + "/" + resultCode];
+    return [message + "(" + resultCode + ")", electionCode +  resultType + "/" + resultCode];
 }
 
 # Send SMS notification to all the subscribers.
