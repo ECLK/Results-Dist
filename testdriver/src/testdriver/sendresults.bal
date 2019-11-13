@@ -71,8 +71,8 @@ function publishResults(string electionCode, http:Client rc, map<map<json>>[] re
             if pr[i].party_name is string {
                 continue;
             }
-            onePr["party_name"] = "Party " + <string>pr[i].party_code;
-            onePr["candidate"] = "Candidate " + <string>pr[i].party_code;
+            onePr["party_name"] = (pr[i].party_name is string) ? check pr[i].party_name : "Party " + <string>pr[i].party_code;
+            onePr["candidate"] = (pr[i].candidate is string) ? check pr[i].candidate : "Candidate " + <string>pr[i].party_code;
             // change percentage to string
             var val = trap <float>pr[i].percentage;
             if val is error {
@@ -87,9 +87,9 @@ function publishResults(string electionCode, http:Client rc, map<map<json>>[] re
 
         // set the percentages in the summary
         map<json> summary = <map<json>>resultsByPD[pdCode].summary;
-        summary["percent_valid"] = (<int>resultsByPD[pdCode].summary.polled == 0) ? "0.00%" : io:sprintf("%.2f", <int>resultsByPD[pdCode].summary.valid*100.0/<int>resultsByPD[pdCode].summary.polled);
-        summary["percent_rejected"] = (<int>resultsByPD[pdCode].summary.polled == 0) ? "0.00%" : io:sprintf("%.2f", <int>resultsByPD[pdCode].summary.rejected*100.0/<int>resultsByPD[pdCode].summary.polled);
-        summary["percent_polled"] = (<int>resultsByPD[pdCode].summary.electors == 0) ? "0.00%" : io:sprintf("%.2f", <int>resultsByPD[pdCode].summary.polled*100.0/<int>resultsByPD[pdCode].summary.electors);
+        summary["percent_valid"] = (<int>resultsByPD[pdCode].summary.polled == 0) ? "0.00" : io:sprintf("%.2f", <int>resultsByPD[pdCode].summary.valid*100.0/<int>resultsByPD[pdCode].summary.polled);
+        summary["percent_rejected"] = (<int>resultsByPD[pdCode].summary.polled == 0) ? "0.00" : io:sprintf("%.2f", <int>resultsByPD[pdCode].summary.rejected*100.0/<int>resultsByPD[pdCode].summary.polled);
+        summary["percent_polled"] = (<int>resultsByPD[pdCode].summary.electors == 0) ? "0.00" : io:sprintf("%.2f", <int>resultsByPD[pdCode].summary.polled*100.0/<int>resultsByPD[pdCode].summary.electors);
 
         string resCode = resultsByPD[pdCode]?.pd_code.toString();
         string edCodeFromPD = resultsByPD[pdCode]?.ed_code.toString();
@@ -156,8 +156,8 @@ function createEDResult (map<map<json>>[] results, map<json>[]resultsByPD, int e
                 // set up 
                 distByParty[i] = {};
                 distByParty[i]["party_code"] = check by_party[i].party_code;
-                distByParty[i]["party_name"] = "Party " + <string>distByParty[i]["party_code"]; // no party_name in test data
-                distByParty[i]["candidate"] = "Candidate " + <string>distByParty[i]["party_code"]; // no candidate name in test data
+                distByParty[i]["party_name"] = (by_party[i].party_name is string) ? check by_party[i].party_name : "Party " + <string>distByParty[i]["party_code"]; // no party_name in test data
+                distByParty[i]["candidate"] = (by_party[i].candidate is string) ? check by_party[i].candidate : "Candidate " + <string>distByParty[i]["party_code"]; // no candidate name in test data
             } else if pdCount > 1 && distByParty[i].party_code != by_party[i].party_code {
                 // all parties are supposed to be in the same order in each PD
                 panic error("Unexpected problem: party codes are not in the same order across all PDs of district " +
@@ -181,13 +181,13 @@ function createEDResult (map<map<json>>[] results, map<json>[]resultsByPD, int e
     // put the vote total & percentages in the result json
     foreach int i in 0 ... votes_by_party.length()-1 {
         distByParty[i]["votes"] = votes_by_party[i];
-        distByParty[i]["percentage"] = (distSummary.valid == 0) ? "0.00%" : io:sprintf ("%.2f", votes_by_party[i]*100.0/distSummary.valid);
+        distByParty[i]["percentage"] = (distSummary.valid == 0) ? "0.00" : io:sprintf ("%.2f", votes_by_party[i]*100.0/distSummary.valid);
     }
 
     // set the percentages in the summary
-    distSummary.percent_valid = (distSummary.polled == 0) ? "0.00%" : io:sprintf("%.2f", distSummary.valid*100.0/distSummary.polled);
-    distSummary.percent_rejected = (distSummary.polled == 0) ? "0.00%" : io:sprintf("%.2f", distSummary.rejected*100.0/distSummary.polled);
-    distSummary.percent_polled = (distSummary.electors == 0) ? "0.00%" : io:sprintf("%.2f", distSummary.polled*100.0/distSummary.electors);
+    distSummary.percent_valid = (distSummary.polled == 0) ? "0.00" : io:sprintf("%.2f", distSummary.valid*100.0/distSummary.polled);
+    distSummary.percent_rejected = (distSummary.polled == 0) ? "0.00" : io:sprintf("%.2f", distSummary.rejected*100.0/distSummary.polled);
+    distSummary.percent_polled = (distSummary.electors == 0) ? "0.00" : io:sprintf("%.2f", distSummary.polled*100.0/distSummary.electors);
 
     return {
         'type: "PRESIDENTIAL-FIRST", 
@@ -224,8 +224,8 @@ function createNationalResult (map<map<json>>[] results, map<json>[]resultsByPD)
                 // set up 
                 natByParty[i] = {};
                 natByParty[i]["party_code"] = check by_party[i].party_code;
-                natByParty[i]["party_name"] = "Party " + <string>natByParty[i]["party_code"]; // no party_name in test data
-                natByParty[i]["candidate"] = "Candidate " + <string>natByParty[i]["party_code"]; // no candidate name in test data
+                natByParty[i]["party_name"] = (by_party[i].party_name is string) ? check by_party[i].party_name : "Party " + <string>by_party[i].party_code; // no party_name in test data
+                natByParty[i]["candidate"] = (by_party[i].candidate is string) ? check by_party[i].candidate : "Candidate " + <string>by_party[i].party_code; // no candidate name in test data
             } else if pdCount > 1 && natByParty[i].party_code != by_party[i].party_code {
                 // all parties are supposed to be in the same order in each PD
                 panic error("Unexpected problem: party codes are not in the same order across all PDs of the country " +
@@ -249,13 +249,13 @@ function createNationalResult (map<map<json>>[] results, map<json>[]resultsByPD)
     // put the vote total & percentages in the result json
     foreach int i in 0 ..< votes_by_party.length() {
         natByParty[i]["votes"] = votes_by_party[i];
-        natByParty[i]["percentage"] = (natSummary.valid == 0) ? "0.00%" : io:sprintf ("%.2f", votes_by_party[i]*100.0/natSummary.valid);
+        natByParty[i]["percentage"] = (natSummary.valid == 0) ? "0.00" : io:sprintf ("%.2f", votes_by_party[i]*100.0/natSummary.valid);
     }
 
     // set the percentages in the summary
-    natSummary.percent_valid = (natSummary.polled == 0) ? "0.00%" : io:sprintf("%.2f", natSummary.valid*100.0/natSummary.polled);
-    natSummary.percent_rejected = (natSummary.polled == 0) ? "0.00%" : io:sprintf("%.2f", natSummary.rejected*100.0/natSummary.polled);
-    natSummary.percent_polled = (natSummary.electors == 0) ? "0.00%" : io:sprintf("%.2f", natSummary.polled*100.0/natSummary.electors);
+    natSummary.percent_valid = (natSummary.polled == 0) ? "0.00" : io:sprintf("%.2f", natSummary.valid*100.0/natSummary.polled);
+    natSummary.percent_rejected = (natSummary.polled == 0) ? "0.00" : io:sprintf("%.2f", natSummary.rejected*100.0/natSummary.polled);
+    natSummary.percent_polled = (natSummary.electors == 0) ? "0.00" : io:sprintf("%.2f", natSummary.polled*100.0/natSummary.electors);
 
     return {
         'type: "PRESIDENTIAL-FIRST", 
