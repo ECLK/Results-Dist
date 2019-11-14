@@ -269,7 +269,18 @@ function createNationalResult (map<map<json>>[] results, map<json>[]resultsByPD)
 function sendResult (http:Client hc, string electionCode, string resType, string resCode, map<json> result) returns error? {
     // reset time stamp of the result to now
     result["timestamp"] = check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ");
-    http:Response hr = check hc->post ("/result/data/" + electionCode + "/" + resType + "/" + resCode, result);
+    http:Response hr;
+
+    // sent alert
+    string params = "?level=" + <string>result.level + "&ed_name=" + <string>result.ed_name + "&pd_name=" + <string>result.pd_name;
+    hr = check hc->post ("/result/notification/" + electionCode + "/" + resType + "/" + resCode + "/?level=" + <string>result.level, <json>{});
+    if hr.statusCode != http:STATUS_ACCEPTED {
+        io:println("Error while posting result notification to: /result/notification/" + electionCode + "/" + resType + "/" + resCode);
+        io:println("\tstatus=", hr.statusCode, ", contentType=", hr.getContentType(), " payload=", hr.getTextPayload());
+        return error ("Unable to post notification for " + resCode);
+    }
+
+    hr = check hc->post ("/result/data/" + electionCode + "/" + resType + "/" + resCode, result);
     if hr.statusCode != http:STATUS_ACCEPTED {
         io:println("Error while posting result to: /result/data/" + electionCode + "/" + resType + "/" + resCode);
         io:println("\tstatus=", hr.statusCode, ", contentType=", hr.getContentType(), " payload=", hr.getTextPayload());

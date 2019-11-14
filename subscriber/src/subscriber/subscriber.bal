@@ -71,13 +71,30 @@ public function main (string secret,                // secret to send to the hub
     }
     sortedHtml = <@untainted>sorted;
 
+    // set up auth
+    if (username is string && password is string) {
+        auth:OutboundBasicAuthProvider outboundBasicAuthProvider = new ({
+            username: <@untainted> username,
+            password: <@untainted> password
+        });
+        http:BasicAuthHandler outboundBasicAuthHandler = 
+                new (<auth:OutboundBasicAuthProvider> outboundBasicAuthProvider);
+        auth = {
+            authHandler: outboundBasicAuthHandler
+        };
+    }
+
     // contact home and display message
-    http:Client hc = new(homeURL);
+    http:Client hc = new(homeURL, { auth: auth });
     http:Response hr = check hc->get("/info");
-    if hr.statusCode == 200 {
+    if hr.statusCode == 401 {
+        return error("Authentication failure! Check your username & password.");
+    } else if hr.statusCode == 200 {
         string msg = check hr.getTextPayload();
         io:println("Message from the results system:\n");
         io:println(msg);
+    } else {
+        return error("Unexpected response from distributor service: " + hr.toString());
     }
 
     // check whether this version is still supported
@@ -88,19 +105,6 @@ public function main (string secret,                // secret to send to the hub
 
     // start the listener
     websub:Listener websubListener = new(subscriberPort);
-
-    if (username is string && password is string) {
-        auth:OutboundBasicAuthProvider outboundBasicAuthProvider = new ({
-            username: <@untainted> username,
-            password: <@untainted> password
-        });
-
-        http:BasicAuthHandler outboundBasicAuthHandler = 
-                new (<auth:OutboundBasicAuthProvider> outboundBasicAuthProvider);
-        auth = {
-            authHandler: outboundBasicAuthHandler
-        };
-    }
 
     // attach JSON subscriber
     service subscriberService = @websub:SubscriberServiceConfig {

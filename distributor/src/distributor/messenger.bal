@@ -24,9 +24,8 @@ function getAwaitResultsMessage(string electionCode, string resultType, string r
         LEVEL_PD => {
             string electoralDistrict = "/" + (ed_name ?: "<unknown electoral district>");
             string pollingDivision = "/" + (pd_name ?: "<unknown polling division>");
-
-            message  = "Await POLLING-DIVISION results for " + electionCode + resultType + electoralDistrict +
-                        pollingDivision;
+            message  = "Await " + (resultCode.endsWith("P") ? "POSTAL" : "POLLING-DIVISION") + " results for " 
+                    + electionCode + resultType + electoralDistrict + pollingDivision;
         }
         LEVEL_ED => {
             string electoralDistrict = "/" + (ed_name ?: "<unknown electoral district>");
