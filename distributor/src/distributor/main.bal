@@ -46,10 +46,10 @@ public function main() returns error? {
                                     hubPersistenceStore: persistenceStore,
                                     clientConfig: {
                                         // TODO: finalize
-                                        retryConfig: {
-                                            count:  1,
-                                            intervalInMillis: 5000
-                                        },
+//                                        retryConfig: {
+//                                            count:  1,
+//                                           intervalInMillis: 5000
+//                                        },
                                         //followRedirects: {
                                         //    enabled: true,
                                         //    maxCount: 5
