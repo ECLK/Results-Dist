@@ -80,7 +80,7 @@ function gen2019EmptyData () returns error? {
             "percentage":"0.00"
         },
         {
-            "party_name":"National Movement for People’s Power",
+            "party_name":"National Movement for People's Power",
             "candidate":"Anura Kumara Dissanayaka",
             "party_code":"NMPP",
             "votes":0,
