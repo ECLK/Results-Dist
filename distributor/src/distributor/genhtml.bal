@@ -3,7 +3,7 @@ import ballerina/math;
 import ballerina/lang.'string;
 
 map<string> electionCode2Name = {
-    "2019PRE": "PRESIDENTIAL ELECTION - 16/11/2019",
+    "2019PRE": "PRESIDENTIAL ELECTION - NOVEMBER 16, 2019",
     "2015-PRE-REPLAY-000": "PRESIDENTIAL ELECTION - 08/01/2015 RESULT REPLAY",
     "2015-PRE-REPLAY-001": "PRESIDENTIAL ELECTION - 08/01/2015 RESULT REPLAY",
     "2015-PRE-REPLAY-002": "PRESIDENTIAL ELECTION - 08/01/2015 RESULT REPLAY",
@@ -24,7 +24,7 @@ map<string> electionCode2Name = {
 
 function generateHtml (string electionCode, map<json> result, boolean sorted) returns string|error {
     boolean firstRound = (result.'type == PRESIDENTIAL_RESULT);
-    string electionName = electionCode2Name[electionCode] ?: "Presidential Election - TEST";
+    string electionName = electionCode2Name[electionCode] ?: ("Presidential Election - " + electionCode);
     electionName +=  firstRound ? " (FIRST PREFERENCES)" : " (REVISED WITH 2nd/3rd PREFERENCES)";
 
     string timeNow = check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ");
@@ -90,7 +90,9 @@ function generateHtml (string electionCode, map<json> result, boolean sorted) re
 
 function sortPartyResults (json[] unsorted) returns json[] {
     return unsorted.sort(function (json r1, json r2) returns int {
-        return (<int>r1.votes) < (<int>r2.votes) ? 1 : -1;
+        int n1 = <int>r1.votes;
+        int n2 = <int>r2.votes;
+        return (n1 < n2) ? 1 : (n1 == n2 ? 0 : -1);
     });
 }
 
