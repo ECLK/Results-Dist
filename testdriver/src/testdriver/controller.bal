@@ -32,6 +32,7 @@ service TestController on hl {
         var e = publishResults(electionCode, rc, (is2019 ? results2019 : results2015), (is2019 ? resultsByPD2019 : resultsByPD2015));
         if e is error {
             log:printInfo("Error publishing results: " + e.toString());
+            alreadyRunning = false;
         }
     }
 }

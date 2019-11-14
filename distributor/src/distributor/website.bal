@@ -84,7 +84,7 @@ service mediaWebsite on mediaListener {
                 } else if format == "html" {
                     http:Response hr = new;
                     boolean sorted = (r.jsonResult.level == LEVEL_NF) ? true : false;
-                    hr.setTextPayload(check generateHtml(election, r.jsonResult, sorted));
+                    hr.setTextPayload(<@untainted>check generateHtml(election, r.jsonResult, sorted));
                     hr.setContentType("text/html");
                     return caller->ok(hr);
                 } else { // xml
