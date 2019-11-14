@@ -6,7 +6,7 @@ import ballerina/websub;
 
 import maryamzi/ping;
 
-const MY_VERSION = "2019-11-10";
+const MY_VERSION = "2019-11-14";
 
 // TODO: set correct ones once decided
 const JSON_TOPIC = "https://github.com/ECLK/Results-Dist-json";
