@@ -73,7 +73,9 @@ function generateHtml (string electionCode, map<json> result, boolean sorted) re
 
 function sortPartyResults (json[] unsorted) returns json[] {
     return unsorted.sort(function (json r1, json r2) returns int {
-        return (<int>r1.votes) < (<int>r2.votes) ? 1 : -1;
+        int n1 = <int>r1.votes;
+        int n2 = <int>r2.votes;
+        return (n1 < n2) ? 1 : (n1 == n2 ? 0 : -1);
     });
 }
 
