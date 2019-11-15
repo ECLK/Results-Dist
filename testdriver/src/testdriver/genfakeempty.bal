@@ -1,6 +1,5 @@
 import ballerina/lang.'int;
 import ballerina/math;
-import ballerina/io;
 
 function genFakeEmptyData () returns error? {
     map<json>[] by_party = [
