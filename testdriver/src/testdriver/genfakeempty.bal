@@ -75,7 +75,6 @@ function genFakeEmptyData () returns error? {
     // do it for the 2nd round with only 2 candites
     int c1 = check math:randomInRange(0, 5);
     int c2 = (c1 + 2) % 5; // 2 over from c1
-    io:println("c1 = " + c1.toString(), " c2 = " + c2.toString() + " length=" + by_party.length().toString());
     json prefvotes = {
         votes1st: 0,
         votes2nd: 0,

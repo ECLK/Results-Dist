@@ -1,6 +1,7 @@
 import ballerina/http;
 import ballerina/log;
 import ballerina/time;
+import ballerina/mime;
 
 listener http:Listener hl = new(9999);
 
@@ -11,6 +12,33 @@ int runCount = 0; // used to generate a unique election code
     basePath: "/"
 }
 service TestController on hl {
+    @http:ResourceConfig {
+        path: "/"
+    }
+    resource function home(http:Caller caller, http:Request req) returns error? {
+        string head = "<head><title>Test Generator Controller</title>";
+        head += "<link rel=\"stylesheet\" href=\"https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css\">";
+        head += "</head>";
+
+        string body = "<body style='margin: 5%'>";
+        body += "<div class='container-fluid'>";
+        body += "<h1>Select a test to run:</h1>";
+        body += "<ul>";
+        foreach var [code, [name, _, _, _, _]] in tests.entries() {
+            body += "<li><a href='/start/" + code + "'>" + name + "</a></li>";
+        }
+        body += "</ul>";
+        body += "</div>";
+        body += "</body>";
+
+        string doc = "<html>" + head + body + "</html>";
+
+        http:Response hr = new;
+        hr.setPayload(doc);
+        hr.setContentType(mime:TEXT_HTML);
+        return caller->ok(hr);
+    }
+
     @http:ResourceConfig {
         path: "/start/{electionCode}"
     }
