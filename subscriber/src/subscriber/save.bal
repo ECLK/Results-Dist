@@ -105,7 +105,7 @@ function saveImagePdf(map<json> imageJson) {
 # + return - returns the base name for the file 
 function getFileNameBase(string electionCode, map<json> result) returns string {
     // start with sequence # and type code
-    string name = electionCode + "-" + result.sequence_number.toString() + "-" +
+    string name = (wantCode ? electionCode + "-" : "") + result.sequence_number.toString() + "-" +
         (result.'type.toString() == PRESIDENTIAL_RESULT ? "PE1" : "PE2") + "-";
 
     string resultLevel = result.level.toString();
