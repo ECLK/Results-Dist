@@ -2,7 +2,6 @@ import ballerina/auth;
 import ballerina/encoding;
 import ballerina/http;
 import ballerina/log;
-import ballerina/websub;
 
 const WWW_AUTHENTICATE_HEADER = "WWW-Authenticate";
 
@@ -70,7 +69,6 @@ public type SubscriptionFilter object {
             log:printWarn("error decoding topic, using the original form: " + topic + ". Error: " + decodedTopic.toString());
         }
 
-
         map<string> callbackMap = resultCallbackMap;
         match topic {
             JSON_TOPIC => {
@@ -95,8 +93,6 @@ public type SubscriptionFilter object {
             log:printWarn("error decoding callback, using the original form: " + callback + ". Error: " + decodedCallback.toString());
         }
 
-        websub:Hub hubVar = <websub:Hub> hub;
-
         string headerValue = request.getHeader(http:AUTH_HEADER);
         
         if !(headerValue.startsWith(auth:AUTH_SCHEME_BASIC)) {
@@ -110,22 +106,9 @@ public type SubscriptionFilter object {
         if (result is [string, string]) {
             [string, string][username, _] = result;
             
-            if callbackMap.hasKey(username) {
-                string existingCallback = callbackMap.get(username);
-                log:printInfo("Removing existing subscription callback: " + existingCallback + ", for username: " +
-                                username + ", and topic: " + topic);
-                error? remResult = hubVar.removeSubscription(topic, existingCallback);
-                if (remResult is error) {
-                    log:printError("error removing existing subscription for username: " + username, remResult);
-                }
-                log:printInfo("Adding a new subscription callback: " + callback + ", for username: " +
-                                username + ", and topic: " + topic);
-                updateUserCallback(username, topic, callback);
-            } else {
-                log:printInfo("Adding a subscription callback: " + callback + ", for username: " + username +
+            log:printInfo("Adding a subscription callback: " + callback + ", for username: " + username +
                                 ", and topic: " + topic);
-                saveUserCallback(username, topic, callback);
-            }
+            saveUserCallback(username, topic, callback);
             callbackMap[username] = <@untainted> callback;
         } else {
             log:printError("Error extracting credentials", result);
