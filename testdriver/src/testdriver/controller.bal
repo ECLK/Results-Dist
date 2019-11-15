@@ -1,7 +1,6 @@
 import ballerina/http;
 import ballerina/log;
 import ballerina/time;
-import ballerina/io;
 
 listener http:Listener hl = new(9999);
 
@@ -12,27 +11,42 @@ int runCount = 0; // used to generate a unique election code
     basePath: "/"
 }
 service TestController on hl {
-    resource function start(http:Caller caller, http:Request req) returns error? {
-        boolean is2019 = req.getQueryParamValue("2019") == () ? false : true;
-
-        http:Response hr = new;
+    @http:ResourceConfig {
+        path: "/start/{electionCode}"
+    }
+    resource function start(http:Caller caller, http:Request req, string electionCode) returns error? {
         if alreadyRunning {
             return caller->ok("Test already running; try again later.");
-        } else {
-            // yes i know race condition possible .. need to use lock to do this better (after it becomes non experimental)
-            alreadyRunning = true;
-            check caller->ok("Test data publishing starting.");
         }
+        string ec = <@untainted>electionCode;
+        if !tests.hasKey(ec) {
+            http:Response hr = new;
+            hr.statusCode = 404;
+            hr.setTextPayload("No such election to run tests with: " + ec);
+            check caller->respond(hr);
+        } 
+        check caller->ok("Test data publishing starting.");
+
+        // yes i know race condition possible .. need to use lock to do this better (after it becomes non experimental)
+        alreadyRunning = true;
+
+        [ string, map<map<json>>[], map<json>[], map<map<json>>[], map<json>[] ] 
+            [electionName, results, resultsByPD, results2, resultsByPD2] = tests.get(ec);
     
-        string electionCode = (is2019 ? "2019-PRE-EMPTY-" : "2015-PRE-REPLAY-") + io:sprintf("%03d", runCount);
-        log:printInfo("Publishing new result set for " + electionCode + " starting at " + time:currentTime().toString());
+
+        log:printInfo("Publishing new result set for " + ec + " starting at " + time:currentTime().toString());
 
         http:Client rc = new (resultsURL);
         _ = check rc->get("/result/reset"); // reset the results store
-        var e = publishResults(electionCode, rc, (is2019 ? results2019 : results2015), (is2019 ? resultsByPD2019 : resultsByPD2015));
+        var e = sendResults("PRESIDENTIAL-FIRST", ec, rc, results, resultsByPD);
         if e is error {
-            log:printInfo("Error publishing results: " + e.toString());
-            alreadyRunning = false;
+            log:printError("Error publishing results: " + e.toString());
+        } else if results2.length() != 0 {
+            e = sendResults("PRESIDENTIAL-PREFS", ec, rc, results2, resultsByPD2);
+            if e is error {
+                log:printError("Error publishing preference results: " + e.toString());
+            }
         }
+        alreadyRunning = false;
     }
 }

@@ -12,12 +12,22 @@ map<json>[] resultsByPD2015 = [];
 
 map<map<json>>[] results2019 = [];
 map<json>[] resultsByPD2019 = [];
+map<map<json>>[] resultsFake = [];
+map<json>[] resultsByPDFake = [];
+map<map<json>>[] resultsFake2 = [];
+map<json>[] resultsByPDFake2 = [];
 
+// electionCode, first round results array, first round results by PD, second round results array, second round result by PD
+map<[ string, map<map<json>>[], map<json>[], map<map<json>>[], map<json>[] ]> tests = {
+    "2015PB":    [ "2015 Playback", results2015, resultsByPD2015, [], [] ],
+    "2019Empty": [ "2019 EMPTY TEST", results2019, resultsByPD2019, [], [] ],
+    "FAKE":      [ "MOCK ELECTION", resultsFake, resultsByPDFake, resultsFake2, resultsByPDFake2 ]
+};
 
 int sleeptime = 0;
 string resultsURL = "";
 
-public function main(string url = "http://resultstest.ecdev.opensource.lk:8181", int delay = 10000) returns error? {
+public function main(string url = "http://localhost:8181", int delay = 10000) returns error? {
     resultsURL = <@untainted> url;
     sleeptime = <@untainted> delay;
 
@@ -25,6 +35,8 @@ public function main(string url = "http://resultstest.ecdev.opensource.lk:8181",
     foreach int i in 0...21 {
         results2015[i] = {};
         results2019[i] = {};
+        resultsFake[i] = {};
+        resultsFake2[i] = {};
     }
 
     // load 2015 presidential election data from Nuwan
@@ -32,6 +44,9 @@ public function main(string url = "http://resultstest.ecdev.opensource.lk:8181",
 
     // generate empty 2019 data
     check gen2019EmptyData();
+
+    // generate empty Fake data
+    check genFakeEmptyData();
     
     // test run will be started via the controller service
 }

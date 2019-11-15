@@ -6,9 +6,7 @@ import ballerina/math;
 import ballerina/runtime;
 import ballerina/encoding;
 
-const PRESIDENTIAL_RESULT = "PRESIDENTIAL-FIRST";
-
-function publishResults(string electionCode, http:Client rc, map<map<json>>[] results, map<json>[] resultsByPD) returns error? {
+function sendResults(string resultType, string electionCode, http:Client rc, map<map<json>>[] results, map<json>[] resultsByPD) returns error? {
     
     boolean[] pdSent = [];
     int[] edSent = []; // # of result sent per ED
@@ -95,7 +93,7 @@ function publishResults(string electionCode, http:Client rc, map<map<json>>[] re
         string resCode = resultsByPD[pdCode]?.pd_code.toString();
         string edCodeFromPD = resultsByPD[pdCode]?.ed_code.toString();
         io:println(io:sprintf("Sending PD results for %s", resCode));
-        check sendResult (rc, electionCode, PRESIDENTIAL_RESULT, resCode, resultsByPD[pdCode]);
+        check sendResult (rc, electionCode, resultType, resCode, resultsByPD[pdCode]);
         edSent[edCode] = edSent[edCode] + 1; // sent another result for this ED
         sentCount = sentCount + 1;
  
@@ -103,7 +101,7 @@ function publishResults(string electionCode, http:Client rc, map<map<json>>[] re
         if edSent[edCode] == results[edCode].length() { 
             resCode = io:sprintf("%02d", edCode+1);
             io:println(io:sprintf("Sending ED results for resCode=%s", resCode));
-            check sendResult (rc, electionCode, PRESIDENTIAL_RESULT, resCode, check createEDResult(results, resultsByPD, edCode));
+            check sendResult (rc, electionCode, resultType, resCode, check createEDResult(resultType, results, resultsByPD, edCode));
             sentCount = sentCount + 1;
         }
 
@@ -112,7 +110,7 @@ function publishResults(string electionCode, http:Client rc, map<map<json>>[] re
     }
 
     io:println("Sending national results");
-    check sendResult (rc, electionCode, PRESIDENTIAL_RESULT, "FINAL", check createNationalResult(results, resultsByPD)); // "FINAL" is unused
+    check sendResult (rc, electionCode, resultType, "FINAL", check createNationalResult(resultType, results, resultsByPD)); // "FINAL" is unused
     io:println("Published ", sentCount+1, " results.");
     alreadyRunning = false;
     runCount = runCount + 1;
@@ -128,7 +126,7 @@ type Summary record {
     string percent_polled;
 }; 
 
-function createEDResult (map<map<json>>[] results, map<json>[]resultsByPD, int edCode) returns map<json> | error {
+function createEDResult (string resultType, map<map<json>>[] results, map<json>[]resultsByPD, int edCode) returns map<json> | error {
     map<map<json>> byPDResults = results[edCode];
     string ed_code = "";
     string ed_name = "";
@@ -143,6 +141,9 @@ function createEDResult (map<map<json>>[] results, map<json>[]resultsByPD, int e
         percent_polled: ""
     };
     int[] votes_by_party = [];
+    int[] votes1st_by_party = [];
+    int[] votes2nd_by_party = [];
+    int[] votes3rd_by_party = [];
     int pdCount = 0;
     foreach [string, json] [pdCode, pdResult] in byPDResults.entries() {
         ed_code = <string> pdResult.ed_code;
@@ -153,6 +154,9 @@ function createEDResult (map<map<json>>[] results, map<json>[]resultsByPD, int e
             if pdCount == 0 { // at the first PD of the ED
                 // init vote count to zero for i-th party at first PD in district
                 votes_by_party[i] = 0;
+                votes1st_by_party[i] = 0;
+                votes2nd_by_party[i] = 0;
+                votes3rd_by_party[i] = 0;
 
                 // set up 
                 distByParty[i] = {};
@@ -165,7 +169,12 @@ function createEDResult (map<map<json>>[] results, map<json>[]resultsByPD, int e
                             pdResult.ed_name.toString());
             }
             // add up votes and do %ge later as totals are not yet known
-            votes_by_party[i] = votes_by_party[i] + <int>by_party[i].votes;            
+            votes_by_party[i] = votes_by_party[i] + <int>by_party[i].votes;  
+            if resultType == "PRESIDENTIAL-PREFS" { // add up pref votes too then
+                votes1st_by_party[i] += <int>by_party[i].votes1st;  
+                votes2nd_by_party[i] += <int>by_party[i].votes2nd;  
+                votes3rd_by_party[i] += <int>by_party[i].votes3rd;  
+            }
         }
 
         distSummary.valid += <int>pdResult.summary.valid;
@@ -182,6 +191,11 @@ function createEDResult (map<map<json>>[] results, map<json>[]resultsByPD, int e
     // put the vote total & percentages in the result json
     foreach int i in 0 ... votes_by_party.length()-1 {
         distByParty[i]["votes"] = votes_by_party[i];
+        if resultType == "PRESIDENTIAL-PREFS" { // pref votes too then
+            distByParty[i]["votes1st"] = votes1st_by_party[i];
+            distByParty[i]["votes2nd"] = votes2nd_by_party[i];
+            distByParty[i]["votes3rd"] = votes3rd_by_party[i];
+        }
         distByParty[i]["percentage"] = (distSummary.valid == 0) ? "0.00" : io:sprintf ("%.2f", votes_by_party[i]*100.0/distSummary.valid);
     }
 
@@ -191,7 +205,7 @@ function createEDResult (map<map<json>>[] results, map<json>[]resultsByPD, int e
     distSummary.percent_polled = (distSummary.electors == 0) ? "0.00" : io:sprintf("%.2f", distSummary.polled*100.0/distSummary.electors);
 
     return {
-        'type: "PRESIDENTIAL-FIRST", 
+        'type: resultType, 
         timestamp: check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ"),
         level: "ELECTORAL-DISTRICT", 
         ed_code: ed_code,
@@ -201,7 +215,7 @@ function createEDResult (map<map<json>>[] results, map<json>[]resultsByPD, int e
     };
 }
 
-function createNationalResult (map<map<json>>[] results, map<json>[]resultsByPD) returns map<json> | error {
+function createNationalResult (string resultType, map<map<json>>[] results, map<json>[]resultsByPD) returns map<json> | error {
     map<json>[] natByParty = []; // array of json value each for a single party results for the district
     Summary natSummary = { // aggregate results (not by_party)
         valid: 0, 
@@ -213,7 +227,9 @@ function createNationalResult (map<map<json>>[] results, map<json>[]resultsByPD)
         percent_polled: ""
     };
     int[] votes_by_party = [];
-    int pdCount = 0;
+    int[] votes1st_by_party = [];
+    int[] votes2nd_by_party = [];
+    int[] votes3rd_by_party = [];    int pdCount = 0;
     foreach map<json> pdResult in resultsByPD {
         json[] by_party = <json[]> pdResult.by_party;
         int nparties = by_party.length();
@@ -221,6 +237,9 @@ function createNationalResult (map<map<json>>[] results, map<json>[]resultsByPD)
             if pdCount == 0 { // at the first PD of the country
                 // init vote count to zero for i-th party at first PD in district
                 votes_by_party[i] = 0;
+                votes1st_by_party[i] = 0;
+                votes2nd_by_party[i] = 0;
+                votes3rd_by_party[i] = 0;
 
                 // set up 
                 natByParty[i] = {};
@@ -234,6 +253,11 @@ function createNationalResult (map<map<json>>[] results, map<json>[]resultsByPD)
             }
             // add up votes and do %ge later as totals are not yet known
             votes_by_party[i] = votes_by_party[i] + <int>by_party[i].votes;            
+            if resultType == "PRESIDENTIAL-PREFS" { // add up pref votes too then
+                votes1st_by_party[i] += <int>by_party[i].votes1st;  
+                votes2nd_by_party[i] += <int>by_party[i].votes2nd;  
+                votes3rd_by_party[i] += <int>by_party[i].votes3rd;  
+            }
         }
 
         natSummary.valid += <int>pdResult.summary.valid;
@@ -250,6 +274,11 @@ function createNationalResult (map<map<json>>[] results, map<json>[]resultsByPD)
     // put the vote total & percentages in the result json
     foreach int i in 0 ..< votes_by_party.length() {
         natByParty[i]["votes"] = votes_by_party[i];
+        if resultType == "PRESIDENTIAL-PREFS" { // pref votes too then
+            natByParty[i]["votes1st"] = votes1st_by_party[i];
+            natByParty[i]["votes2nd"] = votes2nd_by_party[i];
+            natByParty[i]["votes3rd"] = votes3rd_by_party[i];
+        }
         natByParty[i]["percentage"] = (natSummary.valid == 0) ? "0.00" : io:sprintf ("%.2f", votes_by_party[i]*100.0/natSummary.valid);
     }
 
@@ -259,7 +288,7 @@ function createNationalResult (map<map<json>>[] results, map<json>[]resultsByPD)
     natSummary.percent_polled = (natSummary.electors == 0) ? "0.00" : io:sprintf("%.2f", natSummary.polled*100.0/natSummary.electors);
 
     return {
-        'type: "PRESIDENTIAL-FIRST", 
+        'type: resultType, 
         timestamp: check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ"),
         level: "NATIONAL-FINAL", 
         by_party: natByParty,

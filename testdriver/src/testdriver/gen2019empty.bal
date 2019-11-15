@@ -261,7 +261,7 @@ function gen2019EmptyData () returns error? {
     // go thru the 2015 data and copy over and replace the by_party and summary info
     foreach json j in data2015 { 
         map<json> jj = {
-                'type: check j.'type,
+                'type: "PRESIDENTIAL-FIRST",
                 level: check j.level,
                 ed_code: check j.ed_code,
                 ed_name: check j.ed_name, 
