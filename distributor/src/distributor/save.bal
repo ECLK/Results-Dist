@@ -276,7 +276,6 @@ function addToCumulative (map<json> jm) {
         if prefsCumulativeRes.summary.electors == 0 {
             // just starting round 2 - copy over summary data from the previous cumulative
             // total as that's where we start for round 2
-            io:println("*** loading prefs summary: " + cumulativeRes.summary.toString());
             prefsCumulativeRes.summary = cumulativeRes.summary;
         }
         accum = prefsCumulativeRes;
