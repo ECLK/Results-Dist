@@ -34,7 +34,7 @@ const string CREATE_CALLBACKS_TABLE = "CREATE TABLE IF NOT EXISTS callbacks (" +
                                     "    callback VARCHAR(200) NOT NULL," +
                                     "    PRIMARY KEY (username, topic))";
 const INSERT_CALLBACK = "INSERT INTO callbacks (username, topic, callback) VALUES (?, ?, ?)";
-const UPDATE_CALLBACK = "UPDATE callbacks SET callback = ? WHERE username = ? AND topic = ?";
+const REMOVE_CALLBACK = "DELETE from callbacks WHERE username = ? AND topic = ? AND callback = ?";
 const SELECT_CALLBACKS = "SELECT * FROM callbacks";
 const DROP_CALLBACKS_TABLE = "DROP TABLE callbacks";
 
@@ -247,9 +247,9 @@ function saveUserCallback(string username, string topic, string callback) {
     }
 }
 
-# Update a subscription username-calback combination.
-function updateUserCallback(string username, string topic, string callback) {
-    var r = dbClient->update(UPDATE_CALLBACK, callback, username, topic);
+# Remove a subscription username-calback combination.
+function removeUserCallback(string username, string topic, string callback) {
+    var r = dbClient->update(REMOVE_CALLBACK, username, topic, callback);
     if r is error {
         log:printError("Unable to update username-callback in database: ", r);
     }
