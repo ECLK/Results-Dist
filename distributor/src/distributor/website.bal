@@ -1,8 +1,11 @@
+import ballerina/auth;
 import ballerina/http;
+import ballerina/log;
 import ballerina/mime;
 import ballerina/time;
 import ballerina/xmlutils;
 import ballerina/file;
+import ballerina/websub;
 
 const LEVEL_PD = "POLLING-DIVISION";
 const LEVEL_ED = "ELECTORAL-DISTRICT";
@@ -132,6 +135,8 @@ service mediaWebsite on mediaListener {
     # web/info.html and it'll get shown at subscriber startup
     # + return - error if problem
     resource function info(http:Caller caller, http:Request request) returns error? {
+        removeSubscriptionsForUsername(request);
+
         http:Response hr = new;
         hr.setFileAsPayload("web/info.txt", "text/plain");
         check caller->ok(hr);
@@ -273,4 +278,46 @@ function generateResultsTable(string 'type) returns string {
     }
     tab = tab + "</table>";
     return tab;
+}
+
+function removeSubscriptionsForUsername(http:Request request) {
+    if (!request.hasHeader(http:AUTH_HEADER)) {
+        return;
+    }
+
+    websub:Hub hubVar = <websub:Hub> hub;
+    string headerValue = request.getHeader(http:AUTH_HEADER);
+        
+    if !(headerValue.startsWith(auth:AUTH_SCHEME_BASIC)) {
+        return;
+    }
+
+    string credential = headerValue.substring(5, headerValue.length()).trim();
+
+    var result = auth:extractUsernameAndPassword(credential);
+
+    if (result is [string, string]) {
+        [string, string][username, _] = result;
+        
+        removeSubscription(username, resultCallbackMap, JSON_TOPIC, hubVar);
+        removeSubscription(username, imageCallbackMap, IMAGE_PDF_TOPIC, hubVar);
+        removeSubscription(username, awaitResultsCallbackMap, AWAIT_RESULTS_TOPIC, hubVar);
+    } else {
+        log:printError("Error extracting credentials to remove subscription", result);
+    }
+}
+
+function removeSubscription(string username, map<string> callbackMap, string topic, websub:Hub hub) {
+    if !callbackMap.hasKey(username) {
+        return;
+    }
+
+    string existingCallback = callbackMap.get(username);
+    log:printInfo("Removing existing subscription callback: " + existingCallback + ", for username: " +
+                    username + ", and topic: " + topic);
+    error? remResult = hub.removeSubscription(topic, existingCallback);
+    if (remResult is error) {
+        log:printError("error removing existing subscription for username: " + username, remResult);
+    }
+    removeUserCallback(username, topic, existingCallback);
 }
