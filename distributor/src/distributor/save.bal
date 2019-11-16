@@ -288,9 +288,7 @@ function addToCumulative (map<json> jm) {
         accum.summary.polled += <int>jm.summary.polled;
         // don't add up electors from postal PDs as those are already in the district elsewhere
         string pdCode = <string>jm.pd_code;
-        if !pdCode.endsWith("P") {
-            accum.summary.electors += <int>jm.summary.electors;
-        }
+        accum.summary.electors += <int>jm.summary.electors;
         accum.summary.percent_valid = (accum.summary.polled == 0) ? "0.00" : io:sprintf("%.2f", accum.summary.valid*100.0/accum.summary.polled);
         accum.summary.percent_rejected = (accum.summary.polled == 0) ? "0.00" : io:sprintf("%.2f", accum.summary.rejected*100.0/accum.summary.polled);
         accum.summary.percent_polled = (accum.summary.electors == 0) ? "0.00" : io:sprintf("%.2f", accum.summary.polled*100.0/accum.summary.electors);
