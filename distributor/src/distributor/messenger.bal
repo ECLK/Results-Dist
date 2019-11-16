@@ -53,6 +53,7 @@ function sendSMS(string message, string resultId) {
         log:printInfo("Sending SMS for " + resultId);
     }
     foreach string targetMobile in currentMobileSubscribers {
+        log:printInfo("Sending SMS for " + resultId + " to " + targetMobile);
         var response = twilioClient->sendSms(sourceMobile, targetMobile, message);
         if response is error {
             log:printError("Message sending failed for \'" + targetMobile + "\' due to error:" +
