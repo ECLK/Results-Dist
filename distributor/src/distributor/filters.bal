@@ -14,6 +14,7 @@ map<string> awaitResultsCallbackMap = {};
 
 # Filter to challenge authentication.
 public type AuthChallengeFilter object {
+
     *http:RequestFilter;
 
     public function filterRequest(http:Caller caller, http:Request request, http:FilterContext context) 
@@ -25,7 +26,7 @@ public type AuthChallengeFilter object {
         http:Response res = new;
         res.statusCode = 401;
         res.addHeader(WWW_AUTHENTICATE_HEADER, "Basic realm=\"EC Media Results Delivery\"");
-        error? err =  caller->respond(res);
+        error? err = caller->respond(res);
         if (err is error) {
             log:printError("error responding with auth challenge", err);
         }
@@ -35,6 +36,7 @@ public type AuthChallengeFilter object {
 
 # Filter to remove an existing subscription for a user, when a new subscription request is sent.
 public type SubscriptionFilter object {
+
     *http:RequestFilter;
 
     public function filterRequest(http:Caller caller, http:Request request, http:FilterContext context) returns boolean {
@@ -95,7 +97,7 @@ public type SubscriptionFilter object {
 
         string headerValue = request.getHeader(http:AUTH_HEADER);
         
-        if !(headerValue.startsWith(auth:AUTH_SCHEME_BASIC)) {
+        if (!headerValue.startsWith(auth:AUTH_SCHEME_BASIC)) {
             return false;
         }
 

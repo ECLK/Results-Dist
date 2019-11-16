@@ -22,7 +22,7 @@ service mediaWebsite on mediaListener {
         path: "/",
         methods: ["GET"]
     }
-    resource function showAll (http:Caller caller, http:Request req) returns error? {
+    resource function showAll(http:Caller caller, http:Request req) returns error? {
         string head = "<head>";
         head += "<title>Sri Lanka Elections Commission</title>";
         head += "<link rel=\"stylesheet\" href=\"https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css\">";
@@ -49,7 +49,7 @@ service mediaWebsite on mediaListener {
         return caller->ok(hr);
     }
 
-    resource function allresults (http:Caller caller, http:Request req) returns error? {
+    resource function allresults(http:Caller caller, http:Request req) returns error? {
         json[] results = [];
 
         // return results in reverse order
@@ -67,7 +67,7 @@ service mediaWebsite on mediaListener {
         path: "/result/{election}/{seqNo}",
         methods: ["GET"]
     }
-    resource function data (http:Caller caller, http:Request req, string election, int seqNo) returns error? {
+    resource function data(http:Caller caller, http:Request req, string election, int seqNo) returns error? {
         // what's the format they want? we'll default to json if they don't say or get messy
         string format = req.getQueryParamValue ("format") ?: "json";
         if format != "xml" && format != "json" && format != "html" {
@@ -106,7 +106,7 @@ service mediaWebsite on mediaListener {
         path: "/release/{election}/{seqNo}",
         methods: ["GET"]
     }
-    resource function releaseDoc (http:Caller caller, http:Request req, string election, int seqNo) returns error? {
+    resource function releaseDoc(http:Caller caller, http:Request req, string election, int seqNo) returns error? {
         http:Response hr = new;
 
         // find image of the release doc and return it (if its there - may not have appeared yet)
@@ -168,7 +168,7 @@ service mediaWebsite on mediaListener {
             scopes: ["ECAdmin"]
         }
     }
-    resource function smsRegistration (http:Caller caller, http:Request req, Recipient smsRecipient) returns error? {
+    resource function smsRegistration(http:Caller caller, http:Request req, Recipient smsRecipient) returns error? {
         string|error validatedNo = validate(smsRecipient.mobile);
         if validatedNo is error {
             http:Response res = new;
@@ -217,7 +217,7 @@ service mediaWebsite on mediaListener {
     }
 }
 
-# Print the results
+# Print the results.
 # 
 # + return - HTML string for results of the given type from the results cache
 function generateResultsTable(string 'type) returns string {

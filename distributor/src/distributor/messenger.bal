@@ -1,6 +1,7 @@
 import ballerina/config;
 import ballerina/log;
 import ballerina/stringutils;
+
 import wso2/twilio;
 
 twilio:TwilioConfiguration twilioConfig = {

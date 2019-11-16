@@ -1,10 +1,10 @@
 import ballerina/http;
 import ballerina/io;
+import ballerina/lang.'int;
 import ballerina/log;
 import ballerina/mime;
 import ballerina/time;
 import ballerina/websub;
-import ballerina/lang.'int;
 
 # Service for results tabulation to publish results to. We assume that results tabulation will deliver
 # a result in two separate messages - one with the json result data and another with an image of the
@@ -177,8 +177,8 @@ function publishResultData(Result result, string? electionCode = (), string? res
 
     // push it out with the election code and the json result as the message
     json resultAll = {
-        election_code : result.election,
-        result : result.jsonResult
+        election_code: result.election,
+        result: result.jsonResult
     };
     var r = wh.publishUpdate(JSON_TOPIC, resultAll, mime:APPLICATION_JSON);
     if r is error {

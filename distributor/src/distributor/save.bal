@@ -1,6 +1,7 @@
 import ballerina/config;
 import ballerina/io;
 import ballerina/log;
+
 import ballerinax/java.jdbc;
 
 # This variable will contain all the results received. If the server crashes it will 
@@ -114,7 +115,7 @@ function __init() {
 
         // read json string and convert to json
         io:StringReader sr = new(dr.jsonResult, encoding = "UTF-8");
-        map<json> jm =  <map<json>> sr.readJson();
+        map<json> jm = <map<json>> sr.readJson();
 
         // put results in the cache
         resultsCache.push(<Result> {
@@ -172,8 +173,8 @@ function __init() {
     var account = twilioClient->getAccountDetails();
     if account is error {
         log:printError("SMS notification is disabled due to invalid twilio account details. " +
-                        "Please provide valid 'eclk.sms.twilio.accountSid'/'authToken'/'source'(twilio mobile no):" +
-                         <string> account.detail()?.message);
+                       "Please provide valid 'eclk.sms.twilio.accountSid'/'authToken'/'source'(twilio mobile no):" +
+                       <string> account.detail()?.message);
     } else {
         validTwilioAccount = true;
         log:printInfo("SMS notification is enabled : twilio.account.status=" + account.status.toString());
@@ -201,11 +202,11 @@ function saveResult(Result result) returns error? {
 
     // add up cumulative result from all the PD results to get current cumulative total
     if result.jsonResult.level == "POLLING-DIVISION" {
-        addToCumulative (result.jsonResult);
+        addToCumulative(result.jsonResult);
     }
 
     // update in memory cache of all results
-    resultsCache.push (result);
+    resultsCache.push(result);
 }
 
 # Save an image associated with a result
@@ -265,7 +266,7 @@ function resetResults() returns error? {
 }
 
 # Add a polling division level result to the cumulative total.
-function addToCumulative (map<json> jm) {
+function addToCumulative(map<json> jm) {
     boolean firstRound = jm.'type == PRESIDENTIAL_RESULT;
     json[] pr = <json[]> checkpanic jm.by_party;
 
