@@ -3,6 +3,9 @@ RUN wget https://product-dist.ballerina.io/downloads/1.0.3/ballerina-linux-insta
 RUN dpkg -i ballerina-linux-installer-x64-1.0.3.deb
 WORKDIR /usr/src/
 
+ENV TZ=Asia/Colombo
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 ADD . /usr/src/
 
 RUN ballerina build --skip-tests distributor
