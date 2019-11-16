@@ -45,19 +45,19 @@ http:OutboundAuthConfig? auth = ();
 http:Client? imageClient = ();
 
 // what formats does the user want results saved in?
-public function main (string secret,                // secret to send to the hub
-                      string? username = (),        // my username  
-                      string? password = (),        // my password  
-                      boolean await = false,        // do I want the await results notification?
-                      boolean 'json = false,        // do I want json?
-                      boolean 'xml = false,         // do I want xml?
-                      boolean image = false,        // do I want the image?
-                      boolean html = false,         // do I want HTML?
-                      boolean sorted = true,        // do I want HTML results sorted highest to lowest
-                      boolean wantCode = false,     // do I want electionCode in the filename
-                      string homeURL = "https://resultstest.ecdev.opensource.lk", // where do I subscribe at
-                      int port = 1111,              // port I'm going to open
-                      string myURL = ""             // how to reach me over the internet
+public function main(string secret,                // secret to send to the hub
+                     string? username = (),        // my username
+                     string? password = (),        // my password
+                     boolean await = false,        // do I want the await results notification?
+                     boolean 'json = false,        // do I want json?
+                     boolean 'xml = false,         // do I want xml?
+                     boolean image = false,        // do I want the image?
+                     boolean html = false,         // do I want HTML?
+                     boolean sorted = true,        // do I want HTML results sorted highest to lowest
+                     boolean wantCode = false,     // do I want electionCode in the filename
+                     string homeURL = "https://resultstest.ecdev.opensource.lk", // where do I subscribe at
+                     int port = 1111,              // port I'm going to open
+                     string myURL = ""             // how to reach me over the internet
                     ) returns error? {
     subscriberSecret = <@untainted> secret;
     subscriberPublicUrl = <@untainted> (myURL == "" ? string `http://localhost:${port}` : myURL);
@@ -65,18 +65,18 @@ public function main (string secret,                // secret to send to the hub
     hub = <@untainted> homeURL + "/websub/hub";
 
     // check what format the user wants results in
-    wantJson = <@untainted>'json;
-    wantXml = <@untainted>'xml;
-    wantHtml = <@untainted>html;
+    wantJson = <@untainted> 'json;
+    wantXml = <@untainted> 'xml;
+    wantHtml = <@untainted> html;
     if !(wantJson || wantXml || wantHtml) {
         // default to giving json
         wantJson = true;
     }
-    sortedHtml = <@untainted>sorted;
+    sortedHtml = <@untainted> sorted;
 
     // set up auth
     if (username is string && password is string) {
-        auth:OutboundBasicAuthProvider outboundBasicAuthProvider = new ({
+        auth:OutboundBasicAuthProvider outboundBasicAuthProvider = new({
             username: <@untainted> username,
             password: <@untainted> password
         });
@@ -154,7 +154,6 @@ public function main (string secret,                // secret to send to the hub
                    error? pingStatus = ping:ping();
                    if !(pingStatus is ()) {
                        log:printError("Error pinging on await notification", pingStatus);
-
                    }
                } else {
                    log:printError("Expected text payload, received:" + textPayload.toString());
@@ -165,7 +164,7 @@ public function main (string secret,                // secret to send to the hub
     }
 
     if image {
-        imageClient = <@untainted> new (homeURL, {auth: auth});
+        imageClient = <@untainted> new(homeURL, {auth: auth});
 
         // attach the image subscriber
         service imageSubscriberService = @websub:SubscriberServiceConfig {
