@@ -39,6 +39,8 @@ boolean wantXml = false;
 boolean wantHtml = false;
 boolean sortedHtml = false;
 
+boolean wantCode = false;
+
 http:OutboundAuthConfig? auth = ();
 http:Client? imageClient = ();
 
@@ -52,6 +54,7 @@ public function main (string secret,                // secret to send to the hub
                       boolean image = false,        // do I want the image?
                       boolean html = false,         // do I want HTML?
                       boolean sorted = true,        // do I want HTML results sorted highest to lowest
+                      boolean wantCode = false,     // do I want electionCode in the filename
                       string homeURL = "https://resultstest.ecdev.opensource.lk", // where do I subscribe at
                       int port = 1111,              // port I'm going to open
                       string myURL = ""             // how to reach me over the internet

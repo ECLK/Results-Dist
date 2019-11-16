@@ -302,16 +302,16 @@ function sendResult (http:Client hc, string electionCode, string resType, string
     http:Response hr;
 
     // sent alert
-    string params = "?level=" + <string>result.level;
+    string params = "/?level=" + <string>result.level;
     if result.ed_name is string {
         params += "&ed_name=" + check encoding:encodeUriComponent(<string>result.ed_name, "UTF-8");
         if result.pd_name is string {
             params += "&pd_name=" + check encoding:encodeUriComponent(<string>result.pd_name, "UTF-8");
         }
     }
-    hr = check hc->post ("/result/notification/" + electionCode + "/" + resType + "/" + resCode + "/?level=" + <string>result.level, <json>{});
+    hr = check hc->post ("/result/notification/" + electionCode + "/" + resType + "/" + resCode + params, <json>{});
     if hr.statusCode != http:STATUS_ACCEPTED {
-        io:println("Error while posting result notification to: /result/notification/" + electionCode + "/" + resType + "/" + resCode);
+        io:println("Error while posting result notification to: /result/notification/" + electionCode + "/" + resType + "/" + resCode + params);
         io:println("\tstatus=", hr.statusCode, ", contentType=", hr.getContentType(), " payload=", hr.getTextPayload());
         return error ("Unable to post notification for " + resCode);
     }
