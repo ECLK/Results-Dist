@@ -1,5 +1,6 @@
 import ballerina/config;
 import ballerina/websub;
+
 import ballerinax/java.jdbc;
 
 import maryamzi/websub.hub.mysqlstore;
@@ -24,7 +25,7 @@ public function main() returns error? {
     }
 
     // create the datastore for the websub hub
-    mysqlstore:MySqlHubPersistenceStore persistenceStore = check new (db, key);
+    mysqlstore:MySqlHubPersistenceStore persistenceStore = check new(db, key);
 
     // start the hub
     var hubStartUpResult =

@@ -1,8 +1,8 @@
 import ballerina/http;
 import ballerina/io;
 import ballerina/log;
-import ballerina/xmlutils;
 import ballerina/stringutils as su;
+import ballerina/xmlutils;
 
 const PRESIDENTIAL_RESULT = "PRESIDENTIAL-FIRST";
 const LEVEL_PD = "POLLING-DIVISION";

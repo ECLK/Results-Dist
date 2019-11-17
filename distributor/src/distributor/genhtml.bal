@@ -1,6 +1,6 @@
-import ballerina/time;
-import ballerina/math;
 import ballerina/lang.'string;
+import ballerina/math;
+import ballerina/time;
 
 map<string> electionCode2Name = {
     "2019PRE": "PRESIDENTIAL ELECTION - NOVEMBER 16, 2019",
@@ -22,7 +22,7 @@ map<string> electionCode2Name = {
     "2015-PRE-REPLAY-015": "PRESIDENTIAL ELECTION - 08/01/2015 RESULT REPLAY"
 };
 
-function generateHtml (string electionCode, map<json> result, boolean sorted) returns string|error {
+function generateHtml(string electionCode, map<json> result, boolean sorted) returns string|error {
     boolean firstRound = (result.'type == PRESIDENTIAL_RESULT);
     string electionName = electionCode2Name[electionCode] ?: ("Presidential Election - " + electionCode);
     electionName +=  firstRound ? " (FIRST PREFERENCES)" : " (REVISED WITH 2nd/3rd PREFERENCES)";
@@ -88,7 +88,7 @@ function generateHtml (string electionCode, map<json> result, boolean sorted) re
     return "<html>" + head + body + "</html>";
 }
 
-function sortPartyResults (json[] unsorted) returns json[] {
+function sortPartyResults(json[] unsorted) returns json[] {
     return unsorted.sort(function (json r1, json r2) returns int {
         int n1 = <int>r1.votes;
         int n2 = <int>r2.votes;
@@ -96,7 +96,7 @@ function sortPartyResults (json[] unsorted) returns json[] {
     });
 }
 
-function commaFormatInt (int n) returns string {
+function commaFormatInt(int n) returns string {
     string minus = n < 0 ? "-" : "";
     int num = math:absInt(n);
     string numStr = num.toString();
