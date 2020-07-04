@@ -13,10 +13,10 @@ http:BasicAuthHandler inboundBasicAuthHandler = new (new auth:InboundBasicAuthPr
 
 # Listener for media orgs to subscribe, for the website and for them to pull specific results.
 listener http:Listener mediaListener = new (config:getAsInt("eclk.hub.port", 9090), config = {
-    auth: {
-        authHandlers: [inboundBasicAuthHandler],
-        position: 1,
-        mandateSecureSocket: false
-    },
-    filters: [new AuthChallengeFilter(), new SubscriptionFilter()]
+    // auth: {
+    //     authHandlers: [inboundBasicAuthHandler],
+    //     position: 1,
+    //     mandateSecureSocket: false
+    // },
+    // filters: [new AuthChallengeFilter()]
 });

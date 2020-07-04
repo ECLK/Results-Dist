@@ -28,16 +28,6 @@ const UPDATE_RESULT_IMAGE = "UPDATE results SET imageMediaType = ?, imageData = 
 const SELECT_RESULTS_DATA = "SELECT sequenceNo, election, code, type, jsonResult, imageMediaType, imageData FROM results";
 const DROP_RESULTS_TABLE = "DROP TABLE results";
 
-const string CREATE_CALLBACKS_TABLE = "CREATE TABLE IF NOT EXISTS callbacks (" +
-                                    "    username VARCHAR(100) NOT NULL," +
-                                    "    topic VARCHAR(100) NOT NULL," +
-                                    "    callback VARCHAR(200) NOT NULL," +
-                                    "    PRIMARY KEY (username, topic))";
-const INSERT_CALLBACK = "INSERT INTO callbacks (username, topic, callback) VALUES (?, ?, ?)";
-const REMOVE_CALLBACK = "DELETE from callbacks WHERE username = ? AND topic = ? AND callback = ?";
-const SELECT_CALLBACKS = "SELECT * FROM callbacks";
-const DROP_CALLBACKS_TABLE = "DROP TABLE callbacks";
-
 const string CREATE_RECIPIENT_TABLE = "CREATE TABLE IF NOT EXISTS smsRecipients (" +
                                     "    username VARCHAR(100) NOT NULL," +
                                     "    mobileNo VARCHAR(50) NOT NULL," +
@@ -64,12 +54,6 @@ type DataResult record {|
     string jsonResult;
     string? imageMediaType;
     byte[]? imageData;
-|};
-
-type UserCallback record {|
-    string username;
-    string topic;
-    string callback;
 |};
 
 type CumulativeResult record {|
@@ -99,11 +83,11 @@ CumulativeResult prefsCumulativeRes = emptyCumResult;
 function __init() {
     // create tables
     _ = checkpanic dbClient->update(CREATE_RESULTS_TABLE);
-    _ = checkpanic dbClient->update(CREATE_CALLBACKS_TABLE);
     _ = checkpanic dbClient->update(CREATE_RECIPIENT_TABLE);
 
     // load any results in there to our cache - the order will match the autoincrement and will be the sequence #
-    table<DataResult> ret = checkpanic dbClient->select(SELECT_RESULTS_DATA, DataResult);
+    table<record {}> res = checkpanic dbClient->select(SELECT_RESULTS_DATA, DataResult);
+    table<DataResult> ret = <table<DataResult>> res;
     int count = 0;
     resultsCache = [];
     cumulativeRes = emptyCumResult.clone();
@@ -136,48 +120,27 @@ function __init() {
         log:printInfo("Loaded " + count.toString() + " previous results from database");
     }
 
-    // load username-callback data for already added subscriptions
-    table<UserCallback> callbackRet = checkpanic dbClient->select(SELECT_CALLBACKS, UserCallback);
-    count = 0;
-    while (callbackRet.hasNext()) {
-        UserCallback userCb = <UserCallback> callbackRet.getNext();
-
-        if (userCb.topic == JSON_TOPIC) {
-            resultCallbackMap[userCb.username] = <@untainted> userCb.callback;
-        } else if (userCb.topic == IMAGE_PDF_TOPIC) {
-            imageCallbackMap[userCb.username] = <@untainted> userCb.callback;
-        } else {
-            // assume AWAIT_RESULTS_TOPIC
-            awaitResultsCallbackMap[userCb.username] = <@untainted> userCb.callback;
-        }
-
-        count += 1;
-    }
-    if (count > 0) {
-        log:printInfo("Loaded " + count.toString() + " registered callback(s) from database");
-    }
-
-    // load sms recipients to in-memory array
-    table<Recipient> retrievedNos = checkpanic dbClient->select(SELECT_RECIPIENT_DATA, Recipient);
-    count = 0;
-    while (retrievedNos.hasNext()) {
-        Recipient recipient = <Recipient> retrievedNos.getNext();
-        mobileSubscribers[recipient.username] = <@untainted> recipient.mobile;
-        count += 1;
-    }
-    if (count > 0) {
-        log:printInfo("Loaded " + count.toString() + " previous SMS recipient(s) from database");
-    }
-    // validate twilio account
-    var account = twilioClient->getAccountDetails();
-    if account is error {
-        log:printError("SMS notification is disabled due to invalid twilio account details. " +
-                        "Please provide valid 'eclk.sms.twilio.accountSid'/'authToken'/'source'(twilio mobile no):" +
-                         <string> account.detail()?.message);
-    } else {
-        validTwilioAccount = true;
-        log:printInfo("SMS notification is enabled : twilio.account.status=" + account.status.toString());
-    }
+    // // load sms recipients to in-memory array
+    // table<Recipient> retrievedNos = checkpanic dbClient->select(SELECT_RECIPIENT_DATA, Recipient);
+    // count = 0;
+    // while (retrievedNos.hasNext()) {
+    //     Recipient recipient = <Recipient> retrievedNos.getNext();
+    //     mobileSubscribers[recipient.username] = <@untainted> recipient.mobile;
+    //     count += 1;
+    // }
+    // if (count > 0) {
+    //     log:printInfo("Loaded " + count.toString() + " previous SMS recipient(s) from database");
+    // }
+    // // validate twilio account
+    // var account = twilioClient->getAccountDetails();
+    // if account is error {
+    //     log:printError("SMS notification is disabled due to invalid twilio account details. " +
+    //                     "Please provide valid 'eclk.sms.twilio.accountSid'/'authToken'/'source'(twilio mobile no):" +
+    //                      <string> account.detail()?.message);
+    // } else {
+    //     validTwilioAccount = true;
+    //     log:printInfo("SMS notification is enabled : twilio.account.status=" + account.status.toString());
+    // }
 }
 
 # Save an incoming result to make sure we don't lose it after getting it
@@ -239,27 +202,10 @@ function saveImage(string electionCode, string resultCode, string mediaType, byt
     return res;
 }
 
-# Save a subscription username-calback combination.
-function saveUserCallback(string username, string topic, string callback) {
-    var r = dbClient->update(INSERT_CALLBACK, username, topic, callback);
-    if r is error {
-        log:printError("Unable to save username-callback in database: ", r);
-    }
-}
-
-# Remove a subscription username-calback combination.
-function removeUserCallback(string username, string topic, string callback) {
-    var r = dbClient->update(REMOVE_CALLBACK, username, topic, callback);
-    if r is error {
-        log:printError("Unable to update username-callback in database: ", r);
-    }
-}
-
 # Clean everything from the DB and the in-memory cache
 # + return - error if something goes wrong
 function resetResults() returns error? {
     _ = check dbClient->update(DROP_RESULTS_TABLE);
-    _ = check dbClient->update(DROP_CALLBACKS_TABLE);
     _ = check dbClient->update(DROP_RECIPIENT_TABLE);
     __init();
 }

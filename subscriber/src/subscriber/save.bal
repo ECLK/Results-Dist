@@ -128,26 +128,26 @@ function getFileNameBase(string electionCode, map<json> result) returns string {
     return name;
 }
 
-function writeJson(string path, json content) returns error? {
+function writeJson(string path, json content) returns @tainted error? {
     return writeContent(path, 
                         function(io:WritableCharacterChannel wch) returns error? {
                             return wch.writeJson(content);
                         });
 }
 
-function writeXml(string path, xml content) returns error? {
+function writeXml(string path, xml content) returns @tainted error? {
     return writeContent(path, function(io:WritableCharacterChannel wch) returns error? {
         return wch.writeXml(content);
     });
 }
 
-function writePdf(string path, byte[] content) returns error? {
+function writePdf(string path, byte[] content) returns @tainted error? {
     io:WritableByteChannel wbc = check io:openWritableFile(path);
     _ = check wbc.write(content, 0); // TODO: replace check to ensure channels are closed
     check wbc.close();
 }
 
-function writeString(string path, string content) returns error? {
+function writeString(string path, string content) returns @tainted error? {
     return writeContent(path, function(io:WritableCharacterChannel wch) returns error? {
         var r = wch.write(content, 0);
         if r is error {
@@ -158,7 +158,8 @@ function writeString(string path, string content) returns error? {
     });
 }
 
-function writeContent(string path, function(io:WritableCharacterChannel wch) returns error? writeFunc) returns error? {
+function writeContent(string path, function(io:WritableCharacterChannel wch) returns error? writeFunc) 
+        returns @tainted error? {
     io:WritableByteChannel wbc = check io:openWritableFile(path);
     io:WritableCharacterChannel wch = new(wbc, "UTF8");
     check writeFunc(wch); // TODO: replace check to ensure channels are closed

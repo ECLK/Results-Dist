@@ -1,10 +1,8 @@
 import ballerina/http;
 import ballerina/io;
-import ballerina/log;
-import ballerina/mime;
-import ballerina/time;
-import ballerina/websub;
 import ballerina/lang.'int;
+import ballerina/log;
+import ballerina/time;
 
 # Service for results tabulation to publish results to. We assume that results tabulation will deliver
 # a result in two separate messages - one with the json result data and another with an image of the
@@ -46,16 +44,11 @@ service receiveResults on resultsListener {
         string? pd_name = req.getQueryParamValue("pd_name");
         string message = getAwaitResultsMessage(electionCode, "/" + resultType, resultCode, level, ed_name, pd_name);
 
-        // TODO: check if we should make this block an async call
-        websub:Hub wh = <websub:Hub> hub;
-        var r = wh.publishUpdate(AWAIT_RESULTS_TOPIC, message);
-        if r is error {
-            log:printError("Error publishing update: ", r);
-        }
+        _ = start pushAwaitNotification(message);        
 
-        if validTwilioAccount {
-            _ = start sendSMS(message, electionCode + "/" + resultType + "/" + resultCode);
-        }
+        // if validTwilioAccount {
+        //     _ = start sendSMS(message, electionCode + "/" + resultType + "/" + resultCode);
+        // }
 
         // respond accepted
         return caller->accepted();
@@ -173,25 +166,38 @@ service receiveResults on resultsListener {
 # - update the website with the result
 # - deliver the result data to all subscribers
 function publishResultData(Result result, string? electionCode = (), string? resultCode = ()) {
-    websub:Hub wh = <websub:Hub> hub; // safe .. working around type guard limitation
-
     // push it out with the election code and the json result as the message
     json resultAll = {
         election_code : result.election,
         result : result.jsonResult
     };
-    var r = wh.publishUpdate(JSON_TOPIC, resultAll, mime:APPLICATION_JSON);
-    if r is error {
-        log:printError("Error publishing update: ", r);
+
+    foreach var con in jsonConnections {
+        log:printInfo("Sending JSON data for " + con.getConnectionId());
+        _ = start pushData(con, "results data", resultAll);
+    }
+}
+
+function pushData(http:WebSocketCaller con, string kind, json data) {
+    var err = con->pushText(data);
+    if (err is http:WebSocketError) {
+        log:printError(string `Error pushing ${kind} for ${con.getConnectionId()}`, err);
     }
 }
 
 # Publish results image.
-function publishResultImage(map<json> imageData) {
-    websub:Hub wh = <websub:Hub> hub;
-    var r = wh.publishUpdate(IMAGE_PDF_TOPIC, imageData, mime:APPLICATION_JSON);
-    if r is error {
-        log:printError("Error publishing update: ", r);
+function publishResultImage(json imageData) {
+    foreach var con in imageConnections {
+        log:printInfo("Sending image data for " + con.getConnectionId());
+        _ = start pushData(con, "image data", imageData);
+    }
+}
+
+function pushAwaitNotification(string message) {
+    string jsonString = "\"" + message + "\"";
+    foreach var con in awaitConnections {
+        log:printInfo("Sending await notification for " + con.getConnectionId());
+        _ = start pushData(con, "await notification", jsonString);
     }
 }
 

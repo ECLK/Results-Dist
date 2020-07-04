@@ -2,16 +2,13 @@ import ballerina/auth;
 import ballerina/http;
 import ballerina/io;
 import ballerina/log;
-import ballerina/websub;
 
-import maryamzi/ping;
+import maryamzi/sound;
+
+const WANT_IMAGE = "image=true";
+const WANT_AWAIT_RESULTS = "await=true";
 
 const MY_VERSION = "2019-11-15";
-
-// TODO: set correct ones once decided
-const JSON_TOPIC = "https://github.com/ECLK/Results-Dist-json";
-const IMAGE_PDF_TOPIC = "https://github.com/ECLK/Results-Dist-image";
-const AWAIT_RESULTS_TOPIC = "https://github.com/ECLK/Results-Dist-await";
 
 const UNDERSOCRE = "_";
 const COLON = ":";
@@ -20,19 +17,6 @@ const JSON_EXT = ".json";
 const XML_EXT = ".xml";
 const TEXT_EXT = ".txt";
 const PDF_EXT = ".pdf";
-
-const JSON_PATH = "/json";
-const XML_PATH = "/xml";
-const IMAGE_PATH = "/image";
-const AWAIT_PATH = "/await";
-
-const ONE_WEEK_IN_SECONDS = 604800;
-
-string hub = "";
-string subscriberSecret = "";
-
-string subscriberPublicUrl = "";
-int subscriberPort = -1;
 
 boolean wantJson = false;
 boolean wantXml = false;
@@ -45,8 +29,7 @@ http:OutboundAuthConfig? auth = ();
 http:Client? imageClient = ();
 
 // what formats does the user want results saved in?
-public function main (string secret,                // secret to send to the hub
-                      string? username = (),        // my username  
+public function main (string? username = (),        // my username  
                       string? password = (),        // my password  
                       boolean await = false,        // do I want the await results notification?
                       boolean 'json = false,        // do I want json?
@@ -55,14 +38,8 @@ public function main (string secret,                // secret to send to the hub
                       boolean html = false,         // do I want HTML?
                       boolean sorted = true,        // do I want HTML results sorted highest to lowest
                       boolean wantCode = false,     // do I want electionCode in the filename
-                      string homeURL = "https://resultstest.ecdev.opensource.lk", // where do I subscribe at
-                      int port = 1111,              // port I'm going to open
-                      string myURL = ""             // how to reach me over the internet
-                    ) returns error? {
-    subscriberSecret = <@untainted> secret;
-    subscriberPublicUrl = <@untainted> (myURL == "" ? string `http://localhost:${port}` : myURL);
-    subscriberPort = <@untainted> port;
-    hub = <@untainted> homeURL + "/websub/hub";
+                      string homeURL = "http://localhost:9090" // where do I connect at
+                    ) returns @tainted error? {
 
     // check what format the user wants results in
     wantJson = <@untainted>'json;
@@ -106,92 +83,70 @@ public function main (string secret,                // secret to send to the hub
         return error("*** This version of the subscriber is no longer supported!");
     }
 
-    // start the listener
-    websub:Listener websubListener = new(subscriberPort);
-
-    // attach JSON subscriber
-    service subscriberService = @websub:SubscriberServiceConfig {
-        path: JSON_PATH,
-        subscribeOnStartUp: true,
-        target: [hub, JSON_TOPIC],
-        leaseSeconds: ONE_WEEK_IN_SECONDS,
-        secret: subscriberSecret,
-        callback: subscriberPublicUrl.concat(JSON_PATH),
-        hubClientConfig: {
-            auth: auth
-        }
-    }
-    service {
-        resource function onNotification(websub:Notification notification) {
-            json|error payload = notification.getJsonPayload();
-            if (payload is json) {
-                saveResult(<@untainted map<json>>payload); // we know its an object
-            } else {
-                log:printError("Expected JSON payload, received:", payload);
-            }
-        }
-    };
-    check websubListener.__attach(subscriberService);
+    string? queryString = ();
 
     if await {
-        // attach the await results subscriber
-        service awaitResultsSubscriberService = @websub:SubscriberServiceConfig {
-           path: AWAIT_PATH,
-           subscribeOnStartUp: true,
-           target: [hub, AWAIT_RESULTS_TOPIC],
-           leaseSeconds: ONE_WEEK_IN_SECONDS,
-           secret: subscriberSecret,
-           callback: subscriberPublicUrl.concat(AWAIT_PATH),
-           hubClientConfig: {
-               auth: auth
-           }
-        }
-        service {
-           resource function onNotification(websub:Notification notification) {
-               string|error textPayload = notification.getTextPayload();
-               if (textPayload is string) {
-                   log:printInfo("Await results notification received: " + textPayload);
-                   error? pingStatus = ping:ping();
-                   if !(pingStatus is ()) {
-                       log:printError("Error pinging on await notification", pingStatus);
-
-                   }
-               } else {
-                   log:printError("Expected text payload, received:" + textPayload.toString());
-               }
-           }
-        };
-        check websubListener.__attach(awaitResultsSubscriberService);
+        queryString = WANT_AWAIT_RESULTS; 
     }
 
     if image {
         imageClient = <@untainted> new (homeURL, {auth: auth});
-
-        // attach the image subscriber
-        service imageSubscriberService = @websub:SubscriberServiceConfig {
-           path: IMAGE_PATH,
-           subscribeOnStartUp: true,
-           target: [hub, IMAGE_PDF_TOPIC],
-           leaseSeconds: ONE_WEEK_IN_SECONDS,
-           secret: subscriberSecret,
-           callback: subscriberPublicUrl.concat(IMAGE_PATH),
-           hubClientConfig: {
-               auth: auth
-           }
+        
+        if queryString is () {
+            queryString = WANT_IMAGE; 
+        } else {
+            queryString = "&" + WANT_IMAGE; 
         }
-        service {
-           resource function onNotification(websub:Notification notification) {
-               json|error jsonPayload = notification.getJsonPayload();
-               if (jsonPayload is map<json>) {
-                   saveImagePdf(<@untainted> jsonPayload);
-               } else {
-                   log:printError("Expected map<json> payload, received:" + jsonPayload.toString());
-               }
-           }
-        };
-        check websubListener.__attach(imageSubscriberService);
     }
 
-    // start off
-    check websubListener.__start();
+    string wsUrl = "ws://localhost:9090/ws";
+
+    if !(queryString is ()) {
+        wsUrl += "?" + queryString;
+    }
+
+    // Creates a new WebSocket client with the backend URL and assigns a callback service.
+    http:WebSocketClient wsClientEp = new (wsUrl, config = {callbackService: ClientService});
 }
+
+service ClientService = @http:WebSocketServiceConfig {} service {
+
+    resource function onText(http:WebSocketClient conn, json payload) {
+        // TODO: Check if we can improve this by introducing 4 different service or via function pointers
+        // 1. results only
+        // 2. results and await only
+        // 3. results and image only
+        // 4. all 3
+        // With this impl, if the subscriber only wants results, we are doing unnecessary is checks (payload is string,
+        // and objPayload["result"] is ()) for each result notification.
+        if payload is string {
+            // "Await Results" notification.
+            log:printInfo("Await results notification received: " + payload);
+            error? pingStatus = sound:ping();
+            if !(pingStatus is ()) {
+                log:printError("Error pinging on await notification", pingStatus);
+            }
+            return;
+        }
+
+        if !(payload is map<json>) {
+            log:printError("Expected map<json> payload, received:" + payload.toString());
+            return;
+        }
+
+        map<json> objPayload = <map<json>> payload;
+
+        if objPayload["result"] is () {
+            // Image notification.
+            saveImagePdf(<@untainted> objPayload);
+            return;
+        }
+
+        // Result notification.
+        saveResult(<@untainted> objPayload);
+    }
+
+    resource function onError(http:WebSocketClient conn, error err) {
+        log:printError("Error occurred on receipt", err);
+    }
+};

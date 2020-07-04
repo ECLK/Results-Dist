@@ -2,9 +2,6 @@
 org-name="eclk"
 version="0.2.0"
 
-[dependencies]
-"maryamzi/websub.hub.mysqlstore" = "0.2.0"
-
 [platform]
 target = "java8"
 

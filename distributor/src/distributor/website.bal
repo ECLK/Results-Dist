@@ -1,16 +1,56 @@
-import ballerina/auth;
+import ballerina/file;
 import ballerina/http;
 import ballerina/log;
 import ballerina/mime;
 import ballerina/time;
 import ballerina/xmlutils;
-import ballerina/file;
-import ballerina/websub;
 
 const LEVEL_PD = "POLLING-DIVISION";
 const LEVEL_ED = "ELECTORAL-DISTRICT";
 const LEVEL_NI = "NATIONAL-INCREMENTAL";
 const LEVEL_NF = "NATIONAL-FINAL";
+
+const WANT_IMAGE = "image";
+const WANT_AWAIT_RESULTS = "await";
+
+map<http:WebSocketCaller> jsonConnections = {};
+map<http:WebSocketCaller> imageConnections = {};
+map<http:WebSocketCaller> awaitConnections = {};
+
+service disseminator = @http:WebSocketServiceConfig {} service {
+
+    resource function onOpen(http:WebSocketCaller caller) {
+        string connectionId = caller.getConnectionId();
+
+        log:printInfo("Registered: " + connectionId);
+
+        jsonConnections[connectionId] = <@untainted> caller;
+
+        if <anydata> caller.getAttribute(WANT_IMAGE) == true {
+            imageConnections[connectionId] = <@untainted> caller;
+        }
+
+        if <anydata> caller.getAttribute(WANT_AWAIT_RESULTS) == true {
+            awaitConnections[connectionId] = <@untainted> caller;
+        }
+    }
+
+    resource function onClose(http:WebSocketCaller caller, int statusCode, string reason) {
+        string connectionId = caller.getConnectionId();
+
+        _ = jsonConnections.remove(connectionId);
+
+        if imageConnections.hasKey(connectionId) {
+            _ = imageConnections.remove(connectionId);
+        }
+
+        if awaitConnections.hasKey(connectionId) {
+            _ = awaitConnections.remove(connectionId);
+        }
+
+        log:printInfo(string `Unregistered: ${connectionId}, statusCode: ${statusCode}, reason: ${reason}`);     
+    }
+};
 
 # Show a website for media people to get a list of all released results with
 # links to each json value and the image with the signed official document.
@@ -135,8 +175,6 @@ service mediaWebsite on mediaListener {
     # web/info.html and it'll get shown at subscriber startup
     # + return - error if problem
     resource function info(http:Caller caller, http:Request request) returns error? {
-        removeSubscriptionsForUsername(request);
-
         http:Response hr = new;
         hr.setFileAsPayload("web/info.txt", "text/plain");
         check caller->ok(hr);
@@ -160,60 +198,84 @@ service mediaWebsite on mediaListener {
         }
     }
 
+    // @http:ResourceConfig {
+    //     path: "/sms",
+    //     methods: ["POST"],
+    //     body: "smsRecipient",
+    //     auth: {
+    //         scopes: ["ECAdmin"]
+    //     }
+    // }
+    // resource function smsRegistration (http:Caller caller, http:Request req, Recipient smsRecipient) returns error? {
+    //     string|error validatedNo = validate(smsRecipient.mobile);
+    //     if validatedNo is error {
+    //         http:Response res = new;
+    //         res.statusCode = http:STATUS_BAD_REQUEST;
+    //         res.setPayload(<string> validatedNo.detail()?.message);
+    //         return caller->respond(res);
+    //     }
+
+    //     // If the load is high, we might need to sync following db/map update
+    //     string|error status = registerAsSMSRecipient(smsRecipient.username.trim(), <string> validatedNo);
+    //     if status is error {
+    //         http:Response res = new;
+    //         res.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
+    //         res.setPayload(<@untainted> <string> status.detail()?.message);
+    //         return caller->respond(res);
+    //     }
+    //     return caller->ok(<@untainted> <string> status);
+    // }
+
+    // @http:ResourceConfig {
+    //     path: "/sms",
+    //     methods: ["DELETE"],
+    //     body: "smsRecipient",
+    //     auth: {
+    //         scopes: ["ECAdmin"]
+    //     }
+    // }
+    // resource function smsDeregistration (http:Caller caller, http:Request req, Recipient smsRecipient) returns error? {
+    //     string|error validatedNo = validate(smsRecipient.mobile);
+    //     if validatedNo is error {
+    //         http:Response res = new;
+    //         res.statusCode = http:STATUS_BAD_REQUEST;
+    //         res.setPayload(<string> validatedNo.detail()?.message);
+    //         return caller->respond(res);
+    //     }
+
+    //     // If the load is high, we might need to sync following db/map update
+    //     string|error status = unregisterAsSMSRecipient(smsRecipient.username.trim(), <string> validatedNo);
+    //     if status is error {
+    //         http:Response res = new;
+    //         res.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
+    //         res.setPayload(<string> status.detail()?.message);
+    //         return caller->respond(res);
+    //     }
+    //     return caller->ok(<string> status);
+    // }
+
+    // May have to move to a separate service.
     @http:ResourceConfig {
-        path: "/sms",
-        methods: ["POST"],
-        body: "smsRecipient",
-        auth: {
-            scopes: ["ECAdmin"]
+        webSocketUpgrade: {
+            upgradePath: "/ws",
+            upgradeService: disseminator
         }
     }
-    resource function smsRegistration (http:Caller caller, http:Request req, Recipient smsRecipient) returns error? {
-        string|error validatedNo = validate(smsRecipient.mobile);
-        if validatedNo is error {
-            http:Response res = new;
-            res.statusCode = http:STATUS_BAD_REQUEST;
-            res.setPayload(<string> validatedNo.detail()?.message);
-            return caller->respond(res);
-        }
+    resource function upgrader(http:Caller caller, http:Request req) {
+        map<string[]> queryParams = req.getQueryParams();
 
-        // If the load is high, we might need to sync following db/map update
-        string|error status = registerAsSMSRecipient(smsRecipient.username.trim(), <string> validatedNo);
-        if status is error {
-            http:Response res = new;
-            res.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
-            res.setPayload(<@untainted> <string> status.detail()?.message);
-            return caller->respond(res);
-        }
-        return caller->ok(<@untainted> <string> status);
-    }
+        http:WebSocketCaller|http:WebSocketError wsEp = caller->acceptWebSocketUpgrade({});
+        if (wsEp is http:WebSocketCaller) {
+            if queryParams.hasKey(WANT_IMAGE) {
+                wsEp.setAttribute(WANT_IMAGE, true);
+            }
 
-    @http:ResourceConfig {
-        path: "/sms",
-        methods: ["DELETE"],
-        body: "smsRecipient",
-        auth: {
-            scopes: ["ECAdmin"]
+            if queryParams.hasKey(WANT_AWAIT_RESULTS) {
+                wsEp.setAttribute(WANT_AWAIT_RESULTS, true);
+            }
+        } else {
+            log:printError("Error occurred during WebSocket upgrade", wsEp);
         }
-    }
-    resource function smsDeregistration (http:Caller caller, http:Request req, Recipient smsRecipient) returns error? {
-        string|error validatedNo = validate(smsRecipient.mobile);
-        if validatedNo is error {
-            http:Response res = new;
-            res.statusCode = http:STATUS_BAD_REQUEST;
-            res.setPayload(<string> validatedNo.detail()?.message);
-            return caller->respond(res);
-        }
-
-        // If the load is high, we might need to sync following db/map update
-        string|error status = unregisterAsSMSRecipient(smsRecipient.username.trim(), <string> validatedNo);
-        if status is error {
-            http:Response res = new;
-            res.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
-            res.setPayload(<string> status.detail()?.message);
-            return caller->respond(res);
-        }
-        return caller->ok(<string> status);
     }
 }
 
@@ -278,46 +340,4 @@ function generateResultsTable(string 'type) returns string {
     }
     tab = tab + "</table>";
     return tab;
-}
-
-function removeSubscriptionsForUsername(http:Request request) {
-    if (!request.hasHeader(http:AUTH_HEADER)) {
-        return;
-    }
-
-    websub:Hub hubVar = <websub:Hub> hub;
-    string headerValue = request.getHeader(http:AUTH_HEADER);
-        
-    if !(headerValue.startsWith(auth:AUTH_SCHEME_BASIC)) {
-        return;
-    }
-
-    string credential = headerValue.substring(5, headerValue.length()).trim();
-
-    var result = auth:extractUsernameAndPassword(credential);
-
-    if (result is [string, string]) {
-        [string, string][username, _] = result;
-        
-        removeSubscription(username, resultCallbackMap, JSON_TOPIC, hubVar);
-        removeSubscription(username, imageCallbackMap, IMAGE_PDF_TOPIC, hubVar);
-        removeSubscription(username, awaitResultsCallbackMap, AWAIT_RESULTS_TOPIC, hubVar);
-    } else {
-        log:printError("Error extracting credentials to remove subscription", result);
-    }
-}
-
-function removeSubscription(string username, map<string> callbackMap, string topic, websub:Hub hub) {
-    if !callbackMap.hasKey(username) {
-        return;
-    }
-
-    string existingCallback = callbackMap.get(username);
-    log:printInfo("Removing existing subscription callback: " + existingCallback + ", for username: " +
-                    username + ", and topic: " + topic);
-    error? remResult = hub.removeSubscription(topic, existingCallback);
-    if (remResult is error) {
-        log:printError("error removing existing subscription for username: " + username, remResult);
-    }
-    removeUserCallback(username, topic, existingCallback);
 }
