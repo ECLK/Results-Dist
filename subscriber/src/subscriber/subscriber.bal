@@ -52,11 +52,15 @@ public function main (string? username = (),        // my username
     sortedHtml = <@untainted>sorted;
 
     // set up auth
+    string? token = ();
     if (username is string && password is string) {
         auth:OutboundBasicAuthProvider outboundBasicAuthProvider = new ({
             username: <@untainted> username,
             password: <@untainted> password
         });
+
+        token = check outboundBasicAuthProvider.generateToken();
+        
         http:BasicAuthHandler outboundBasicAuthHandler = 
                 new (<auth:OutboundBasicAuthProvider> outboundBasicAuthProvider);
         auth = {
@@ -105,8 +109,12 @@ public function main (string? username = (),        // my username
         wsUrl += "?" + queryString;
     }
 
-    // Creates a new WebSocket client with the backend URL and assigns a callback service.
-    http:WebSocketClient wsClientEp = new (wsUrl, config = {callbackService: ClientService});
+    map<string> headers = {};
+    if !(token is ()) {
+        headers[http:AUTH_HEADER] = string `Basic ${token}`;
+    }
+
+    http:WebSocketClient wsClientEp = new (wsUrl, config = {callbackService: ClientService, customHeaders: headers});
 }
 
 service ClientService = @http:WebSocketServiceConfig {} service {
