@@ -130,10 +130,7 @@ service ClientService = @http:WebSocketServiceConfig {} service {
         if payload is string {
             // "Await Results" notification.
             log:printInfo("Await results notification received: " + payload);
-            error? pingStatus = sound:ping();
-            if !(pingStatus is ()) {
-                log:printError("Error pinging on await notification", pingStatus);
-            }
+            _  = start notifyAwait();
             return;
         }
 
@@ -158,3 +155,10 @@ service ClientService = @http:WebSocketServiceConfig {} service {
         log:printError("Error occurred on receipt", err);
     }
 };
+
+function notifyAwait() {
+    error? pingStatus = sound:ping();
+    if !(pingStatus is ()) {
+        log:printError("Error pinging on await notification", pingStatus);
+    }
+}
