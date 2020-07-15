@@ -27,7 +27,7 @@ map<[ string, map<map<json>>[], map<json>[], map<map<json>>[], map<json>[] ]> te
 int sleeptime = 0;
 string resultsURL = "";
 
-public function main(string url = "http://localhost:8181", int delay = 10000) returns error? {
+public function main(string url = "http://localhost:8181", int delay = 10000) returns @untainted error? {
     resultsURL = <@untainted> url;
     sleeptime = <@untainted> delay;
 
@@ -51,7 +51,7 @@ public function main(string url = "http://localhost:8181", int delay = 10000) re
     // test run will be started via the controller service
 }
 
-function loadNuwanData () returns error? {
+function loadNuwanData () returns @untainted error? {
     data2015 = <@untainted json[]> check readJson("data/elections.lk.presidential.2015.json");
 
     foreach json j in data2015 { // can't use data.forEach because I want to use check in the body
