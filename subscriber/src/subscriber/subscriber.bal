@@ -38,7 +38,7 @@ public function main (string? username = (),        // my username
                       boolean html = false,         // do I want HTML?
                       boolean sorted = true,        // do I want HTML results sorted highest to lowest
                       boolean wantCode = false,     // do I want electionCode in the filename
-                      string homeURL = "http://localhost:9090" // where do I connect at
+                      string homeURL = "https://resultstest.ecdev.opensource.lk" // where do I connect at
                     ) returns @tainted error? {
 
     // check what format the user wants results in
@@ -88,18 +88,26 @@ public function main (string? username = (),        // my username
     }
 
     string? queryString = ();
+    service callbackService = resultDataOnlyClientService;
+    string kinds = "result data";
 
     if await {
         queryString = WANT_AWAIT_RESULTS; 
+        callbackService = awaitAndResultDataClientService;
+        kinds = "await notification and result data";
     }
 
     if image {
         imageClient = <@untainted> new (homeURL, {auth: auth});
         
         if queryString is () {
-            queryString = WANT_IMAGE; 
+            queryString = WANT_IMAGE;
+            callbackService = imageAndResultDataClientService;
+            kinds = "result data and PDF";
         } else {
             queryString = "&" + WANT_IMAGE; 
+            callbackService = allClientService;
+            kinds = "await notification, result data, and PDF";
         }
     }
 
@@ -114,19 +122,82 @@ public function main (string? username = (),        // my username
         headers[http:AUTH_HEADER] = string `Basic ${token}`;
     }
 
-    http:WebSocketClient wsClientEp = new (wsUrl, config = {callbackService: ClientService, customHeaders: headers});
+    http:WebSocketClient wsClientEp = new (wsUrl, config = {callbackService: callbackService, customHeaders: headers});
+    
+    if wsClientEp.isOpen() {
+        io:println(
+            string `Established a connection to receive ${kinds}. Connection ID: ${wsClientEp.getConnectionId()}`);
+    }    
 }
 
-service ClientService = @http:WebSocketServiceConfig {} service {
+service resultDataOnlyClientService = @http:WebSocketServiceConfig {} service {
 
     resource function onText(http:WebSocketClient conn, json payload) {
-        // TODO: Check if we can improve this by introducing 4 different service or via function pointers
-        // 1. results only
-        // 2. results and await only
-        // 3. results and image only
-        // 4. all 3
-        // With this impl, if the subscriber only wants results, we are doing unnecessary is checks (payload is string,
-        // and objPayload["result"] is ()) for each result notification.
+        if !(payload is map<json>) {
+            log:printError("Expected map<json> payload, received:" + payload.toString());
+            return;
+        }
+
+        saveResult(<@untainted> <map<json>> payload);
+    }
+
+    resource function onError(http:WebSocketClient conn, error err) {
+        log:printError("Error occurred", err);
+    }
+};
+
+service awaitAndResultDataClientService = @http:WebSocketServiceConfig {} service {
+
+    resource function onText(http:WebSocketClient conn, json payload) {
+        if payload is string {
+            // "Await Results" notification.
+            log:printInfo("Await results notification received: " + payload);
+            _  = start notifyAwait();
+            return;
+        }
+
+        if !(payload is map<json>) {
+            log:printError("Expected map<json> payload, received:" + payload.toString());
+            return;
+        }
+
+        saveResult(<@untainted map<json>> payload);
+    }
+
+    resource function onError(http:WebSocketClient conn, error err) {
+        log:printError("Error occurred", err);
+    }
+};
+
+service imageAndResultDataClientService = @http:WebSocketServiceConfig {} service {
+
+    resource function onText(http:WebSocketClient conn, json payload) {
+        if !(payload is map<json>) {
+            log:printError("Expected map<json> payload, received:" + payload.toString());
+            return;
+        }
+
+        map<json> objPayload = <map<json>> payload;
+
+        if objPayload["result"] is () {
+            // Image notification.
+            saveImagePdf(<@untainted> objPayload);
+            return;
+        }
+
+        // Result notification.
+        saveResult(<@untainted> objPayload);
+    }
+
+    resource function onError(http:WebSocketClient conn, error err) {
+        log:printError("Error occurred", err);
+    }
+};
+
+
+service allClientService = @http:WebSocketServiceConfig {} service {
+
+    resource function onText(http:WebSocketClient conn, json payload) {
         if payload is string {
             // "Await Results" notification.
             log:printInfo("Await results notification received: " + payload);
@@ -152,7 +223,7 @@ service ClientService = @http:WebSocketServiceConfig {} service {
     }
 
     resource function onError(http:WebSocketClient conn, error err) {
-        log:printError("Error occurred on receipt", err);
+        log:printError("Error occurred", err);
     }
 };
 
