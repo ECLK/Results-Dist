@@ -33,7 +33,7 @@ const string CREATE_RECIPIENT_TABLE = "CREATE TABLE IF NOT EXISTS smsRecipients 
                                     "    mobileNo VARCHAR(50) NOT NULL," +
                                     "    PRIMARY KEY (username))";
 const INSERT_RECIPIENT = "INSERT INTO smsRecipients (username, mobileNo) VALUES (?, ?)";
-const DELETE_RECIPIENT = "DELETE FROM smsRecipients WHERE username = ? AND mobileNo = ?";
+const DELETE_RECIPIENT = "DELETE FROM smsRecipients WHERE username = ?";
 const SELECT_RECIPIENT_DATA = "SELECT * FROM smsRecipients";
 const DROP_RECIPIENT_TABLE = "DROP TABLE smsRecipients";
 
@@ -120,27 +120,27 @@ function __init() {
         log:printInfo("Loaded " + count.toString() + " previous results from database");
     }
 
-    // // load sms recipients to in-memory array
-    // table<Recipient> retrievedNos = checkpanic dbClient->select(SELECT_RECIPIENT_DATA, Recipient);
-    // count = 0;
-    // while (retrievedNos.hasNext()) {
-    //     Recipient recipient = <Recipient> retrievedNos.getNext();
-    //     mobileSubscribers[recipient.username] = <@untainted> recipient.mobile;
-    //     count += 1;
-    // }
-    // if (count > 0) {
-    //     log:printInfo("Loaded " + count.toString() + " previous SMS recipient(s) from database");
-    // }
-    // // validate twilio account
-    // var account = twilioClient->getAccountDetails();
-    // if account is error {
-    //     log:printError("SMS notification is disabled due to invalid twilio account details. " +
-    //                     "Please provide valid 'eclk.sms.twilio.accountSid'/'authToken'/'source'(twilio mobile no):" +
-    //                      <string> account.detail()?.message);
-    // } else {
-    //     validTwilioAccount = true;
-    //     log:printInfo("SMS notification is enabled : twilio.account.status=" + account.status.toString());
-    // }
+    // load sms recipients to in-memory map
+    table<record {}> retrievedRes = checkpanic dbClient->select(SELECT_RECIPIENT_DATA, Recipient);
+    table<Recipient> retrievedNos = <table<Recipient>> retrievedRes;
+    count = 0;
+    while (retrievedNos.hasNext()) {
+        Recipient recipient = <Recipient> retrievedNos.getNext();
+        mobileSubscribers[recipient.username] = <@untainted> recipient.mobile;
+        count += 1;
+    }
+    if (count > 0) {
+        log:printInfo("Loaded " + count.toString() + " previous SMS recipient(s) from database");
+    }
+    // validate GovSMS authentication
+    var account = smsClient->sendSms(sourceDepartment, "Test authentication", "");
+    if account is error {
+        log:printError("SMS notification is disabled due to '" + <string> account.detail()?.message +
+                       "'. Please provide valid 'eclk.govsms.username'/'password'/'source'(department title)");
+    } else {
+        validTwilioAccount = true;
+        log:printInfo("SMS notification is enabled");
+    }
 }
 
 # Save an incoming result to make sure we don't lose it after getting it
