@@ -199,7 +199,7 @@ service mediaWebsite on mediaListener {
             scopes: ["ECAdmin"]
         }
     }
-    resource function smsRegistration (http:Caller caller, http:Request req, Recipient smsRecipient) returns error? {
+    resource function smsRegistration(http:Caller caller, http:Request req, Recipient smsRecipient) returns error? {
         string|error validatedNo = validate(smsRecipient.mobile);
         if validatedNo is error {
             return caller->badRequest(<string> validatedNo.detail()?.message);
@@ -221,7 +221,7 @@ service mediaWebsite on mediaListener {
             scopes: ["ECAdmin"]
         }
     }
-    resource function smsDeregistration (http:Caller caller, http:Request req, Recipient smsRecipient) returns error? {
+    resource function smsDeregistration(http:Caller caller, http:Request req, Recipient smsRecipient) returns error? {
         string|error validatedNo = validate(smsRecipient.mobile);
         if validatedNo is error {
             return caller->badRequest(<string> validatedNo.detail()?.message);
@@ -230,9 +230,9 @@ service mediaWebsite on mediaListener {
         // If the load is high, we might need to sync following db/map update
         string|error status = unregisterAsSMSRecipient(smsRecipient.username.trim(), <string> validatedNo);
         if status is error {
-            return caller->internalServerError(<string> status.detail()?.message);
+            return caller->internalServerError(<@untainted string> status.detail()?.message);
         }
-        return caller->ok(<string> status);
+        return caller->ok(<@untainted string> status);
     }
 
     // May have to move to a separate service.

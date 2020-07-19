@@ -33,7 +33,7 @@ const string CREATE_RECIPIENT_TABLE = "CREATE TABLE IF NOT EXISTS smsRecipients 
                                     "    mobileNo VARCHAR(50) NOT NULL," +
                                     "    PRIMARY KEY (username))";
 const INSERT_RECIPIENT = "INSERT INTO smsRecipients (username, mobileNo) VALUES (?, ?)";
-const DELETE_RECIPIENT = "DELETE FROM smsRecipients WHERE username = ? AND mobileNo = ?";
+const DELETE_RECIPIENT = "DELETE FROM smsRecipients WHERE username = ?";
 const SELECT_RECIPIENT_DATA = "SELECT * FROM smsRecipients";
 const DROP_RECIPIENT_TABLE = "DROP TABLE smsRecipients";
 
@@ -120,7 +120,7 @@ function __init() {
         log:printInfo("Loaded " + count.toString() + " previous results from database");
     }
 
-    // load sms recipients to in-memory array
+    // load sms recipients to in-memory map
     table<record {}> retrievedRes = checkpanic dbClient->select(SELECT_RECIPIENT_DATA, Recipient);
     table<Recipient> retrievedNos = <table<Recipient>> retrievedRes;
     count = 0;

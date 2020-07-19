@@ -8,7 +8,7 @@ govsms:Configuration govsmsConfig = {
      password: config:getAsString("eclk.govsms.password")
 };
 
-govsms:Client smsClient = new(govsmsConfig);
+govsms:Client smsClient = new (govsmsConfig);
 
 // Keeps registered sms recipients in-memory. Values are populated in every service init and recipient registration
 map<string> mobileSubscribers = {};
@@ -47,16 +47,16 @@ function getAwaitResultsMessage(string electionCode, string resultType, string r
 # + message - The message to send
 # + resultId - The message identification
 function sendSMS(string message, string resultId) {
-    map<string> currentMobileSubscribers = mobileSubscribers;
-    if (currentMobileSubscribers.length() > 0) {
-        log:printInfo("Sending SMS for " + resultId);
+    if (mobileSubscribers.length() == 0) {
+        return;
     }
-    foreach string targetMobile in currentMobileSubscribers {
-        log:printInfo("Sending SMS for " + resultId + " to " + targetMobile);
+    string logMessage = "Sending SMS for " + resultId;
+    log:printInfo(logMessage);
+    foreach string targetMobile in mobileSubscribers {
+        log:printInfo(logMessage + " to " + targetMobile);
         var response = smsClient->sendSms(sourceDepartment, message, targetMobile);
         if response is error {
-            log:printError("Message sending failed for \'" + targetMobile + "\' due to error:" +
-                         <string> response.detail()?.message);
+            log:printError("Message sending failed for \'" + targetMobile + "\'", response);
         }
     }
 }
@@ -121,20 +121,21 @@ function registerAsSMSRecipient(string username, string mobileNo) returns string
 # + mobileNo - The recipient number
 # + return - The status of deregistration or operation error
 function unregisterAsSMSRecipient(string username, string mobileNo) returns string|error {
+    string result = "";
+    if mobileSubscribers.hasKey(username) && mobileSubscribers.get(username) == mobileNo {
+        result = "Successfully unregistered: username:" + username + " mobile:" + mobileSubscribers.remove(username);
+    } else {
+        string errMsg = "Unregistration failed: No entry found for username:" + username + " mobile:"  + mobileNo;
+        log:printError(errMsg);
+        return error(ERROR_REASON, message = errMsg);
+    }
 
     // Remove persisted recipient number from database
-    var status = dbClient->update(DELETE_RECIPIENT, username, mobileNo);
+    var status = dbClient->update(DELETE_RECIPIENT, username);
     if status is error {
         log:printError("Failed to remove recipient from the database", status);
-        return error(ERROR_REASON, message = "Unregistration failed: username:" + username + " mobile:" + mobileNo +
-                                         ": " + <string> status.detail()?.message);
+        return error(ERROR_REASON, message = "Failed to remove from the database: username:" + username + " mobile:"
+                     + mobileNo + ": " + <string> status.detail()?.message);
     }
-
-    if mobileSubscribers.hasKey(username) && mobileSubscribers.get(username) == mobileNo {
-        return "Successfully unregistered: username:" + username + " mobile:" + mobileSubscribers.remove(username);
-    }
-
-    string errMsg = "Unregistration failed: No entry found for username:" + username + " mobile:"  + mobileNo;
-    log:printError(errMsg);
-    return error(ERROR_REASON, message = errMsg);
+    return result;
 }

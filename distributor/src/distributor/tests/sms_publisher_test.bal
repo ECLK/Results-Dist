@@ -1,4 +1,5 @@
 import ballerina/auth;
+import ballerina/config;
 import ballerina/http;
 import ballerina/stringutils;
 import ballerina/test;
@@ -7,9 +8,13 @@ import ballerina/test;
 //
 // [b7a.users.test]
 // password="password"
+// scopes="ECAdmin"
 @test:Config { enable: false }
 function testSubscriberRegistration() {
-    auth:OutboundBasicAuthProvider outboundBasicAuthProvider1 = new({ username: "test", password: "password" });
+    auth:OutboundBasicAuthProvider outboundBasicAuthProvider1 = new({
+        username: "test",
+        password: config:getAsString("b7a.users.test.password")
+    });
     http:BasicAuthHandler outboundBasicAuthHandler1 = new(outboundBasicAuthProvider1);
     http:Client httpEndpoint = new("http://localhost:9090", {
         auth: {
