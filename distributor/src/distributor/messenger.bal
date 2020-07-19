@@ -1,4 +1,5 @@
  import ballerina/config;
+ import ballerina/io;
  import ballerina/log;
  import ballerina/stringutils;
  import chamil/govsms;
@@ -74,8 +75,9 @@ function validate(string mobileNo) returns string|error {
 
     boolean number = stringutils:matches(mobile, "^[0-9]*$");
     if !number {
-        return error(ERROR_REASON, message = "Invalid mobile number. Given mobile number contains non numeric " +
-                                           "characters: " + mobile);
+        string errorMsg = "Invalid mobile number. Given mobile number contains non numeric characters: " + mobile;
+        log:printError(errorMsg);
+        return error(ERROR_REASON, message = errorMsg);
     }
 
     if (mobile.startsWith("0") && mobile.length() == 10) {
@@ -85,6 +87,7 @@ function validate(string mobileNo) returns string|error {
         return mobile;
     }
     // Allow only the local mobile numbers to register via public API. International number are avoided.
+    log:printError("Invalid mobile number : " + mobile);
     return error(ERROR_REASON, message = "Invalid mobile number. Resend the request as follows: If the " +
                                      "mobile no is 0771234567, send POST request to  \'/sms\' with JSON payload " +
                                      "\'{\"username\":\"myuser\", \"mobile\":\"0771234567\"}\'");
@@ -95,7 +98,7 @@ function validate(string mobileNo) returns string|error {
 # + username - The recipient username
 # + mobileNo - The recipient number
 # + return - The status of registration or operation error
-function registerAsSMSRecipient(string username, string mobileNo) returns string|error {
+function registerSmsRecipient(string username, string mobileNo) returns string|error {
 
     if mobileSubscribers.hasKey(username) {
         string errMsg = "Registration failed: username:" + username + " is already registered with mobile:" + mobileNo;
@@ -120,7 +123,7 @@ function registerAsSMSRecipient(string username, string mobileNo) returns string
 # + username - The recipient username
 # + mobileNo - The recipient number
 # + return - The status of deregistration or operation error
-function unregisterAsSMSRecipient(string username, string mobileNo) returns string|error {
+function unregisterSmsRecipient(string username, string mobileNo) returns string|error {
     string result = "";
     if mobileSubscribers.hasKey(username) && mobileSubscribers.get(username) == mobileNo {
         result = "Successfully unregistered: username:" + username + " mobile:" + mobileSubscribers.remove(username);
@@ -138,4 +141,75 @@ function unregisterAsSMSRecipient(string username, string mobileNo) returns stri
                      + mobileNo + ": " + <string> status.detail()?.message);
     }
     return result;
+}
+
+function unregisterAllSMSRecipient() returns error? {
+    mobileSubscribers = {};
+    _ = check dbClient->update(DROP_RECIPIENT_TABLE);
+    _ = check dbClient->update(CREATE_RECIPIENT_TABLE);
+}
+
+function readRecipients(io:ReadableByteChannel|error payload) returns @tainted Recipient[]|error {
+    Recipient[] recipients = [];
+    if (payload is io:ReadableByteChannel) {
+        io:ReadableCharacterChannel rch = new (payload, "UTF8");
+        var result = rch.readJson();
+        closeReadableChannel(rch);
+        if (result is error) {
+            string logMessage = "Error occurred while reading json: malformed Recipient[]";
+            log:printError(logMessage, result);
+            return error(ERROR_REASON, message = logMessage, cause = result);
+        }
+
+        any|error recipientArray = Recipient[].constructFrom(<json>result);
+        if recipientArray is error {
+            string logMessage = "Error occurred while converting json: malformed Recipient[]";
+            log:printError(logMessage, recipientArray);
+            return error(ERROR_REASON, message = logMessage, cause = recipientArray);
+        }
+        return <Recipient[]> recipientArray;
+    } else {
+        return payload;
+    }
+}
+
+function closeReadableChannel(io:ReadableCharacterChannel rc) {
+    var result = rc.close();
+    if (result is error) {
+        log:printError("Error occurred while closing character stream", result);
+    }
+}
+
+function validateAllRecipients(Recipient[] recipients) returns error? {
+    string errMsg = "invalid recipient mobile no: ";
+    boolean erroneous = false;
+    foreach var user in recipients {
+        string|error validatedNo = validate(user.mobile);
+        if validatedNo is error {
+            erroneous = true;
+            errMsg = errMsg + user.username + ":" + user.mobile + ", ";
+        } else {
+            user.mobile = validatedNo;
+        }
+    }
+    if erroneous {
+        return error(ERROR_REASON, message = errMsg.substring(0, errMsg.length() - 2));
+    }
+}
+
+function registerAllSMSRecipients(Recipient[] recipients) returns error? {
+    string errMsg = "";
+    boolean erroneous = false;
+    foreach var user in recipients {
+        string|error status = registerSmsRecipient(user.username.trim(), user.mobile);
+        if status is error {
+            erroneous = true;
+            errMsg = errMsg + user.username + ":" + user.mobile + ", ";
+        } else {
+            log:printInfo(status);
+        }
+    }
+    if erroneous {
+        return error(ERROR_REASON, message = errMsg.substring(0, errMsg.length() - 2));
+    }
 }

@@ -206,11 +206,45 @@ service mediaWebsite on mediaListener {
         }
 
         // If the load is high, we might need to sync following db/map update
-        string|error status = registerAsSMSRecipient(smsRecipient.username.trim(), <string> validatedNo);
+        string|error status = registerSmsRecipient(smsRecipient.username.trim(), <string> validatedNo);
         if status is error {
             return caller->internalServerError(<@untainted> <string> status.detail()?.message);
         }
         return caller->ok(<@untainted> <string> status);
+    }
+
+    // This API enables registering mobile nos via a file(binary payload). Make sure the data is structured
+    // as an array of Recipients and the content type is `application/octet-stream`.
+    // [
+    //   { "username":"newuser1", "mobile":"0771234567" },
+    //   { "username":"newuser2", "mobile":"0771234568" },
+    //   { "username":"newuser3", "mobile":"0771234569" }
+    // ]
+    @http:ResourceConfig {
+        path: "/sms/addall",
+        methods: ["POST"],
+        consumes: ["application/octet-stream"],
+        auth: {
+            scopes: ["ECAdmin"]
+        }
+    }
+    resource function smsBulkRegistration (http:Caller caller, http:Request req) returns error? {
+        Recipient[]|error recipient = readRecipients(req.getByteChannel());
+        if recipient is error {
+            return caller->badRequest(<@untainted> recipient.toString());
+        }
+        Recipient[] smsRecipient = <Recipient[]> recipient;
+        error? validatedNo = validateAllRecipients(smsRecipient);
+        if validatedNo is error {
+            return caller->badRequest("Validation failed: " + <@untainted string> validatedNo.detail()?.message);
+        }
+
+        error? status = registerAllSMSRecipients(smsRecipient);
+        if status is error {
+            return caller->internalServerError("Registration failed: " + <@untainted string> status.detail()?.message);
+        }
+
+        return caller->ok("Successfully registered all");
     }
 
     @http:ResourceConfig {
@@ -228,11 +262,26 @@ service mediaWebsite on mediaListener {
         }
 
         // If the load is high, we might need to sync following db/map update
-        string|error status = unregisterAsSMSRecipient(smsRecipient.username.trim(), <string> validatedNo);
+        string|error status = unregisterSmsRecipient(smsRecipient.username.trim(), <string> validatedNo);
         if status is error {
             return caller->internalServerError(<@untainted string> status.detail()?.message);
         }
         return caller->ok(<@untainted string> status);
+    }
+
+    @http:ResourceConfig {
+        path: "/sms/reset",
+        methods: ["DELETE"],
+        auth: {
+            scopes: ["ECAdmin"]
+        }
+    }
+    resource function resetSmsRecipients(http:Caller caller, http:Request req) returns error? {
+        error? status = unregisterAllSMSRecipient();
+        if status is error {
+            return caller->internalServerError(<string> status.detail()?.message);
+        }
+        return caller->ok("Successfully unregistered all");
     }
 
     // May have to move to a separate service.

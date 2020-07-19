@@ -9,7 +9,7 @@ import ballerina/test;
 // [b7a.users.test]
 // password="password"
 // scopes="ECAdmin"
-@test:Config { enable: false }
+@test:Config { enable: false, after: "testResetRecipients" }
 function testSubscriberRegistration() {
     auth:OutboundBasicAuthProvider outboundBasicAuthProvider1 = new({
         username: "test",
@@ -90,6 +90,77 @@ function testSubscriberRegistration() {
         var result = response.getTextPayload();
         if (result is string) {
             test:assertEquals(result, "Successfully unregistered: username:newuser mobile:0771234567");
+        } else {
+            test:assertFail(msg = "Invalid response message:");
+        }
+    } else {
+        test:assertFail(msg = "Failed to call the endpoint:");
+    }
+
+    // Test bulk success registration
+    req = new;
+    req.setFileAsPayload("src/distributor/tests/resources/contact1.json");
+    response = httpEndpoint->post("/sms/addall", req);
+    if (response is http:Response) {
+        var result = response.getTextPayload();
+        if (result is string) {
+            test:assertEquals(result, "Successfully registered all");
+        } else {
+            test:assertFail(msg = "Invalid response message:");
+        }
+    } else {
+        test:assertFail(msg = "Failed to call the endpoint:");
+    }
+
+    // Test bulk registration with invalid nos
+    req = new;
+    req.setFileAsPayload("src/distributor/tests/resources/contact2.json");
+    response = httpEndpoint->post("/sms/addall", req);
+    if (response is http:Response) {
+        var result = response.getTextPayload();
+        if (result is string) {
+            test:assertEquals(result, "Validation failed: invalid recipient mobile no: newuser1:+00771234562");
+        } else {
+            test:assertFail(msg = "Invalid response message:");
+        }
+    } else {
+        test:assertFail(msg = "Failed to call the endpoint:");
+    }
+
+    // Test bulk registration with malformed JSON
+    req = new;
+    req.setFileAsPayload("src/distributor/tests/resources/contact3.json");
+    response = httpEndpoint->post("/sms/addall", req);
+    if (response is http:Response) {
+        var result = response.getTextPayload();
+        if (result is string) {
+            test:assertTrue(stringutils:contains(result, "Error occurred while converting json: malformed Recipient"));
+        } else {
+            test:assertFail(msg = "Invalid response message:");
+        }
+    } else {
+        test:assertFail(msg = "Failed to call the endpoint:");
+    }
+}
+
+@test:Config { before: "testSubscriberRegistration" }
+function testResetRecipients() {
+    auth:OutboundBasicAuthProvider outboundBasicAuthProvider1 = new({
+        username: "test",
+        password: config:getAsString("b7a.users.test.password")
+    });
+    http:BasicAuthHandler outboundBasicAuthHandler1 = new(outboundBasicAuthProvider1);
+    http:Client httpEndpoint = new("http://localhost:9090", {
+        auth: {
+            authHandler: outboundBasicAuthHandler1
+        }
+    });
+    http:Request req = new;
+    var response = httpEndpoint->delete("/sms/reset", req);
+    if (response is http:Response) {
+        var result = response.getTextPayload();
+        if (result is string) {
+            test:assertEquals(result, "Successfully unregistered all");
         } else {
             test:assertFail(msg = "Invalid response message:");
         }
