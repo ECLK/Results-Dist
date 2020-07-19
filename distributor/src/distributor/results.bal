@@ -46,9 +46,9 @@ service receiveResults on resultsListener {
 
         _ = start pushAwaitNotification(message);        
 
-        // if validTwilioAccount {
-        //     _ = start sendSMS(message, electionCode + "/" + resultType + "/" + resultCode);
-        // }
+         if validTwilioAccount {
+             _ = start sendSMS(<@untainted> message, <@untainted> (electionCode + "/" + resultType + "/" + resultCode));
+         }
 
         // respond accepted
         return caller->accepted();
