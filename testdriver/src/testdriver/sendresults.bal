@@ -73,15 +73,15 @@ function sendResults(string resultType, string electionCode, http:Client rc, map
             onePr["party_name"] = (pr[i].party_name is string) ? check pr[i].party_name : "Party " + <string>pr[i].party_code;
             onePr["candidate"] = (pr[i].candidate is string) ? check pr[i].candidate : "Candidate " + <string>pr[i].party_code;
             // change percentage to string
-            var val = trap <float>pr[i].percentage;
+            var val = trap <float>pr[i].vote_percentage;
             if val is error {
                 // already a string so let it go
             } else {
-                onePr["percentage"] = io:sprintf ("%.2f", val);
+                onePr["vote_percentage"] = io:sprintf ("%.2f", val);
             }
            // this line causes generated code to hang here: the cast is in error but no runtime error but just STOP!
            // looks like updating a json property that is already there really upsets the code :(
-           //onePr["percentage"] = io:sprintf ("%.2f", <string>pr[i].percentage);
+           //onePr["vote_percentage"] = io:sprintf ("%.2f", <string>pr[i].vote_percentage);
         }
 
         // set the percentages in the summary
@@ -169,7 +169,7 @@ function createEDResult (string resultType, map<map<json>>[] results, map<json>[
                             pdResult.ed_name.toString());
             }
             // add up votes and do %ge later as totals are not yet known
-            votes_by_party[i] = votes_by_party[i] + <int>by_party[i].votes;  
+            votes_by_party[i] = votes_by_party[i] + <int>by_party[i].vote_count;  
             if resultType == "PRESIDENTIAL-PREFS" { // add up pref votes too then
                 votes1st_by_party[i] += <int>by_party[i].votes1st;  
                 votes2nd_by_party[i] += <int>by_party[i].votes2nd;  
@@ -196,7 +196,7 @@ function createEDResult (string resultType, map<map<json>>[] results, map<json>[
             distByParty[i]["votes2nd"] = votes2nd_by_party[i];
             distByParty[i]["votes3rd"] = votes3rd_by_party[i];
         }
-        distByParty[i]["percentage"] = (distSummary.valid == 0) ? "0.00" : io:sprintf ("%.2f", votes_by_party[i]*100.0/distSummary.valid);
+        distByParty[i]["vote_percentage"] = (distSummary.valid == 0) ? "0.00" : io:sprintf ("%.2f", votes_by_party[i]*100.0/distSummary.valid);
     }
 
     // set the percentages in the summary
@@ -252,7 +252,7 @@ function createNationalResult (string resultType, map<map<json>>[] results, map<
                             pdResult.ed_name.toString() + "/" + pdResult.pd_name.toString());
             }
             // add up votes and do %ge later as totals are not yet known
-            votes_by_party[i] = votes_by_party[i] + <int>by_party[i].votes;            
+            votes_by_party[i] = votes_by_party[i] + <int>by_party[i].vote_count;            
             if resultType == "PRESIDENTIAL-PREFS" { // add up pref votes too then
                 votes1st_by_party[i] += <int>by_party[i].votes1st;  
                 votes2nd_by_party[i] += <int>by_party[i].votes2nd;  
@@ -279,7 +279,7 @@ function createNationalResult (string resultType, map<map<json>>[] results, map<
             natByParty[i]["votes2nd"] = votes2nd_by_party[i];
             natByParty[i]["votes3rd"] = votes3rd_by_party[i];
         }
-        natByParty[i]["percentage"] = (natSummary.valid == 0) ? "0.00" : io:sprintf ("%.2f", votes_by_party[i]*100.0/natSummary.valid);
+        natByParty[i]["vote_percentage"] = (natSummary.valid == 0) ? "0.00" : io:sprintf ("%.2f", votes_by_party[i]*100.0/natSummary.valid);
     }
 
     // set the percentages in the summary
