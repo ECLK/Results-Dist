@@ -13,6 +13,11 @@ import ballerinax/java.jdbc;
 # https://github.com/ECLK/Results-Dist/issues/35.)
 Result[] resultsCache = [];
 
+// TODO: set in `init`.
+final ElectionType electionType = ELECTION_TYPE_PARLIAMENTARY;
+
+function(map<json>) cleanupJson = cleanupPresidentialJson;
+
 const string CREATE_RESULTS_TABLE = "CREATE TABLE IF NOT EXISTS results (" +
                                     "    sequenceNo INT NOT NULL AUTO_INCREMENT," + 
                                     "    election VARCHAR(50) NOT NULL," +
@@ -56,13 +61,13 @@ type DataResult record {|
     byte[]? imageData;
 |};
 
-type CumulativeResult record {|
+type PresidentialCumulativeResult record {|
     int nadded;
-    PartyResult[] by_party;
+    PresidentialPartyResult[] by_party;
     SummaryResult summary;
 |};
 
-CumulativeResult emptyCumResult = { 
+PresidentialCumulativeResult emptyCumResult = { 
     nadded: 0,
     by_party: [], 
     summary: { 
@@ -75,12 +80,17 @@ CumulativeResult emptyCumResult = {
         percent_polled: ""
     }
 };
-CumulativeResult cumulativeRes = emptyCumResult;
-CumulativeResult prefsCumulativeRes = emptyCumResult;
+PresidentialCumulativeResult cumulativeRes = emptyCumResult;
+PresidentialCumulativeResult prefsCumulativeRes = emptyCumResult;
 
+# Set the election type and relevant modes.
 # Create database and set up at module init time and load any data in there to
 # memory for the website to show. Panic if there's any issue.
 function __init() {
+    if electionType == ELECTION_TYPE_PARLIAMENTARY {
+        cleanupJson = cleanupParliamentaryJson;
+    }
+
     // create tables
     _ = checkpanic dbClient->update(CREATE_RESULTS_TABLE);
     _ = checkpanic dbClient->update(CREATE_RECIPIENT_TABLE);
@@ -111,10 +121,10 @@ function __init() {
             imageData: dr.imageData
         });
 
-        // add up cumulative result from all the PD results to get current cumulative total
-        if jm.level == "POLLING-DIVISION" {
-            addToCumulative (<@untainted> jm);
-        }
+        // // add up cumulative result from all the PD results to get current cumulative total
+        // if jm.level == "POLLING-DIVISION" {
+        //     addToPresidentialCumulative (<@untainted> jm);
+        // }
     }
     if (count > 0) {
         log:printInfo("Loaded " + count.toString() + " previous results from database");
@@ -162,13 +172,13 @@ function saveResult(Result result) returns error? {
         return r;
     }
 
-    // add up cumulative result from all the PD results to get current cumulative total
-    if result.jsonResult.level == "POLLING-DIVISION" {
-        addToCumulative (result.jsonResult);
-    }
+    // // add up cumulative result from all the PD results to get current cumulative total
+    // if result.jsonResult.level == "POLLING-DIVISION" {
+    //     addToPresidentialCumulative (result.jsonResult);
+    // }
 
     // update in memory cache of all results
-    resultsCache.push (result);
+    resultsCache.push(result);
 }
 
 # Save an image associated with a result
@@ -211,11 +221,11 @@ function resetResults() returns error? {
 }
 
 # Add a polling division level result to the cumulative total.
-function addToCumulative (map<json> jm) {
+function addToPresidentialCumulative (map<json> jm) {
     boolean firstRound = jm.'type == PRESIDENTIAL_RESULT;
     json[] pr = <json[]> checkpanic jm.by_party;
 
-    CumulativeResult accum = emptyCumResult; // avoiding optional
+    PresidentialCumulativeResult accum = emptyCumResult; // avoiding optional
     if firstRound {
         accum = cumulativeRes;
     } else {
@@ -233,7 +243,7 @@ function addToCumulative (map<json> jm) {
         accum.summary.rejected += <int>jm.summary.rejected;
         accum.summary.polled += <int>jm.summary.polled;
         // don't add up electors from postal PDs as those are already in the district elsewhere
-        string pdCode = <string>jm.pd_code;
+        string pdCode = <string>jm.pd_code; // check 
         accum.summary.electors += <int>jm.summary.electors;
         accum.summary.percent_valid = (accum.summary.polled == 0) ? "0.00" : io:sprintf("%.2f", accum.summary.valid*100.0/accum.summary.polled);
         accum.summary.percent_rejected = (accum.summary.polled == 0) ? "0.00" : io:sprintf("%.2f", accum.summary.rejected*100.0/accum.summary.polled);
@@ -242,20 +252,20 @@ function addToCumulative (map<json> jm) {
 
     // if first PD being added to cumulative then just copy the party results over
     if accum.nadded == 0 {
-        pr.forEach (x => accum.by_party.push(checkpanic PartyResult.constructFrom(x)));
+        pr.forEach (x => accum.by_party.push(checkpanic PresidentialPartyResult.constructFrom(x)));
     } else {
         // record by party votes from this result (copying name etc. is silly after first hit)
         foreach int i in 0 ..< pr.length() {
             accum.by_party[i].party_code = <string>pr[i].party_code;
             accum.by_party[i].party_name = <string>pr[i].party_name;
             accum.by_party[i].candidate = <string>pr[i].candidate;
-            accum.by_party[i].votes += <int>pr[i].votes;
+            accum.by_party[i].vote_count += <int>pr[i].vote_count;
             if !firstRound {
                 accum.by_party[i]["votes1st"] = (accum.by_party[i]["votes1st"] ?: 0) + <int>pr[i].votes1st;
                 accum.by_party[i]["votes2nd"] = (accum.by_party[i]["votes2nd"] ?: 0) + <int>pr[i].votes2nd;
                 accum.by_party[i]["votes3rd"] = (accum.by_party[i]["votes3rd"] ?: 0) + <int>pr[i].votes3rd;
             }
-            accum.by_party[i].percentage = (accum.summary.valid == 0) ? "0.00" : io:sprintf ("%.2f", ((accum.by_party[i].votes*100.0)/accum.summary.valid));
+            accum.by_party[i].vote_percentage = (accum.summary.valid == 0) ? "0.00" : io:sprintf ("%.2f", ((accum.by_party[i].vote_count*100.0)/accum.summary.valid));
         }
     }
     accum.nadded += 1;

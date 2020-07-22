@@ -7,36 +7,36 @@ function genFakeEmptyData () returns error? {
             "party_name":"Yakada Party",
             "candidate":"Yakada Yaka",
             "party_code":"XXX",
-            "votes":0,
-            "percentage":"0.00"
+            "vote_count":0,
+            "vote_percentage":"0.00"
         },
         {
             "party_name":"Maara Gus Party",
             "candidate":"Honda Lamaya",
             "party_code":"GGG",
-            "votes":0,
-            "percentage":"0.00"
+            "vote_count":0,
+            "vote_percentage":"0.00"
         },
         {
             "party_name":"Saturday Night Dance Party",
             "candidate":"Dancing Girl",
             "party_code":"WWW",
-            "votes":0,
-            "percentage":"0.00"
+            "vote_count":0,
+            "vote_percentage":"0.00"
         },
         {
             "party_name":"Hari Honda Party",
             "candidate":"Harima Honda Eki",
             "party_code":"YYY",
-            "votes":0,
-            "percentage":"0.00"
+            "vote_count":0,
+            "vote_percentage":"0.00"
         },
         {
             "party_name":"Shaaaaa Party",
             "candidate":"Sharima Shari Ekaa",
             "party_code":"ZZZ",
-            "votes":0,
-            "percentage":"0.00"
+            "vote_count":0,
+            "vote_percentage":"0.00"
         }
     ];
     json summary = {
