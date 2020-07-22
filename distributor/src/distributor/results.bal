@@ -33,10 +33,7 @@ service receiveResults on resultsListener {
 
         var levelQueryParam = req.getQueryParamValue("level");
         if levelQueryParam is () {
-            http:Response res = new;
-            res.statusCode = http:STATUS_BAD_REQUEST;
-            res.setPayload("Missing required 'level' query param for notification");
-            return caller->respond(res);
+            return caller->badRequest("Missing required 'level' query param for notification");
         }
 
         string level = <string> levelQueryParam;
@@ -46,7 +43,7 @@ service receiveResults on resultsListener {
 
         _ = start pushAwaitNotification(message);        
 
-         if validTwilioAccount {
+         if validSmsClient {
              _ = start sendSMS(<@untainted> message, <@untainted> (electionCode + "/" + resultType + "/" + resultCode));
          }
 

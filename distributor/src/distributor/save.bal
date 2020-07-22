@@ -138,7 +138,7 @@ function __init() {
         log:printError("SMS notification is disabled due to '" + <string> account.detail()?.message +
                        "'. Please provide valid 'eclk.govsms.username'/'password'/'source'(department title)");
     } else {
-        validTwilioAccount = true;
+        validSmsClient = true;
         log:printInfo("SMS notification is enabled");
     }
 }

@@ -5,10 +5,18 @@ import ballerina/xmlutils;
 import ballerina/stringutils as su;
 
 const PRESIDENTIAL_RESULT = "PRESIDENTIAL-FIRST";
+const R_V = "R_V";
+const R_VI = "R_VI";
+const R_S = "R_S";
+const R_SI = "R_SI";
+const R_SC = "R_SC";
+const R_VSN = "R_VSN";
+const R_NC = "R_NC";
+
 const LEVEL_PD = "POLLING-DIVISION";
 const LEVEL_ED = "ELECTORAL-DISTRICT";
 const LEVEL_NI = "NATIONAL-INCREMENTAL";
-const LEVEL_NF = "NATIONAL-FINAL";
+const LEVEL_NF = "NATIONAL";
 
 
 function saveResult(map<json> resultAll) {
@@ -87,26 +95,35 @@ function saveImagePdf(map<json> imageJson) {
     }
 }
 
-# Return the file name to store this result using the format:
-# 	NNN-{TypeCode}-{LevelCode}[--{EDCode[--{PDCode}]].{ext}
+# Return the file name to store this result using the election format:
+# 	NNN-{TypeCode}-{LevelCode}[-{Code}[--{EDName[--{PDName}]]].{ext}
 # where
 # 	NNN			Sequence number of the result with 0s if needed (001, 002, ..).
-#	{TypeCode}	Result type- first preference or 2nd/3rd preference. “PE1” for
+#	{TypeCode}	Presidential result type- first preference or 2nd/3rd preference. “PE1” for
 #				first preference count and “PE2” for 2nd/3rd preference counts.
-#	{LevelCode}	Result level: PD for polling division, ED for electoral district,
+#               Parliamentary Result type- "R_V", "R_VI", "R_S", "R_SI", "R_SC", "R_VSN", "R_NC".
+#	{LevelCode}	Presidential result level: PD for polling division, ED for electoral district,
 #				NI for national incremental result and NF for national final result.
+#               Parliamentary result level: PD for polling division, ED for electoral district, and N for national.
+#   {Code}      If ED results, then 2 digit code of the district. If PD results then 2 digit ED code followed by one
+#               character PD code. For Postal, Displaced and Quarantine results, the pd_code will be “PV”, “DV” and
+#               “QV” respectively.
 #	{EDName}	Name of the electoral district in English.
-#	{Code}		If ED result, then 2 digit code of the district. If PD result then
-#				2 digit ED code followed by one character PD code, with “P” 
-#				being used for postal results for the district.
 #	{PDName}	Name of the polling division in English.
 #	{ext}		Either “json” or “xml” depending on the format of the file.
 # 
 # + return - returns the base name for the file 
 function getFileNameBase(string electionCode, map<json> result) returns string {
+    // result type code
+    string resultType = result.'type.toString();
+    match resultType {
+        R_V|R_VI|R_S|R_SI|R_SC|R_VSN|R_NC => { }
+        PRESIDENTIAL_FIRST => { resultType = "PE1"; }
+        _ => { resultType = "PE2"; }
+    }
+
     // start with sequence # and type code
-    string name = (wantCode ? electionCode + "-" : "") + result.sequence_number.toString() + "-" +
-        (result.'type.toString() == PRESIDENTIAL_RESULT ? "PE1" : "PE2") + "-";
+    string name = (wantCode ? electionCode + "-" : "") + result.sequence_number.toString() + "-" + resultType + "-";
 
     string resultLevel = result.level.toString();
 
