@@ -58,7 +58,6 @@ service receiveResults on resultsListener {
     }
     resource function receiveData(http:Caller caller, http:Request req, string electionCode, string resultType,
                                   string resultCode, json jsonResult) returns error? {
-        boolean firstRound = (resultType == PRESIDENTIAL_RESULT);
 
         // payload is supposed to be a json object - its ok to get upset if not
         map<json> jsonobj = check trap <map<json>> jsonResult;
@@ -84,6 +83,12 @@ service receiveResults on resultsListener {
         // publish the received result
         publishResultData(result);
 
+        if (electionType == ELECTION_TYPE_PARLIAMENTARY) {
+            return caller->accepted();
+        }
+
+        // TODO: temporarily avoid sending incremental results
+        boolean firstRound = (resultType == PRESIDENTIAL_RESULT);
         if result.jsonResult.level == "POLLING-DIVISION" {
             // send a cumulative result with the current running totals
             log:printInfo("Publishing cumulative result with " + electionCode +  "/" + resultType + "/" + resultCode);
@@ -198,12 +203,12 @@ function pushAwaitNotification(string message) {
     }
 }
 
-function cleanupJson(map<json> jin) {
+function cleanupPresidentialJson(map<json> jin) {
     json[] by_party = <json[]> jin.by_party;
     foreach json j2 in by_party {
         map<json> j = <map<json>> j2;
         if j.votes is string {
-            j["votes"] = (j.votes == "") ? 0 : <int>'int:fromString(<string>j.votes);
+            j["vote_count"] = (j.vote_count == "") ? 0 : <int>'int:fromString(<string>j.vote_count);
         }
         if j.votes1st is string {
             j["votes1st"] = (j.votes1st == "") ? 0 : <int>'int:fromString(<string>j.votes1st);
@@ -215,7 +220,28 @@ function cleanupJson(map<json> jin) {
             j["votes3rd"] = (j.votes3rd == "") ? 0 : <int>'int:fromString(<string>j.votes3rd);
         }
     }
-    map<json> js = <map<json>>jin.summary;
+    cleanUpSummaryJson(<map<json>>jin.summary);
+}
+
+function cleanupParliamentaryJson(map<json> jin) {
+    json[] by_party = <json[]> jin.by_party;
+    foreach json j2 in by_party {
+        map<json> j = <map<json>> j2;
+        if j.votes is string {
+            j["vote_count"] = (j.vote_count == "") ? 0 : <int>'int:fromString(<string>j.vote_count);
+        }
+        if j.seat_count is string {
+            j["seat_count"] = (j.seat_count == "") ? 0 : <int>'int:fromString(<string>j.seat_count);
+        }
+        if j.national_list_seat_count is string {
+            j["national_list_seat_count"] = (j.national_list_seat_count == "") ? 0 : 
+                                                <int>'int:fromString(<string>j.national_list_seat_count);
+        }
+    }
+    cleanUpSummaryJson(<map<json>>jin.summary);
+}
+
+function cleanUpSummaryJson(map<json> js) {
     if js.valid is string {
         js["valid"] = (js.valid == "") ? 0 : <int>'int:fromString(<string>js.valid);
     }
@@ -229,4 +255,3 @@ function cleanupJson(map<json> jin) {
         js["electors"] = (js.electors == "") ? 0 : <int>'int:fromString(<string>js.electors);
     }
 }
-
