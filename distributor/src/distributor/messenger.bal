@@ -25,11 +25,11 @@ function getAwaitResultsMessage(string electionCode, string resultType, string r
             string pollingDivision = "/" + (pd_name ?: "<unknown polling division>");
 
             string pdLevelName = "";
-            if (resultCode.endsWith("PV") {
+            if (resultCode.endsWith("PV")) {
                 pdLevelName = "POSTAL";
-            } else if (resultCode.endsWith("DV") {
+            } else if (resultCode.endsWith("DV")) {
                 pdLevelName = "DISPLACED";
-            } else if (resultCode.endsWith("QV") {
+            } else if (resultCode.endsWith("QV")) {
                 pdLevelName = "QUARANTINE";
             } else {
                 pdLevelName = "POLLING-DIVISION";
