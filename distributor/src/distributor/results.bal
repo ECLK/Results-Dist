@@ -224,7 +224,27 @@ function cleanupPresidentialJson(map<json> jin) {
 }
 
 function cleanupParliamentaryJson(map<json> jin) {
-    json[] by_party = <json[]> jin.by_party;
+    string resultType = jin.'type.toString();
+    match resultType {
+        R_V => {
+            cleanByPartyJson(<json[]> jin.by_party);
+            cleanUpSummaryJson(<map<json>>jin.summary);
+        }
+        R_S => {
+            cleanByPartyJson(<json[]> jin.by_party);
+        }
+        R_VS => {
+            cleanByPartyJson(<json[]> jin.by_party);
+            cleanUpSummaryJson(<map<json>>jin.summary);
+        }
+        R_VSN => {
+            cleanByPartyJson(<json[]> jin.by_party);
+            cleanUpSummaryJson(<map<json>>jin.summary);
+        }
+    }
+}
+
+function cleanByPartyJson(json[] by_party) {
     foreach json j2 in by_party {
         map<json> j = <map<json>> j2;
         if j.votes is string {
@@ -234,13 +254,11 @@ function cleanupParliamentaryJson(map<json> jin) {
             j["seat_count"] = (j.seat_count == "") ? 0 : <int>'int:fromString(<string>j.seat_count);
         }
         if j.national_list_seat_count is string {
-            j["national_list_seat_count"] = (j.national_list_seat_count == "") ? 0 : 
+            j["national_list_seat_count"] = (j.national_list_seat_count == "") ? 0 :
                                                 <int>'int:fromString(<string>j.national_list_seat_count);
         }
     }
-    cleanUpSummaryJson(<map<json>>jin.summary);
 }
-
 function cleanUpSummaryJson(map<json> js) {
     if js.valid is string {
         js["valid"] = (js.valid == "") ? 0 : <int>'int:fromString(<string>js.valid);
