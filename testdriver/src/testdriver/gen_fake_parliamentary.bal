@@ -14,7 +14,7 @@ function genFakeParliamentary() {
                     "party_code": "Foo",
                     "party_name": "Foo foo",
                     "vote_count": 15,
-                    "vote_percentage": "0.17",
+                    "vote_percentage": 0.17,
                     "seat_count": 0,
                     "national_list_seat_count": 0
                 },
@@ -22,7 +22,7 @@ function genFakeParliamentary() {
                     "party_code": "Bar",
                     "party_name": "Bar bar",
                     "vote_count": 65,
-                    "vote_percentage": "0.72",
+                    "vote_percentage": 0.72,
                     "seat_count": 0,
                     "national_list_seat_count": 0
                 },
@@ -30,7 +30,7 @@ function genFakeParliamentary() {
                     "party_code": "Baz",
                     "party_name": "Baz baz",
                     "vote_count": 10,
-                    "vote_percentage": "0.11",
+                    "vote_percentage": 0.11,
                     "seat_count": 0,
                     "national_list_seat_count": 0
                 }
@@ -56,7 +56,7 @@ function genFakeParliamentary() {
                     "party_code": "Foo",
                     "party_name": "Foo foo",
                     "vote_count": 90,
-                    "vote_percentage": "0.6",
+                    "vote_percentage": 0.6,
                     "seat_count": 0,
                     "national_list_seat_count": 0
                 },
@@ -64,7 +64,7 @@ function genFakeParliamentary() {
                     "party_code": "Bar",
                     "party_name": "Bar bar",
                     "vote_count": 35,
-                    "vote_percentage": "0.23",
+                    "vote_percentage": 0.23,
                     "seat_count": 0,
                     "national_list_seat_count": 0
                 },
@@ -72,7 +72,7 @@ function genFakeParliamentary() {
                     "party_code": "Baz",
                     "party_name": "Baz baz",
                     "vote_count": 25,
-                    "vote_percentage": "0.17",
+                    "vote_percentage": 0.17,
                     "seat_count": 0,
                     "national_list_seat_count": 0
                 }
@@ -98,7 +98,7 @@ function genFakeParliamentary() {
                     "party_code": "Foo",
                     "party_name": "Foo foo",
                     "vote_count": 10,
-                    "vote_percentage": "0.46",
+                    "vote_percentage": 0.46,
                     "seat_count": 0,
                     "national_list_seat_count": 0
                 },
@@ -106,7 +106,7 @@ function genFakeParliamentary() {
                     "party_code": "Bar",
                     "party_name": "Bar bar",
                     "vote_count": 0,
-                    "vote_percentage": "0.00",
+                    "vote_percentage": 0.00,
                     "seat_count": 0,
                     "national_list_seat_count": 0
                 },
@@ -114,7 +114,7 @@ function genFakeParliamentary() {
                     "party_code": "Baz",
                     "party_name": "Baz baz",
                     "vote_count": 12,
-                    "vote_percentage": "0.54",
+                    "vote_percentage": 0.54,
                     "seat_count": 0,
                     "national_list_seat_count": 0
                 }
@@ -140,7 +140,7 @@ function genFakeParliamentary() {
                     "party_code": "Foo",
                     "party_name": "Foo foo",
                     "vote_count": 10,
-                    "vote_percentage": "0.13",
+                    "vote_percentage": 0.13,
                     "seat_count": 0,
                     "national_list_seat_count": 0
                 },
@@ -148,7 +148,7 @@ function genFakeParliamentary() {
                     "party_code": "Bar",
                     "party_name": "Bar bar",
                     "vote_count": 50,
-                    "vote_percentage": "0.63",
+                    "vote_percentage": 0.63,
                     "seat_count": 0,
                     "national_list_seat_count": 0
                 },
@@ -156,7 +156,7 @@ function genFakeParliamentary() {
                     "party_code": "Baz",
                     "party_name": "Baz baz",
                     "vote_count": 20,
-                    "vote_percentage": "0.25",
+                    "vote_percentage": 0.25,
                     "seat_count": 0,
                     "national_list_seat_count": 0
                 }
@@ -182,7 +182,7 @@ function genFakeParliamentary() {
                     "party_code": "Foo",
                     "party_name": "Foo foo",
                     "vote_count": 50,
-                    "vote_percentage": "0.55",
+                    "vote_percentage": 0.55,
                     "seat_count": 0,
                     "national_list_seat_count": 0
                 },
@@ -190,7 +190,7 @@ function genFakeParliamentary() {
                     "party_code": "Bar",
                     "party_name": "Bar bar",
                     "vote_count": 20,
-                    "vote_percentage": "0.22",
+                    "vote_percentage": 0.22,
                     "seat_count": 0,
                     "national_list_seat_count": 0
                 },
@@ -198,7 +198,7 @@ function genFakeParliamentary() {
                     "party_code": "Baz",
                     "party_name": "Baz baz",
                     "vote_count": 20,
-                    "vote_percentage": "0.22",
+                    "vote_percentage": 0.22,
                     "seat_count": 0,
                     "national_list_seat_count": 0
                 }
@@ -222,7 +222,7 @@ function genFakeParliamentary() {
                     "party_code": "Foo",
                     "party_name": "Foo foo",
                     "vote_count": 0,
-                    "vote_percentage": "0.00",
+                    "vote_percentage": 0.00,
                     "seat_count": 10,
                     "national_list_seat_count": 0
                 },
@@ -236,7 +236,7 @@ function genFakeParliamentary() {
                     "party_code": "Baz",
                     "party_name": "Baz baz",
                     "vote_count": 0,
-                    "vote_percentage": "0.00",
+                    "vote_percentage": 0.00,
                     "seat_count": 3,
                     "national_list_seat_count": 0
                 }
@@ -254,7 +254,7 @@ function genFakeParliamentary() {
                     "party_code": "Foo",
                     "party_name": "Foo foo",
                     "vote_count": 0,
-                    "vote_percentage": "0.00",
+                    "vote_percentage": 0.00,
                     "seat_count": 8,
                     "national_list_seat_count": 0
                 },
@@ -262,7 +262,7 @@ function genFakeParliamentary() {
                     "party_code": "Bar",
                     "party_name": "Bar bar",
                     "vote_count": 0,
-                    "vote_percentage": "0.00",
+                    "vote_percentage": 0.00,
                     "seat_count": 10,
                     "national_list_seat_count": 0
                 },
@@ -284,7 +284,7 @@ function genFakeParliamentary() {
                     "party_code": "Foo",
                     "party_name": "Foo foo",
                     "vote_count": 18200,
-                    "vote_percentage": "0.48",
+                    "vote_percentage": 0.48,
                     "seat_count": 100,
                     "national_list_seat_count": 0
                 },
@@ -292,7 +292,7 @@ function genFakeParliamentary() {
                     "party_code": "Bar",
                     "party_name": "Bar bar",
                     "vote_count": 12540,
-                    "vote_percentage": "0.33",
+                    "vote_percentage": 0.33,
                     "seat_count": 75,
                     "national_list_seat_count": 0
                 },
@@ -300,7 +300,7 @@ function genFakeParliamentary() {
                     "party_code": "Baz",
                     "party_name": "Baz baz",
                     "vote_count": 7500,
-                    "vote_percentage": "0.20",
+                    "vote_percentage": 0.20,
                     "seat_count": 25,
                     "national_list_seat_count": 0
                 }
@@ -322,7 +322,7 @@ function genFakeParliamentary() {
                     "party_code": "Foo",
                     "party_name": "Foo foo",
                     "vote_count": 18200,
-                    "vote_percentage": "0.48",
+                    "vote_percentage": 0.48,
                     "seat_count": 100,
                     "national_list_seat_count": 12
                 },
@@ -330,7 +330,7 @@ function genFakeParliamentary() {
                     "party_code": "Bar",
                     "party_name": "Bar bar",
                     "vote_count": 12540,
-                    "vote_percentage": "0.33",
+                    "vote_percentage": 0.33,
                     "seat_count": 75,
                     "national_list_seat_count": 9
                 },
@@ -338,7 +338,7 @@ function genFakeParliamentary() {
                     "party_code": "Baz",
                     "party_name": "Baz baz",
                     "vote_count": 7500,
-                    "vote_percentage": "0.20",
+                    "vote_percentage": 0.20,
                     "seat_count": 25,
                     "national_list_seat_count": 4
                 }
