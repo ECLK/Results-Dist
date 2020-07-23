@@ -25,8 +25,14 @@ boolean sortedHtml = false;
 
 boolean wantCode = false;
 
+const ELECTION_TYPE_PRESIDENTIAL = "PRESIDENTIAL";
+const ELECTION_TYPE_PARLIAMENTARY = "PARLIAMENTARY";
+
+public type ElectionType ELECTION_TYPE_PRESIDENTIAL|ELECTION_TYPE_PARLIAMENTARY;
+
 http:OutboundAuthConfig? auth = ();
 http:Client? imageClient = ();
+ElectionType electionType = ELECTION_TYPE_PARLIAMENTARY;
 
 // what formats does the user want results saved in?
 public function main (string? username = (),        // my username  
@@ -38,8 +44,12 @@ public function main (string? username = (),        // my username
                       boolean html = false,         // do I want HTML?
                       boolean sorted = true,        // do I want HTML results sorted highest to lowest
                       boolean wantCode = false,     // do I want electionCode in the filename
-                      string homeURL = "https://resultstest.ecdev.opensource.lk" // where do I connect at
+                      string homeURL = "https://resultstest.ecdev.opensource.lk", // where do I connect at
+                      ElectionType mode = ELECTION_TYPE_PARLIAMENTARY
                     ) returns @tainted error? {
+
+    // Set the election type
+    electionType = <@untainted>mode;
 
     // check what format the user wants results in
     wantJson = <@untainted>'json;
