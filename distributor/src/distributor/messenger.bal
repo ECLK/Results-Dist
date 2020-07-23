@@ -13,7 +13,7 @@ govsms:Client smsClient = new (govsmsConfig);
 // Keeps registered sms recipients in-memory. Values are populated in every service init and recipient registration
 map<string> mobileSubscribers = {};
 string sourceDepartment = config:getAsString("eclk.govsms.source");
-boolean validTwilioAccount = false;
+boolean validSmsClient = false;
 
 function getAwaitResultsMessage(string electionCode, string resultType, string resultCode, string level, 
                                 string? ed_name, string? pd_name) returns string {
@@ -23,8 +23,19 @@ function getAwaitResultsMessage(string electionCode, string resultType, string r
         LEVEL_PD => {
             string electoralDistrict = "/" + (ed_name ?: "<unknown electoral district>");
             string pollingDivision = "/" + (pd_name ?: "<unknown polling division>");
-            message  = "Await " + (resultCode.endsWith("P") ? "POSTAL" : "POLLING-DIVISION") + " results for " 
-                    + electionCode + resultType + electoralDistrict + pollingDivision;
+
+            string pdLevelName = "";
+            if (resultCode.endsWith("PV") {
+                pdLevelName = "POSTAL";
+            } else if (resultCode.endsWith("DV") {
+                pdLevelName = "DISPLACED";
+            } else if (resultCode.endsWith("QV") {
+                pdLevelName = "QUARANTINE";
+            } else {
+                pdLevelName = "POLLING-DIVISION";
+            }
+            message  = "Await " + pdLevelName + " results for " + electionCode + resultType +
+                            electoralDistrict + pollingDivision;
         }
         LEVEL_ED => {
             string electoralDistrict = "/" + (ed_name ?: "<unknown electoral district>");
