@@ -9,12 +9,12 @@ type ResultLevel
 type PartyResult record {
     string party_code;
     string party_name;
-    int vote_count;
-    string vote_percentage;
 };
 
 type PresidentialPartyResult record {|
     *PartyResult;
+    int vote_count;
+    string vote_percentage;
     string candidate;
     int votes1st?;
     int votes2nd?;
@@ -23,8 +23,10 @@ type PresidentialPartyResult record {|
 
 type ParliamentaryPartyResult record {|
     *PartyResult;
-    int seat_count;
-    int national_list_seat_count;
+    int vote_count?;
+    string vote_percentage?;
+    int seat_count?;
+    int national_list_seat_count?;
 |};
 
 type SummaryResult record {|

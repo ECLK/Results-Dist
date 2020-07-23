@@ -63,7 +63,7 @@ service receiveResults on resultsListener {
         map<json> jsonobj = check trap <map<json>> jsonResult;
 
         // check and convert numbers to ints if they're strings
-        cleanupJson(jsonobj);
+        cleanupJsonFunc(jsonobj);
 
         // save everything in a convenient way
         Result result = <@untainted> {
@@ -78,44 +78,13 @@ service receiveResults on resultsListener {
         log:printInfo("Result data received for " + electionCode +  "/" + resultType + "/" + resultCode);
 
         // store the result in the DB against the resultCode and assign it a sequence #
-        check saveResult(result);
+        CumulativeResult? resCumResult = check saveResult(result);
     
         // publish the received result
         publishResultData(result);
 
-        if (electionType == ELECTION_TYPE_PARLIAMENTARY) {
-            return caller->accepted();
-        }
-
-        // TODO: temporarily avoid sending incremental results
-        boolean firstRound = (resultType == PRESIDENTIAL_RESULT);
-        if result.jsonResult.level == "POLLING-DIVISION" {
-            // send a cumulative result with the current running totals
-            log:printInfo("Publishing cumulative result with " + electionCode +  "/" + resultType + "/" + resultCode);
-
-
-            map<json> cumJsonResult = {
-                'type: resultType,
-                timestamp: check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ"),
-                level: "NATIONAL-INCREMENTAL",
-                by_party: check json.constructFrom(firstRound ? cumulativeRes.by_party : prefsCumulativeRes.by_party),
-                summary: check json.constructFrom(firstRound ? cumulativeRes.summary : prefsCumulativeRes.summary)
-            };
-            Result cumResult = <@untainted> {
-                sequenceNo: -1, // wil be updated with DB sequence # upon storage
-                election: result.election,
-                'type: result.'type,
-                code: result.code,
-                jsonResult: cumJsonResult,
-                imageMediaType: (),
-                imageData: ()
-            };
-
-            // store the result in the DB against the resultCode and assign it a sequence #
-            check saveResult(cumResult);
-
-            // publish the received cumulative result
-            publishResultData(cumResult);
+        if !(resCumResult is ()) {
+            check sendIncrementalResultFunc(resCumResult, electionCode, resultType, resultCode, result);
         }
 
         // respond accepted
@@ -224,41 +193,30 @@ function cleanupPresidentialJson(map<json> jin) {
 }
 
 function cleanupParliamentaryJson(map<json> jin) {
-    string resultType = jin.'type.toString();
-    match resultType {
-        R_V => {
-            cleanByPartyJson(<json[]> jin.by_party);
-            cleanUpSummaryJson(<map<json>>jin.summary);
-        }
-        R_S => {
-            cleanByPartyJson(<json[]> jin.by_party);
-        }
-        R_VS => {
-            cleanByPartyJson(<json[]> jin.by_party);
-            cleanUpSummaryJson(<map<json>>jin.summary);
-        }
-        R_VSN => {
-            cleanByPartyJson(<json[]> jin.by_party);
-            cleanUpSummaryJson(<map<json>>jin.summary);
+    if (jin.hasKey("by_party")) {
+        json[] by_party = <json[]> jin.by_party;
+        foreach json j2 in by_party {
+            map<json> j = <map<json>> j2;
+            if j.votes is string {
+                j["vote_count"] = (j.vote_count == "") ? 0 : <int>'int:fromString(<string>j.vote_count);
+            }
+            if j.seat_count is string {
+                j["seat_count"] = (j.seat_count == "") ? 0 : <int>'int:fromString(<string>j.seat_count);
+            }
+            if j.national_list_seat_count is string {
+                j["national_list_seat_count"] = (j.national_list_seat_count == "") ? 0 :
+                                                    <int>'int:fromString(<string>j.national_list_seat_count);
+            }
         }
     }
+
+    if !(jin.hasKey("summary")) {
+        return;
+    }
+
+    cleanUpSummaryJson(<map<json>>jin.summary);
 }
 
-function cleanByPartyJson(json[] by_party) {
-    foreach json j2 in by_party {
-        map<json> j = <map<json>> j2;
-        if j.votes is string {
-            j["vote_count"] = (j.vote_count == "") ? 0 : <int>'int:fromString(<string>j.vote_count);
-        }
-        if j.seat_count is string {
-            j["seat_count"] = (j.seat_count == "") ? 0 : <int>'int:fromString(<string>j.seat_count);
-        }
-        if j.national_list_seat_count is string {
-            j["national_list_seat_count"] = (j.national_list_seat_count == "") ? 0 :
-                                                <int>'int:fromString(<string>j.national_list_seat_count);
-        }
-    }
-}
 function cleanUpSummaryJson(map<json> js) {
     if js.valid is string {
         js["valid"] = (js.valid == "") ? 0 : <int>'int:fromString(<string>js.valid);
@@ -272,4 +230,108 @@ function cleanUpSummaryJson(map<json> js) {
     if js.electors is string {
         js["electors"] = (js.electors == "") ? 0 : <int>'int:fromString(<string>js.electors);
     }
+}
+
+function sendPresidentialIncrementalResult(CumulativeResult resCumResult, string electionCode, string resultType,
+                                           string resultCode, Result result) returns error? {
+    // send a cumulative result with the current running totals
+    log:printInfo("Publishing cumulative result with " + electionCode +  "/" + resultType + "/" + resultCode);
+
+    PresidentialCumulativeVotesResult presidentialCumResult = <PresidentialCumulativeVotesResult> resCumResult;
+
+    map<json> cumJsonResult = {
+        'type: resultType,
+        timestamp: check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ"),
+        level: "NATIONAL-INCREMENTAL",
+        by_party: check json.constructFrom(presidentialCumResult.by_party),
+        summary: check json.constructFrom(presidentialCumResult.summary)
+    };
+    Result cumResult = <@untainted> {
+        sequenceNo: -1, // wil be updated with DB sequence # upon storage
+        election: result.election,
+        'type: result.'type,
+        code: result.code,
+        jsonResult: cumJsonResult,
+        imageMediaType: (),
+        imageData: ()
+    };
+
+    // store the result in the DB against the resultCode and assign it a sequence #
+    // Ignore the non-error return value, since it would be `()`, when saving an incremental result
+    _ = check saveResult(cumResult);
+
+    // publish the received cumulative result
+    publishResultData(cumResult);
+}
+
+function sendParliamentaryIncrementalResult(CumulativeResult resCumResult, string electionCode, string resultType,
+                                            string resultCode, Result result) returns error? {
+    if resCumResult is ParliamentaryCumulativeVotesResult {
+        return sendParliamentaryIncrementalVotesResult(resCumResult, electionCode, "R_VI", resultCode, result);
+    }
+
+    return sendParliamentaryIncrementalSeatsResult(resCumResult, electionCode, "R_SI", resultCode, result);
+}
+
+function sendParliamentaryIncrementalVotesResult(CumulativeResult resCumResult, string electionCode, string resultType,
+                                                 string resultCode, Result result) returns error? {
+    log:printInfo("Publishing cumulative result with " + electionCode +  "/" + resultType + "/" + resultCode);
+
+    ParliamentaryCumulativeVotesResult parliamentaryCumResult = <ParliamentaryCumulativeVotesResult> resCumResult;
+
+    map<json> cumJsonResult = {
+        'type: resultType,
+        timestamp: check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ"),
+        level: "ELECTORAL-DISTRICT",
+        ed_code: <string> result.jsonResult.ed_code,
+        ed_name: <string> result.jsonResult.ed_name,
+        by_party: check json.constructFrom(parliamentaryCumResult.by_party),
+        summary: check json.constructFrom(parliamentaryCumResult.summary)
+    };
+    Result cumResult = <@untainted> {
+        sequenceNo: -1, // wil be updated with DB sequence # upon storage
+        election: result.election,
+        'type: resultType,
+        code: result.code,
+        jsonResult: cumJsonResult,
+        imageMediaType: (),
+        imageData: ()
+    };
+
+    // store the result in the DB against the resultCode and assign it a sequence #
+    // Ignore the non-error return value, since it would be `()`, when saving an incremental result
+    _ = check saveResult(cumResult);
+
+    // publish the received cumulative result
+    publishResultData(cumResult);
+}
+
+function sendParliamentaryIncrementalSeatsResult(CumulativeResult resCumResult, string electionCode, string resultType,
+                                                 string resultCode, Result result) returns error? {
+    log:printInfo("Publishing cumulative result with " + electionCode +  "/" + resultType + "/" + resultCode);
+
+    ParliamentaryCumulativeSeatsResult parliamentaryCumResult = <ParliamentaryCumulativeSeatsResult> resCumResult;
+
+    map<json> cumJsonResult = {
+        'type: resultType,
+        timestamp: check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ"),
+        level: "NATIONAL",
+        by_party: check json.constructFrom(parliamentaryCumResult.by_party)
+    };
+    Result cumResult = <@untainted> {
+        sequenceNo: -1, // wil be updated with DB sequence # upon storage
+        election: result.election,
+        'type: resultType,
+        code: result.code,
+        jsonResult: cumJsonResult,
+        imageMediaType: (),
+        imageData: ()
+    };
+
+    // store the result in the DB against the resultCode and assign it a sequence #
+    // Ignore the non-error return value, since it would be `()`, when saving an incremental result
+    _ = check saveResult(cumResult);
+
+    // publish the received cumulative result
+    publishResultData(cumResult);
 }

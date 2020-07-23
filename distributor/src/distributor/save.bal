@@ -16,7 +16,10 @@ Result[] resultsCache = [];
 // TODO: set in `init`.
 final ElectionType electionType = ELECTION_TYPE_PARLIAMENTARY;
 
-function(map<json>) cleanupJson = cleanupPresidentialJson;
+function(map<json>) cleanupJsonFunc = cleanupPresidentialJson;
+function(map<json>) returns CumulativeResult? addToCumulativeFunc = addToPresidentialCumulative;
+function(CumulativeResult, string, string, string, Result) returns error? sendIncrementalResultFunc = 
+                                                                                sendPresidentialIncrementalResult;
 
 const string CREATE_RESULTS_TABLE = "CREATE TABLE IF NOT EXISTS results (" +
                                     "    sequenceNo INT NOT NULL AUTO_INCREMENT," + 
@@ -61,34 +64,78 @@ type DataResult record {|
     byte[]? imageData;
 |};
 
-type PresidentialCumulativeResult record {|
+type CumulativeResult record {
     int nadded;
-    PresidentialPartyResult[] by_party;
+};
+
+type CumulativeVotesResult record {
+    *CumulativeResult;
     SummaryResult summary;
+};
+
+type PresidentialCumulativeVotesResult record {|
+    *CumulativeVotesResult;
+    PresidentialPartyResult[] by_party;
 |};
 
-PresidentialCumulativeResult emptyCumResult = { 
+type ParliamentaryCumulativeVotesResult record {|
+    *CumulativeVotesResult;
+    ParliamentaryPartyResult[] by_party;
+|};
+
+type ParliamentaryCumulativeSeatsResult record {|
+    *CumulativeResult;
+    ParliamentaryPartyResult[] by_party;
+|};
+
+SummaryResult emptySummaryResult = { 
+    valid: 0, 
+    rejected: 0, 
+    polled: 0, 
+    electors: 0,
+    percent_valid: "",
+    percent_rejected: "",
+    percent_polled: ""
+};
+
+////////////////////// Presidential Cumulatives ////////////////////// 
+PresidentialCumulativeVotesResult emptyPresidentialCumResult = { 
     nadded: 0,
     by_party: [], 
-    summary: { 
-        valid: 0, 
-        rejected: 0, 
-        polled: 0, 
-        electors: 0,
-        percent_valid: "",
-        percent_rejected: "",
-        percent_polled: ""
-    }
+    summary: emptySummaryResult
 };
-PresidentialCumulativeResult cumulativeRes = emptyCumResult;
-PresidentialCumulativeResult prefsCumulativeRes = emptyCumResult;
+PresidentialCumulativeVotesResult presidentialCumulativeVotesRes = emptyPresidentialCumResult;
+PresidentialCumulativeVotesResult presidentialPrefsCumulativeVotesRes = emptyPresidentialCumResult;
+
+////////////////////// Parliamentary Cumulatives ////////////////////// 
+ParliamentaryCumulativeVotesResult emptyParliamentaryCumVotesResult = { 
+    nadded: 0,
+    by_party: [], 
+    summary: emptySummaryResult
+}; 
+
+ParliamentaryCumulativeSeatsResult emptyParliamentaryCumSeatsResult = { 
+    nadded: 0,
+    by_party: []
+}; 
+
+map<ParliamentaryCumulativeVotesResult> parliamentaryDistrictwiseCumVotesRes = initializeDistrictwiseCumulativeVotesMap();
+
+ParliamentaryCumulativeSeatsResult parliamentaryCumSeatsRes = emptyParliamentaryCumSeatsResult;
 
 # Set the election type and relevant modes.
 # Create database and set up at module init time and load any data in there to
 # memory for the website to show. Panic if there's any issue.
 function __init() {
     if electionType == ELECTION_TYPE_PARLIAMENTARY {
-        cleanupJson = cleanupParliamentaryJson;
+        cleanupJsonFunc = cleanupParliamentaryJson;
+        addToCumulativeFunc = addToParliamentaryCumulative;
+        sendIncrementalResultFunc = sendParliamentaryIncrementalResult;
+        parliamentaryDistrictwiseCumVotesRes = initializeDistrictwiseCumulativeVotesMap();
+        parliamentaryCumSeatsRes = emptyParliamentaryCumSeatsResult;
+    } else {
+        presidentialCumulativeVotesRes = emptyPresidentialCumResult.clone();
+        presidentialPrefsCumulativeVotesRes = emptyPresidentialCumResult.clone();
     }
 
     // create tables
@@ -100,8 +147,7 @@ function __init() {
     table<DataResult> ret = <table<DataResult>> res;
     int count = 0;
     resultsCache = [];
-    cumulativeRes = emptyCumResult.clone();
-    prefsCumulativeRes = emptyCumResult.clone();
+
     while (ret.hasNext()) {
         DataResult dr = <DataResult> ret.getNext();
         count += 1;
@@ -121,10 +167,7 @@ function __init() {
             imageData: dr.imageData
         });
 
-        // // add up cumulative result from all the PD results to get current cumulative total
-        // if jm.level == "POLLING-DIVISION" {
-        //     addToPresidentialCumulative (<@untainted> jm);
-        // }
+        _ = addToCumulativeFunc(<@untainted> jm);
     }
     if (count > 0) {
         log:printInfo("Loaded " + count.toString() + " previous results from database");
@@ -155,7 +198,7 @@ function __init() {
 
 # Save an incoming result to make sure we don't lose it after getting it
 # + return - error if unable to insert to the database
-function saveResult(Result result) returns error? {
+function saveResult(Result result) returns CumulativeResult|error? {
     // save it without the proper json first so we can put the sequence number into that
     var r = dbClient->update(INSERT_RESULT, result.election, result.code, "", result.'type);
     if r is jdbc:UpdateResult {
@@ -172,13 +215,10 @@ function saveResult(Result result) returns error? {
         return r;
     }
 
-    // // add up cumulative result from all the PD results to get current cumulative total
-    // if result.jsonResult.level == "POLLING-DIVISION" {
-    //     addToPresidentialCumulative (result.jsonResult);
-    // }
-
     // update in memory cache of all results
     resultsCache.push(result);
+    
+    return addToCumulativeFunc(result.jsonResult);
 }
 
 # Save an image associated with a result
@@ -221,20 +261,27 @@ function resetResults() returns error? {
 }
 
 # Add a polling division level result to the cumulative total.
-function addToPresidentialCumulative (map<json> jm) {
+# 
+# + return - the module level record with accumulated results if this result contributed to a cumulative result, 
+#               `()` if not
+function addToPresidentialCumulative(map<json> jm) returns PresidentialCumulativeVotesResult? {
+    if jm.level != "POLLING-DIVISION" {
+        return;
+    }
+
     boolean firstRound = jm.'type == PRESIDENTIAL_RESULT;
     json[] pr = <json[]> checkpanic jm.by_party;
 
-    PresidentialCumulativeResult accum = emptyCumResult; // avoiding optional
+    PresidentialCumulativeVotesResult accum = emptyPresidentialCumResult; // avoiding optional
     if firstRound {
-        accum = cumulativeRes;
+        accum = presidentialCumulativeVotesRes;
     } else {
-        if prefsCumulativeRes.summary.electors == 0 {
+        if presidentialPrefsCumulativeVotesRes.summary.electors == 0 {
             // just starting round 2 - copy over summary data from the previous cumulative
             // total as that's where we start for round 2
-            prefsCumulativeRes.summary = cumulativeRes.summary;
+            presidentialPrefsCumulativeVotesRes.summary = presidentialCumulativeVotesRes.summary;
         }
-        accum = prefsCumulativeRes;
+        accum = presidentialPrefsCumulativeVotesRes;
     }
 
     // add the summary counts in round 1. N/A when adding up 2nd/3rd prefs
@@ -270,8 +317,116 @@ function addToPresidentialCumulative (map<json> jm) {
     }
     accum.nadded += 1;
     if firstRound {
-        cumulativeRes = accum;
+        presidentialCumulativeVotesRes = accum;
     } else {
-        prefsCumulativeRes = accum;
+        presidentialPrefsCumulativeVotesRes = accum;
     }
+    return accum;
+}
+
+# Add a polling division level result to the cumulative parliamentary total.
+# 
+# + return - the record with accumulated results if this result contributed to a cumulative result, `()` if not
+function addToParliamentaryCumulative(map<json> jm) 
+        returns ParliamentaryCumulativeVotesResult|ParliamentaryCumulativeSeatsResult? {
+    match jm.level {
+        "POLLING-DIVISION" => {
+            return addToParliamentaryCumulativeVotes(jm);
+        }
+        "ELECTORAL-DISTRICT" => {
+            return addToParliamentaryCumulativeSeats(jm);
+        }
+    }
+}
+
+function addToParliamentaryCumulativeVotes(map<json> jm) returns ParliamentaryCumulativeVotesResult? {
+    if jm.'type != "R_V" {
+        return;
+    }
+
+    string edCode = <string> jm.ed_code;
+
+    var accum = <ParliamentaryCumulativeVotesResult> parliamentaryDistrictwiseCumVotesRes[edCode];
+
+    json[] pr = <json[]> checkpanic jm.by_party;
+
+    SummaryResult summary = accum.summary;
+    summary.valid += <int>jm.summary.valid;
+    summary.rejected += <int>jm.summary.rejected;
+    summary.polled += <int>jm.summary.polled;
+    // // don't add up electors from postal PDs as those are already in the district elsewhere
+    // string pdCode = <string>jm.pd_code; // check 
+    summary.electors += <int>jm.summary.electors;
+    summary.percent_valid = (accum.summary.polled == 0) ? "0.00" : io:sprintf("%.2f", accum.summary.valid*100.0/accum.summary.polled);
+    summary.percent_rejected = (accum.summary.polled == 0) ? "0.00" : io:sprintf("%.2f", accum.summary.rejected*100.0/accum.summary.polled);
+    summary.percent_polled = (accum.summary.electors == 0) ? "0.00" : io:sprintf("%.2f", accum.summary.polled*100.0/accum.summary.electors);
+
+    if accum.nadded == 0 {
+        pr.forEach(x => accum.by_party.push(checkpanic ParliamentaryPartyResult.constructFrom(x)));
+    } else {
+        foreach int i in 0 ..< pr.length() {
+            json currentPartyRes = pr[i];
+            ParliamentaryPartyResult? res = getMatchingByPartyRecord(accum.by_party, <string>currentPartyRes.party_code);
+
+            if res is () {
+                accum.by_party.push(checkpanic ParliamentaryPartyResult.constructFrom(currentPartyRes));
+            } else {
+                int accumVoteCount = <int> accum.by_party[i]?.vote_count + <int>pr[i].vote_count;
+                accum.by_party[i].vote_count = accumVoteCount;
+                accum.by_party[i].vote_percentage = (accum.summary.valid == 0) ? "0.00" : io:sprintf ("%.2f", ((accumVoteCount*100.0)/accum.summary.valid));
+            }
+        }
+    }
+    accum.nadded += 1;
+    return accum;
+}
+
+function getMatchingByPartyRecord(ParliamentaryPartyResult[] partyResultArray, string partyCode) 
+        returns ParliamentaryPartyResult? {
+    foreach ParliamentaryPartyResult res in partyResultArray {
+        if res.party_code == partyCode {
+            return res;
+        }
+    }
+}
+
+function addToParliamentaryCumulativeSeats(map<json> jm) returns ParliamentaryCumulativeSeatsResult? {
+    if jm.'type != "R_S" {
+        return;
+    }
+
+    json[] pr = <json[]> checkpanic jm.by_party;
+
+    if parliamentaryCumSeatsRes.nadded == 0 {
+        pr.forEach(x => parliamentaryCumSeatsRes.by_party.push(checkpanic ParliamentaryPartyResult.constructFrom(x)));
+    } else {
+        foreach int i in 0 ..< pr.length() {
+            json currentPartyRes = pr[i];
+            ParliamentaryPartyResult? res = getMatchingByPartyRecord(parliamentaryCumSeatsRes.by_party, 
+                                                                     <string>currentPartyRes.party_code);
+
+            if res is () {
+                parliamentaryCumSeatsRes.by_party.push(checkpanic ParliamentaryPartyResult.constructFrom(currentPartyRes));
+            } else {
+                parliamentaryCumSeatsRes.by_party[i].seat_count = 
+                    <int> parliamentaryCumSeatsRes.by_party[i]?.seat_count + <int>pr[i].seat_count;
+            }
+        }
+    }
+    parliamentaryCumSeatsRes.nadded += 1;
+    return parliamentaryCumSeatsRes;
+}
+
+function initializeDistrictwiseCumulativeVotesMap() returns map<ParliamentaryCumulativeVotesResult> {
+    map<ParliamentaryCumulativeVotesResult> cumulativeResultMap = {};
+
+    foreach int index in 1 ... 9 {
+        cumulativeResultMap[string `0${index.toString()}`] = emptyParliamentaryCumVotesResult.clone();
+    }
+
+    foreach int index in 10 ... 22 {
+        cumulativeResultMap[index.toString()] = emptyParliamentaryCumVotesResult.clone();
+    }
+
+    return cumulativeResultMap;
 }
