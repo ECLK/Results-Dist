@@ -121,7 +121,15 @@ public function main (string? username = (),        // my username
         }
     }
 
-    string wsUrl = "ws://localhost:9090/ws";
+    string wsUrl;
+
+    if homeURL.startsWith("http://") {
+        wsUrl = "ws" + homeURL.substring(<int> homeURL.indexOf("http") + 4) + "/connect";
+    } else if homeURL.startsWith("https://") {
+        wsUrl = "wss" + homeURL.substring(<int> homeURL.indexOf("https") + 5) + "/connect";
+    } else {
+        panic error("InvalidHomeUrlError");
+    }
 
     if !(queryString is ()) {
         wsUrl += "?" + queryString;

@@ -156,7 +156,7 @@ function getParliamentaryFileNameBase(string electionCode, map<json> result) ret
     match resultLevel {
         LEVEL_PD => { name = name + "PD" + "-" + result.pd_code.toString(); }
         LEVEL_ED => { name = name + "ED" + "-" + result.ed_code.toString(); }
-        LEVEL_NF => { name = name + "NF"; }
+        LEVEL_NF => { name = name + "N"; }
     }
 
     // add electoral district / polling division names if needed with spaces replaced with _
