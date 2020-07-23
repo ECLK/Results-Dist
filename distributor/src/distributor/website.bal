@@ -238,7 +238,7 @@ service mediaWebsite on mediaListener {
     // May have to move to a separate service.
     @http:ResourceConfig {
         webSocketUpgrade: {
-            upgradePath: "/ws",
+            upgradePath: "/connect",
             upgradeService: disseminator
         }
     }
