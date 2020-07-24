@@ -20,6 +20,7 @@ function(map<json>) cleanupJsonFunc = cleanupPresidentialJson;
 function(map<json>) returns CumulativeResult? addToCumulativeFunc = addToPresidentialCumulative;
 function(CumulativeResult, string, string, string, Result) returns error? sendIncrementalResultFunc = 
                                                                                 sendPresidentialIncrementalResult;
+function(json[], string) returns json[] byPartySortFunction = sortPresidentialByPartyResults;
 
 const string CREATE_RESULTS_TABLE = "CREATE TABLE IF NOT EXISTS results (" +
                                     "    sequenceNo INT NOT NULL AUTO_INCREMENT," + 
@@ -130,6 +131,7 @@ function __init() {
     if electionType == ELECTION_TYPE_PARLIAMENTARY {
         cleanupJsonFunc = cleanupParliamentaryJson;
         addToCumulativeFunc = addToParliamentaryCumulative;
+        byPartySortFunction = sortParliamentaryByPartyResults;
         sendIncrementalResultFunc = sendParliamentaryIncrementalResult;
         parliamentaryDistrictwiseCumVotesRes = initializeDistrictwiseCumulativeVotesMap();
         parliamentaryCumSeatsRes = emptyParliamentaryCumSeatsResult;

@@ -137,10 +137,16 @@ service receiveResults on resultsListener {
 # - update the website with the result
 # - deliver the result data to all subscribers
 function publishResultData(Result result, string? electionCode = (), string? resultCode = ()) {
+    map<json> jsonResult = result.jsonResult;
+
+    if jsonResult.level == "NATIONAL" && !(jsonResult.by_party is error) {
+        jsonResult["by_party"] = byPartySortFunction(<json[]> jsonResult.by_party, result.'type);
+    }
+
     // push it out with the election code and the json result as the message
     json resultAll = {
         election_code : result.election,
-        result : result.jsonResult
+        result : jsonResult
     };
 
     foreach var con in jsonConnections {
