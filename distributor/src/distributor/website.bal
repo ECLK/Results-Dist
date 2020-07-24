@@ -8,7 +8,7 @@ import ballerina/xmlutils;
 const LEVEL_PD = "POLLING-DIVISION";
 const LEVEL_ED = "ELECTORAL-DISTRICT";
 const LEVEL_NI = "NATIONAL-INCREMENTAL";
-const LEVEL_NF = "NATIONAL-FINAL";
+const LEVEL_NF = "NATIONAL";
 
 const WANT_IMAGE = "image";
 const WANT_AWAIT_RESULTS = "await";
@@ -137,9 +137,7 @@ service mediaWebsite on mediaListener {
         }
 
         // bad request
-        http:Response res = new;
-        res.statusCode = http:STATUS_NOT_FOUND;
-        return caller->respond(res);
+        return caller->notFound();
     }
 
     @http:ResourceConfig {
@@ -166,9 +164,7 @@ service mediaWebsite on mediaListener {
         }
 
         // bad request
-        http:Response res = new;
-        res.statusCode = http:STATUS_NOT_FOUND;
-        return caller->respond(res);
+        return caller->notFound();
     }
 
     # Hook for subscriber to be sent some info to display. Can put some HTML content into 
@@ -191,73 +187,58 @@ service mediaWebsite on mediaListener {
         if file:exists("web/active-" + <@untainted> versionNo) {
             return caller->ok("Still good");
         } else {
-            http:Response hr = new;
-            hr.statusCode = http:STATUS_NOT_FOUND;
-            hr.setTextPayload("This version is no longer active; please upgrade (see status message).");
-            return caller->respond(hr);
+            return caller->notFound("This version is no longer active; please upgrade (see status message).");
         }
     }
 
-    // @http:ResourceConfig {
-    //     path: "/sms",
-    //     methods: ["POST"],
-    //     body: "smsRecipient",
-    //     auth: {
-    //         scopes: ["ECAdmin"]
-    //     }
-    // }
-    // resource function smsRegistration (http:Caller caller, http:Request req, Recipient smsRecipient) returns error? {
-    //     string|error validatedNo = validate(smsRecipient.mobile);
-    //     if validatedNo is error {
-    //         http:Response res = new;
-    //         res.statusCode = http:STATUS_BAD_REQUEST;
-    //         res.setPayload(<string> validatedNo.detail()?.message);
-    //         return caller->respond(res);
-    //     }
+    @http:ResourceConfig {
+        path: "/sms",
+        methods: ["POST"],
+        body: "smsRecipient",
+        auth: {
+            scopes: ["ECAdmin"]
+        }
+    }
+    resource function smsRegistration(http:Caller caller, http:Request req, Recipient smsRecipient) returns error? {
+        string|error validatedNo = validate(smsRecipient.mobile);
+        if validatedNo is error {
+            return caller->badRequest(<string> validatedNo.detail()?.message);
+        }
 
-    //     // If the load is high, we might need to sync following db/map update
-    //     string|error status = registerAsSMSRecipient(smsRecipient.username.trim(), <string> validatedNo);
-    //     if status is error {
-    //         http:Response res = new;
-    //         res.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
-    //         res.setPayload(<@untainted> <string> status.detail()?.message);
-    //         return caller->respond(res);
-    //     }
-    //     return caller->ok(<@untainted> <string> status);
-    // }
+        // If the load is high, we might need to sync following db/map update
+        string|error status = registerAsSMSRecipient(smsRecipient.username.trim(), <string> validatedNo);
+        if status is error {
+            return caller->internalServerError(<@untainted> <string> status.detail()?.message);
+        }
+        return caller->ok(<@untainted> <string> status);
+    }
 
-    // @http:ResourceConfig {
-    //     path: "/sms",
-    //     methods: ["DELETE"],
-    //     body: "smsRecipient",
-    //     auth: {
-    //         scopes: ["ECAdmin"]
-    //     }
-    // }
-    // resource function smsDeregistration (http:Caller caller, http:Request req, Recipient smsRecipient) returns error? {
-    //     string|error validatedNo = validate(smsRecipient.mobile);
-    //     if validatedNo is error {
-    //         http:Response res = new;
-    //         res.statusCode = http:STATUS_BAD_REQUEST;
-    //         res.setPayload(<string> validatedNo.detail()?.message);
-    //         return caller->respond(res);
-    //     }
+    @http:ResourceConfig {
+        path: "/sms",
+        methods: ["DELETE"],
+        body: "smsRecipient",
+        auth: {
+            scopes: ["ECAdmin"]
+        }
+    }
+    resource function smsDeregistration(http:Caller caller, http:Request req, Recipient smsRecipient) returns error? {
+        string|error validatedNo = validate(smsRecipient.mobile);
+        if validatedNo is error {
+            return caller->badRequest(<string> validatedNo.detail()?.message);
+        }
 
-    //     // If the load is high, we might need to sync following db/map update
-    //     string|error status = unregisterAsSMSRecipient(smsRecipient.username.trim(), <string> validatedNo);
-    //     if status is error {
-    //         http:Response res = new;
-    //         res.statusCode = http:STATUS_INTERNAL_SERVER_ERROR;
-    //         res.setPayload(<string> status.detail()?.message);
-    //         return caller->respond(res);
-    //     }
-    //     return caller->ok(<string> status);
-    // }
+        // If the load is high, we might need to sync following db/map update
+        string|error status = unregisterAsSMSRecipient(smsRecipient.username.trim(), <string> validatedNo);
+        if status is error {
+            return caller->internalServerError(<@untainted string> status.detail()?.message);
+        }
+        return caller->ok(<@untainted string> status);
+    }
 
     // May have to move to a separate service.
     @http:ResourceConfig {
         webSocketUpgrade: {
-            upgradePath: "/ws",
+            upgradePath: "/connect",
             upgradeService: disseminator
         }
     }
