@@ -45,7 +45,7 @@ function generateHtml (string electionCode, map<json> result, boolean sorted) re
     body += "<p>Votes received by each candidate" + (sorted ? ", sorted highest to lowest" : "") + "</p>";
 
     body += "<table class='table'><tr><th>Name of Candidate</th><th class='text-center'>Party Abbreviaton</th><th class='text-right'>Votes Received</th><th class='text-right'>Percentage</th></tr>";
-    json[] partyResults = sorted ? sortPartyResults(<json[]>result.by_party) : <json[]>result.by_party;
+    json[] partyResults = sorted ? sortByPartyResultsByVoteCount(<json[]>result.by_party) : <json[]>result.by_party;
     foreach json j in partyResults {
         map<json> pr = <map<json>> j; // value is a json object
         body += "<tr><td>" + <string>pr.candidate + "</td><td class='text-center'>" + <string>pr.party_code + "</td><td class='text-right'>" + commaFormatInt(<int>pr.vote_count) + "</td><td class='text-right'>" + <string>pr.vote_percentage + "%</td></tr>";
@@ -71,7 +71,7 @@ function generateHtml (string electionCode, map<json> result, boolean sorted) re
     return "<html>" + head + body + "</html>";
 }
 
-function sortPartyResults (json[] unsorted) returns json[] {
+function sortByPartyResultsByVoteCount (json[] unsorted) returns json[] {
     return unsorted.sort(function (json r1, json r2) returns int {
         int n1 = <int>r1.vote_count;
         int n2 = <int>r2.vote_count;
