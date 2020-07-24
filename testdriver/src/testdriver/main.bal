@@ -27,14 +27,14 @@ map<json>[] resultsByPDFake2 = [];
 map<json>[] parliamentaryFake = [];
 
 // electionCode, first round results array, first round results by PD, second round results array, second round result by PD
-map<[ string, map<map<json>>[], map<json>[], map<map<json>>[], map<json>[] ]> tests = {
+map<[string, map<map<json>>[], map<json>[], map<map<json>>[], map<json>[]]> tests = {
     "2015PB":    [ "2015 Playback", results2015, resultsByPD2015, [], [] ],
     "2019Empty": [ "2019 EMPTY TEST", results2019, resultsByPD2019, [], [] ],
     "FAKE":      [ "MOCK ELECTION", resultsFake, resultsByPDFake, resultsFake2, resultsByPDFake2 ]
 };
 
-map<[ string, map<map<json>>[], map<json>[], map<map<json>>[], map<json>[] ]> parliamentaryTests = {
-    "mock":      [ "MOCK_ELECTION", [], parliamentaryFake, [], [] ]
+map<[string, map<map<json>>[], map<json>[], map<map<json>>[], map<json>[]]> parliamentaryTests = {
+    "FAKE":      [ "FAKE_ELECTION", [], parliamentaryFake, [], [] ]
 };
 
 function(string url, int delay) returns @untainted error? loadData =

@@ -415,7 +415,5 @@ function genFakeParliamentary() {
     ];
 
     // load date to parliamentaryFake[]
-    foreach json j in data {
-        parliamentaryFake.push(j);
-    }
+    parliamentaryFake.push(...data);
 }

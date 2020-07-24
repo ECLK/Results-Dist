@@ -1,8 +1,8 @@
-import ballerina/io;
-import ballerina/http;
-import ballerina/time;
-import ballerina/runtime;
 import ballerina/encoding;
+import ballerina/http;
+import ballerina/io;
+import ballerina/runtime;
+import ballerina/time;
 
 const R_V = "R_V";
 const R_S = "R_S";
@@ -21,21 +21,21 @@ function sendParliamentaryResults(string electionCode, http:Client rc, map<json>
         string resultType = result.'type.toString();
         match resultType {
             R_V => {
-                check updateByParty(result);
+                check updateByParty(<json[]>result.by_party);
                 check updateSummary(result);
                 check feedResult(rc, electionCode, resultType, result.pd_code.toString(), result);
             }
             R_S => {
-                check updateByParty(result);
+                check updateByParty(<json[]>result.by_party);
                 check feedResult(rc, electionCode, resultType, result.ed_code.toString(), result);
             }
             R_VS => {
-                check updateByParty(result);
+                check updateByParty(<json[]>result.by_party);
                 check updateSummary(result);
                 check feedResult(rc, electionCode, resultType, FINAL, result);
             }
             R_VSN => {
-                check updateByParty(result);
+                check updateByParty(<json[]>result.by_party);
                 check updateSummary(result);
                 check feedResult(rc, electionCode, resultType, FINAL, result);
             }
@@ -54,22 +54,17 @@ function sendParliamentaryResults(string electionCode, http:Client rc, map<json>
     }
 }
 
-function updateByParty(map<json> result) returns error? {
-    // add missing info in test data: party_name and candidate for each party result if needed only (2019 set has it)
-    json[] pr = <json[]>result.by_party;
-    foreach int i in 0 ..< pr.length() {
-        map<json> onePr = <map<json>>pr[i];
-        if pr[i].party_name is string {
-            continue;
-        }
-        onePr["party_name"] = (pr[i].party_name is string) ? check pr[i].party_name : "Party " + <string>pr[i].party_code;
-        onePr["candidate"] = (pr[i].candidate is string) ? check pr[i].candidate : "Candidate " + <string>pr[i].party_code;
+function updateByParty(json[] byPartyJson) returns error? {
+    // add missing info in test data:
+    foreach int i in 0 ..< byPartyJson.length() {
+        map<json> party = <map<json>>byPartyJson[i];
         // change percentage to string
-        var val = trap <float>pr[i].vote_percentage;
-        if val is error {
-            // already a string so let it go
+        json val = party["vote_percentage"];
+
+        if val is float {
+            party["vote_percentage"] = io:sprintf ("%.2f", val);
         } else {
-            onePr["vote_percentage"] = io:sprintf ("%.2f", val);
+            // already a string so let it go
         }
     }
 }
@@ -80,7 +75,6 @@ function updateSummary(map<json> result) returns error? {
     summary["percent_valid"] = (<int>result.summary.polled == 0) ? "0.00" : io:sprintf("%.2f", <int>result.summary.valid*100.0/<int>result.summary.polled);
     summary["percent_rejected"] = (<int>result.summary.polled == 0) ? "0.00" : io:sprintf("%.2f", <int>result.summary.rejected*100.0/<int>result.summary.polled);
     summary["percent_polled"] = (<int>result.summary.electors == 0) ? "0.00" : io:sprintf("%.2f", <int>result.summary.polled*100.0/<int>result.summary.electors);
-
 }
 
 

@@ -59,7 +59,7 @@ function startParliamentaryResults(http:Caller caller, http:Request req, string 
         return caller->ok("Test already running; try again later.");
     }
     string ec = <@untainted>electionCode;
-    if ec != "mock" {
+    if ec != "FAKE" {
         check caller->notFound("No such election to run tests with: " + ec);
     }
     check caller->ok("Test data publishing starting.");
