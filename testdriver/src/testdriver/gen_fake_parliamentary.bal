@@ -413,4 +413,7 @@ function genFakeParliamentary() {
             ]
         }
     ];
+
+    // load date to parliamentaryFake[]
+    parliamentaryFake.push(...data);
 }

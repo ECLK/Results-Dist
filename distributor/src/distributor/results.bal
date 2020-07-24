@@ -76,7 +76,7 @@ service receiveResults on resultsListener {
             imageData: ()
         };
         log:printInfo("Result data received for " + electionCode +  "/" + resultType + "/" + resultCode);
-        
+
         // store the result in the DB against the resultCode and assign it a sequence #
         CumulativeResult? resCumResult = check saveResult(result);
     
@@ -204,7 +204,7 @@ function cleanupParliamentaryJson(map<json> jin) {
                 j["seat_count"] = (j.seat_count == "") ? 0 : <int>'int:fromString(<string>j.seat_count);
             }
             if j.national_list_seat_count is string {
-                j["national_list_seat_count"] = (j.national_list_seat_count == "") ? 0 : 
+                j["national_list_seat_count"] = (j.national_list_seat_count == "") ? 0 :
                                                     <int>'int:fromString(<string>j.national_list_seat_count);
             }
         }
@@ -212,7 +212,7 @@ function cleanupParliamentaryJson(map<json> jin) {
 
     if !(jin.hasKey("summary")) {
         return;
-    } 
+    }
 
     cleanUpSummaryJson(<map<json>>jin.summary);
 }
@@ -268,13 +268,13 @@ function sendParliamentaryIncrementalResult(CumulativeResult resCumResult, strin
                                             string resultCode, Result result) returns error? {
     if resCumResult is ParliamentaryCumulativeVotesResult {
         return sendParliamentaryIncrementalVotesResult(resCumResult, electionCode, "R_VI", resultCode, result);
-    }    
+    }
 
     return sendParliamentaryIncrementalSeatsResult(resCumResult, electionCode, "R_SI", resultCode, result);
 }
 
-function sendParliamentaryIncrementalVotesResult(CumulativeResult resCumResult, string electionCode, string resultType, 
-                                                 string resultCode, Result result) returns error? {                                  
+function sendParliamentaryIncrementalVotesResult(CumulativeResult resCumResult, string electionCode, string resultType,
+                                                 string resultCode, Result result) returns error? {
     log:printInfo("Publishing cumulative result with " + electionCode +  "/" + resultType + "/" + resultCode);
 
     ParliamentaryCumulativeVotesResult parliamentaryCumResult = <ParliamentaryCumulativeVotesResult> resCumResult;
