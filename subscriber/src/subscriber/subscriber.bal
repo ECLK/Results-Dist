@@ -44,7 +44,7 @@ public function main (string? username = (),        // my username
                       boolean html = false,         // do I want HTML?
                       boolean sorted = true,        // do I want HTML results sorted highest to lowest
                       boolean wantCode = false,     // do I want electionCode in the filename
-                      string homeURL = "https://resultstest.ecdev.opensource.lk", // where do I connect at
+                      string homeURL = "https://mediaresultshub.ecdev.opensource.lk", // where do I connect at
                       ElectionType mode = ELECTION_TYPE_PARLIAMENTARY
                     ) returns @tainted error? {
 
@@ -88,7 +88,9 @@ public function main (string? username = (),        // my username
         io:println("Message from the results system:\n");
         io:println(msg);
     } else {
-        return error("Unexpected response from distributor service: " + hr.toString());
+        string|error payload = hr.getTextPayload();
+        return error("Unexpected response from distributor service: " + hr.statusCode.toString() + 
+                     (payload is string ? (": " + payload) : ""));
     }
 
     // check whether this version is still supported
