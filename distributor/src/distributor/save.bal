@@ -410,8 +410,7 @@ function addToParliamentaryCumulativeSeats(map<json> jm) returns ParliamentaryCu
             if res is () {
                 parliamentaryCumSeatsRes.by_party.push(checkpanic ParliamentaryPartyResult.constructFrom(currentPartyRes));
             } else {
-                parliamentaryCumSeatsRes.by_party[i].seat_count = 
-                    <int> parliamentaryCumSeatsRes.by_party[i]?.seat_count + <int>pr[i].seat_count;
+                res.seat_count = <int> res?.seat_count + <int> currentPartyRes.seat_count;
             }
         }
     }
