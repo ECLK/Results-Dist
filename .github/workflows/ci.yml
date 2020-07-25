@@ -1,0 +1,46 @@
+name: Result-Dist CI Workflow
+
+on: [push, pull_request]
+
+jobs:
+  distributor_build:
+    
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+    
+      - name: Distributor Build
+        uses: ballerina-platform/ballerina-action@1.2.4
+        with:
+          args: 
+            build --sourceroot=./distributor -a --skip-tests
+
+  subscriber_build:
+    
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+    
+      - name: Subscriber Build
+        uses: ballerina-platform/ballerina-action@1.2.4
+        with:
+          args: 
+            build --sourceroot=./subscriber -a
+
+  testdriver_build:
+    
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+    
+      - name: Test Driver Build
+        uses: ballerina-platform/ballerina-action@1.2.4
+        with:
+          args: 
+            build --sourceroot=./testdriver -a

@@ -8,7 +8,7 @@ import maryamzi/sound;
 const WANT_IMAGE = "image=true";
 const WANT_AWAIT_RESULTS = "await=true";
 
-const MY_VERSION = "2019-11-15";
+const MY_VERSION = "2020-07-25";
 
 const UNDERSOCRE = "_";
 const COLON = ":";
@@ -41,25 +41,23 @@ public function main (string? username = (),        // my username
                       boolean 'json = false,        // do I want json?
                       boolean 'xml = false,         // do I want xml?
                       boolean image = false,        // do I want the image?
-                      boolean html = false,         // do I want HTML?
-                      boolean sorted = true,        // do I want HTML results sorted highest to lowest
+                    //   boolean html = false,         // do I want HTML?
+                    //   boolean sorted = true,        // do I want HTML results sorted highest to lowest
                       boolean wantCode = false,     // do I want electionCode in the filename
-                      string homeURL = "https://resultstest.ecdev.opensource.lk", // where do I connect at
-                      ElectionType mode = ELECTION_TYPE_PARLIAMENTARY
+                      string homeURL = "https://mediaresultshub.ecdev.opensource.lk" // where do I connect at
                     ) returns @tainted error? {
-
     // Set the election type
-    electionType = <@untainted>mode;
+    electionType = ELECTION_TYPE_PARLIAMENTARY;
 
     // check what format the user wants results in
     wantJson = <@untainted>'json;
     wantXml = <@untainted>'xml;
-    wantHtml = <@untainted>html;
+    // wantHtml = <@untainted>html;
     if !(wantJson || wantXml || wantHtml) {
         // default to giving json
         wantJson = true;
     }
-    sortedHtml = <@untainted>sorted;
+    // sortedHtml = <@untainted>sorted;
 
     // set up auth
     string? token = ();
@@ -88,7 +86,9 @@ public function main (string? username = (),        // my username
         io:println("Message from the results system:\n");
         io:println(msg);
     } else {
-        return error("Unexpected response from distributor service: " + hr.toString());
+        string|error payload = hr.getTextPayload();
+        return error("Unexpected response from distributor service: " + hr.statusCode.toString() + 
+                     (payload is string ? (": " + payload) : ""));
     }
 
     // check whether this version is still supported
