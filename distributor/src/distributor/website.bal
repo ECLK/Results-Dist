@@ -221,7 +221,7 @@ service mediaWebsite on mediaListener {
     //   { "username":"newuser3", "mobile":"0771234569" }
     // ]
     @http:ResourceConfig {
-        path: "/sms/addall",
+        path: "/sms/all",
         methods: ["POST"],
         consumes: ["application/octet-stream"],
         auth: {
@@ -271,7 +271,7 @@ service mediaWebsite on mediaListener {
     }
 
     @http:ResourceConfig {
-        path: "/sms/reset",
+        path: "/sms/all",
         methods: ["DELETE"],
         auth: {
             scopes: ["ECAdmin"]
