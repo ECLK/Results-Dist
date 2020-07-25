@@ -14,8 +14,8 @@ function testReceivedDataViaTesDriverFakeElection() {
     testR_VI("0008-R_VI-ED-02--Gampaha.json", 10, 50, 20, 80, 10, 90, 100);
     testR_VI("0010-R_VI-ED-02--Gampaha.json", 60, 70, 40, 170, 20, 190, 225);
 
-    //testNational("0012-R_SI-N.json", "Foo", 10, "Bar", 5, "Baz", 3);
-    //testNational("0014-R_SI-N.json", "Bar", 25, "Foo", 18, "Baz", 4);
+    testNational("0012-R_SI-N.json", "Foo", 10, "Bar", 5, "Baz", 3);
+    testNational("0014-R_SI-N.json", "Bar", 25, "Foo", 18, "Baz", 4);
 
     testNational("0015-R_VS-N.json", "Foo", 100, "Bar", 75, "Baz", 25);
     testNational("0016-R_VSN-N.json", "Foo", 100, "Bar", 75, "Baz", 25);
