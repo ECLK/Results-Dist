@@ -8,7 +8,7 @@ import maryamzi/sound;
 const WANT_IMAGE = "image=true";
 const WANT_AWAIT_RESULTS = "await=true";
 
-const MY_VERSION = "2019-11-15";
+const MY_VERSION = "2020-07-25";
 
 const UNDERSOCRE = "_";
 const COLON = ":";
@@ -25,8 +25,14 @@ boolean sortedHtml = false;
 
 boolean wantCode = false;
 
+const ELECTION_TYPE_PRESIDENTIAL = "PRESIDENTIAL";
+const ELECTION_TYPE_PARLIAMENTARY = "PARLIAMENTARY";
+
+public type ElectionType ELECTION_TYPE_PRESIDENTIAL|ELECTION_TYPE_PARLIAMENTARY;
+
 http:OutboundAuthConfig? auth = ();
 http:Client? imageClient = ();
+ElectionType electionType = ELECTION_TYPE_PARLIAMENTARY;
 
 // what formats does the user want results saved in?
 public function main (string? username = (),        // my username  
@@ -35,21 +41,23 @@ public function main (string? username = (),        // my username
                       boolean 'json = false,        // do I want json?
                       boolean 'xml = false,         // do I want xml?
                       boolean image = false,        // do I want the image?
-                      boolean html = false,         // do I want HTML?
-                      boolean sorted = true,        // do I want HTML results sorted highest to lowest
+                    //   boolean html = false,         // do I want HTML?
+                    //   boolean sorted = true,        // do I want HTML results sorted highest to lowest
                       boolean wantCode = false,     // do I want electionCode in the filename
-                      string homeURL = "https://resultstest.ecdev.opensource.lk" // where do I connect at
+                      string homeURL = "https://mediaresultshub.ecdev.opensource.lk" // where do I connect at
                     ) returns @tainted error? {
+    // Set the election type
+    electionType = ELECTION_TYPE_PARLIAMENTARY;
 
     // check what format the user wants results in
     wantJson = <@untainted>'json;
     wantXml = <@untainted>'xml;
-    wantHtml = <@untainted>html;
+    // wantHtml = <@untainted>html;
     if !(wantJson || wantXml || wantHtml) {
         // default to giving json
         wantJson = true;
     }
-    sortedHtml = <@untainted>sorted;
+    // sortedHtml = <@untainted>sorted;
 
     // set up auth
     string? token = ();
@@ -78,7 +86,9 @@ public function main (string? username = (),        // my username
         io:println("Message from the results system:\n");
         io:println(msg);
     } else {
-        return error("Unexpected response from distributor service: " + hr.toString());
+        string|error payload = hr.getTextPayload();
+        return error("Unexpected response from distributor service: " + hr.statusCode.toString() + 
+                     (payload is string ? (": " + payload) : ""));
     }
 
     // check whether this version is still supported
@@ -111,7 +121,15 @@ public function main (string? username = (),        // my username
         }
     }
 
-    string wsUrl = "ws://localhost:9090/ws";
+    string wsUrl;
+
+    if homeURL.startsWith("http://") {
+        wsUrl = "ws" + homeURL.substring(<int> homeURL.indexOf("http") + 4) + "/connect";
+    } else if homeURL.startsWith("https://") {
+        wsUrl = "wss" + homeURL.substring(<int> homeURL.indexOf("https") + 5) + "/connect";
+    } else {
+        panic error("InvalidHomeUrlError");
+    }
 
     if !(queryString is ()) {
         wsUrl += "?" + queryString;

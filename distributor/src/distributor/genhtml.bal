@@ -53,18 +53,18 @@ function generateHtml (string electionCode, map<json> result, boolean sorted) re
     } else {
         body += "<table class='table'><tr><th>Name of Candidate</th><th class='text-center'>Party Abbreviaton</th><th class='text-right'>1st Preferences</th><th class='text-right'>2nd Preferences</th><th class='text-right'>3rd Preferences</th><th class='text-right'>Total Votes Received</th><th class='text-right'>Percentage</th></tr>";
     }
-    json[] partyResults = sorted ? sortPartyResults(<json[]>result.by_party) : <json[]>result.by_party;
+    json[] partyResults = sorted ? sortByPartyResultsByVoteCount(<json[]>result.by_party) : <json[]>result.by_party;
     foreach json j in partyResults {
         map<json> pr = <map<json>> j; // value is a json object
         if firstRound {
-            body += "<tr><td>" + <string>pr.candidate + "</td><td class='text-center'>" + <string>pr.party_code + "</td><td class='text-right'>" + commaFormatInt(<int>pr.votes) + "</td><td class='text-right'>" + <string>pr.percentage + "%</td></tr>";
+            body += "<tr><td>" + <string>pr.candidate + "</td><td class='text-center'>" + <string>pr.party_code + "</td><td class='text-right'>" + commaFormatInt(<int>pr.vote_count) + "</td><td class='text-right'>" + <string>pr.vote_percentage + "%</td></tr>";
         } else {
             body += "<tr><td>" + <string>pr.candidate + "</td><td class='text-center'>" + <string>pr.party_code 
                                + "</td><td class='text-right'>" + commaFormatInt(<int>pr.votes1st) 
                                + "</td><td class='text-right'>" + commaFormatInt(<int>pr.votes2nd) 
                                + "</td><td class='text-right'>" + commaFormatInt(<int>pr.votes3rd) 
-                               + "</td><td class='text-right'>" + commaFormatInt(<int>pr.votes) 
-                               + "</td><td class='text-right'>" + <string>pr.percentage + "%</td></tr>";
+                               + "</td><td class='text-right'>" + commaFormatInt(<int>pr.vote_count) 
+                               + "</td><td class='text-right'>" + <string>pr.vote_percentage + "%</td></tr>";
         }
     }
     body += "</table>";
@@ -88,12 +88,38 @@ function generateHtml (string electionCode, map<json> result, boolean sorted) re
     return "<html>" + head + body + "</html>";
 }
 
-function sortPartyResults (json[] unsorted) returns json[] {
+function sortByPartyResultsByVoteCount (json[] unsorted) returns json[] {
     return unsorted.sort(function (json r1, json r2) returns int {
-        int n1 = <int>r1.votes;
-        int n2 = <int>r2.votes;
+        int n1 = <int>r1.vote_count;
+        int n2 = <int>r2.vote_count;
         return (n1 < n2) ? 1 : (n1 == n2 ? 0 : -1);
     });
+}
+
+function sortByPartyResultsBySeatCount(json[] unsorted) returns json[] {
+    return unsorted.sort(function (json r1, json r2) returns int {
+        return <int> r2.seat_count - <int> r1.seat_count;
+    });
+}
+
+function sortPresidentialByPartyResults(json[] unsorted, string resultType) returns json[] {
+    return sortByPartyResultsByVoteCount(unsorted);
+}
+
+function sortParliamentaryByPartyResults(json[] unsorted, string resultType) returns json[] {
+    if unsorted.length() == 0 {
+        return unsorted;
+    }
+
+    match resultType {
+        "R_NC"|"R_SCNC" => {
+            return unsorted;
+        }
+        "R_SI" => {
+            return sortByPartyResultsBySeatCount(unsorted);
+        }
+    }
+    return sortByPartyResultsByVoteCount(unsorted);
 }
 
 function commaFormatInt (int n) returns string {

@@ -8,7 +8,7 @@ import ballerina/xmlutils;
 const LEVEL_PD = "POLLING-DIVISION";
 const LEVEL_ED = "ELECTORAL-DISTRICT";
 const LEVEL_NI = "NATIONAL-INCREMENTAL";
-const LEVEL_NF = "NATIONAL-FINAL";
+const LEVEL_NF = "NATIONAL";
 
 const WANT_IMAGE = "image";
 const WANT_AWAIT_RESULTS = "await";
@@ -287,7 +287,7 @@ service mediaWebsite on mediaListener {
     // May have to move to a separate service.
     @http:ResourceConfig {
         webSocketUpgrade: {
-            upgradePath: "/ws",
+            upgradePath: "/connect",
             upgradeService: disseminator
         }
     }

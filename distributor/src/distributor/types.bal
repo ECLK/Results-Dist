@@ -1,3 +1,4 @@
+type ElectionType ELECTION_TYPE_PRESIDENTIAL|ELECTION_TYPE_PARLIAMENTARY;
 
 type ResultLevel 
     "POLLING-DIVISION" | 
@@ -5,15 +6,27 @@ type ResultLevel
     "NATIONAL-INCREMENTAL" | 
     "NATIONAL-FINAL";
 
-type PartyResult record {|
+type PartyResult record {
     string party_code;
     string party_name;
+};
+
+type PresidentialPartyResult record {|
+    *PartyResult;
+    int vote_count;
+    string vote_percentage;
     string candidate;
-    int votes;
     int votes1st?;
     int votes2nd?;
     int votes3rd?;
-    string percentage;
+|};
+
+type ParliamentaryPartyResult record {|
+    *PartyResult;
+    int vote_count?;
+    string vote_percentage?;
+    int seat_count?;
+    int national_list_seat_count?;
 |};
 
 type SummaryResult record {|
