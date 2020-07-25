@@ -1,3 +1,5 @@
+![Result-Dist CI Workflow](https://github.com/ECLK/Results-Dist/workflows/Result-Dist%20CI%20Workflow/badge.svg)
+
 # Results Distribution System
 
 This is the system that distributes an Election Commission approved result to registered media entities.
