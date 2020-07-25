@@ -8,7 +8,7 @@ import maryamzi/sound;
 const WANT_IMAGE = "image=true";
 const WANT_AWAIT_RESULTS = "await=true";
 
-const MY_VERSION = "2019-11-15";
+const MY_VERSION = "2020-07-25";
 
 const UNDERSOCRE = "_";
 const COLON = ":";
@@ -44,12 +44,10 @@ public function main (string? username = (),        // my username
                     //   boolean html = false,         // do I want HTML?
                     //   boolean sorted = true,        // do I want HTML results sorted highest to lowest
                       boolean wantCode = false,     // do I want electionCode in the filename
-                      string homeURL = "https://mediaresultshub.ecdev.opensource.lk", // where do I connect at
-                      ElectionType mode = ELECTION_TYPE_PARLIAMENTARY
+                      string homeURL = "https://mediaresultshub.ecdev.opensource.lk" // where do I connect at
                     ) returns @tainted error? {
-
     // Set the election type
-    electionType = <@untainted>mode;
+    electionType = ELECTION_TYPE_PARLIAMENTARY;
 
     // check what format the user wants results in
     wantJson = <@untainted>'json;
