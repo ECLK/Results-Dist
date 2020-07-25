@@ -375,7 +375,7 @@ function addToParliamentaryCumulativeVotes(map<json> jm) returns ParliamentaryCu
             } else {
                 int accumVoteCount = <int> accum.by_party[i]?.vote_count + <int>pr[i].vote_count;
                 accum.by_party[i].vote_count = accumVoteCount;
-                accum.by_party[i].vote_percentage = (accum.summary.valid == 0) ? "0.00" : io:sprintf ("%.2f", ((accumVoteCount*100.0)/accum.summary.valid));
+                accum.by_party[i].vote_percentage = (accum.summary.valid == 0) ? "0.00" : io:sprintf ("%.2f", ((accumVoteCount*1.0)/accum.summary.valid));
             }
         }
     }

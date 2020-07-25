@@ -219,6 +219,14 @@ function genFakeParliamentary() {
             "ed_name": "Gampaha",
             "by_party": [
                 {
+                    "party_code": "Baz",
+                    "party_name": "Baz baz",
+                    "vote_count": 0,
+                    "vote_percentage": 0.00,
+                    "seat_count": 3,
+                    "national_list_seat_count": 0
+                },
+                {
                     "party_code": "Foo",
                     "party_name": "Foo foo",
                     "vote_count": 0,
@@ -230,14 +238,6 @@ function genFakeParliamentary() {
                     "party_code": "Bar",
                     "party_name": "Bar bar",
                     "seat_count": 5,
-                    "national_list_seat_count": 0
-                },
-                {
-                    "party_code": "Baz",
-                    "party_name": "Baz baz",
-                    "vote_count": 0,
-                    "vote_percentage": 0.00,
-                    "seat_count": 3,
                     "national_list_seat_count": 0
                 }
             ]
@@ -263,7 +263,7 @@ function genFakeParliamentary() {
                     "party_name": "Bar bar",
                     "vote_count": 0,
                     "vote_percentage": 0.00,
-                    "seat_count": 10,
+                    "seat_count": 20,
                     "national_list_seat_count": 0
                 },
                 {
@@ -281,14 +281,6 @@ function genFakeParliamentary() {
             "level": "NATIONAL",
             "by_party": [
                 {
-                    "party_code": "Foo",
-                    "party_name": "Foo foo",
-                    "vote_count": 18200,
-                    "vote_percentage": 0.48,
-                    "seat_count": 100,
-                    "national_list_seat_count": 0
-                },
-                {
                     "party_code": "Bar",
                     "party_name": "Bar bar",
                     "vote_count": 12540,
@@ -302,6 +294,14 @@ function genFakeParliamentary() {
                     "vote_count": 7500,
                     "vote_percentage": 0.20,
                     "seat_count": 25,
+                    "national_list_seat_count": 0
+                },
+                {
+                    "party_code": "Foo",
+                    "party_name": "Foo foo",
+                    "vote_count": 18200,
+                    "vote_percentage": 0.48,
+                    "seat_count": 100,
                     "national_list_seat_count": 0
                 }
             ],
@@ -319,6 +319,14 @@ function genFakeParliamentary() {
             "level": "NATIONAL",
             "by_party": [
                 {
+                    "party_code": "Baz",
+                    "party_name": "Baz baz",
+                    "vote_count": 7500,
+                    "vote_percentage": 0.20,
+                    "seat_count": 25,
+                    "national_list_seat_count": 4
+                },
+                {
                     "party_code": "Foo",
                     "party_name": "Foo foo",
                     "vote_count": 18200,
@@ -333,14 +341,6 @@ function genFakeParliamentary() {
                     "vote_percentage": 0.33,
                     "seat_count": 75,
                     "national_list_seat_count": 9
-                },
-                {
-                    "party_code": "Baz",
-                    "party_name": "Baz baz",
-                    "vote_count": 7500,
-                    "vote_percentage": 0.20,
-                    "seat_count": 25,
-                    "national_list_seat_count": 4
                 }
             ],
             "summary": {
