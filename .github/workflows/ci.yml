@@ -1,6 +1,6 @@
 name: Result-Dist CI Workflow
 
-on: [push]
+on: [pull_request]
 
 jobs:
   distributor_build:
