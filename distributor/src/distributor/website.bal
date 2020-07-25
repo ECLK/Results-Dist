@@ -231,6 +231,7 @@ service mediaWebsite on mediaListener {
     resource function smsBulkRegistration (http:Caller caller, http:Request req) returns error? {
         Recipient[]|error recipient = readRecipients(req.getByteChannel());
         if recipient is error {
+            log:printError("Invalid input", recipient);
             return caller->badRequest(<@untainted> recipient.toString());
         }
         Recipient[] smsRecipient = <Recipient[]> recipient;

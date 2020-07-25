@@ -156,32 +156,27 @@ function unregisterSmsRecipient(string username, string mobileNo) returns string
 
 function unregisterAllSMSRecipient() returns error? {
     mobileSubscribers = {};
-    _ = check dbClient->update(DROP_RECIPIENT_TABLE);
-    _ = check dbClient->update(CREATE_RECIPIENT_TABLE);
+    _ = check dbClient->update(DELETE_RECIPIENT_TABLE);
 }
 
 function readRecipients(io:ReadableByteChannel|error payload) returns @tainted Recipient[]|error {
-    Recipient[] recipients = [];
-    if (payload is io:ReadableByteChannel) {
-        io:ReadableCharacterChannel rch = new (payload, "UTF8");
-        var result = rch.readJson();
-        closeReadableChannel(rch);
-        if (result is error) {
-            string logMessage = "Error occurred while reading json: malformed Recipient[]";
-            log:printError(logMessage, result);
-            return error(ERROR_REASON, message = logMessage, cause = result);
-        }
 
-        any|error recipientArray = Recipient[].constructFrom(<json>result);
-        if recipientArray is error {
-            string logMessage = "Error occurred while converting json: malformed Recipient[]";
-            log:printError(logMessage, recipientArray);
-            return error(ERROR_REASON, message = logMessage, cause = recipientArray);
-        }
-        return <Recipient[]> recipientArray;
-    } else {
-        return payload;
+    io:ReadableByteChannel rbChannel = check payload;
+
+    io:ReadableCharacterChannel rch = new (rbChannel, "UTF8");
+    var result = rch.readJson();
+    closeReadableChannel(rch);
+    if (result is error) {
+        string logMessage = "Error occurred while reading json: malformed Recipient[]";
+        return error(ERROR_REASON, message = logMessage, cause = result);
     }
+
+    Recipient[]|error recipientArray = Recipient[].constructFrom(<json>result);
+    if recipientArray is error {
+        string logMessage = "Error occurred while converting json: malformed Recipient[]";
+        return error(ERROR_REASON, message = logMessage, cause = recipientArray);
+    }
+    return recipientArray;
 }
 
 function closeReadableChannel(io:ReadableCharacterChannel rc) {

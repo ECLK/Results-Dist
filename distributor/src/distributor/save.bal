@@ -45,6 +45,7 @@ const INSERT_RECIPIENT = "INSERT INTO smsRecipients (username, mobileNo) VALUES 
 const DELETE_RECIPIENT = "DELETE FROM smsRecipients WHERE username = ?";
 const SELECT_RECIPIENT_DATA = "SELECT * FROM smsRecipients";
 const DROP_RECIPIENT_TABLE = "DROP TABLE smsRecipients";
+const DELETE_RECIPIENT_TABLE = "DELETE FROM smsRecipients";
 
 jdbc:Client dbClient = new ({
     url: config:getAsString("eclk.hub.db.url"),
