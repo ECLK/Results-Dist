@@ -1,0 +1,64 @@
+name: Result-Dist Persist Artifact Workflow
+
+on: [workflow_dispatch]
+
+jobs:
+  distributor_build:
+    
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+    
+      - name: Distributor Build
+        uses: ballerina-platform/ballerina-action@master
+        with:
+          args: 
+            build --sourceroot=./distributor -a --skip-tests
+
+      - name: Upload JAR
+        uses: actions/upload-artifact@v2
+        with:
+          name: distributor.jar
+          path: ./distributor/target/bin/
+
+  subscriber_build:
+    
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+    
+      - name: Subscriber Build
+        uses: ballerina-platform/ballerina-action@master
+        with:
+          args: 
+            build --sourceroot=./subscriber -a 
+
+      - name: Upload JAR
+        uses: actions/upload-artifact@v2
+        with:
+          name: subscriber.jar
+          path: ./subscriber/target/bin/
+
+  testdriver_build:
+    
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+    
+      - name: Test Driver Build
+        uses: ballerina-platform/ballerina-action@master
+        with:
+          args: 
+            build --sourceroot=./testdriver -a 
+
+      - name: Upload JAR
+        uses: actions/upload-artifact@v2
+        with:
+          name: testdriver.jar
+          path: ./testdriver/target/bin/
