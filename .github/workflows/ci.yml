@@ -12,7 +12,7 @@ jobs:
         uses: actions/checkout@v2
     
       - name: Distributor Build
-        uses: ballerina-platform/ballerina-action@master
+        uses: ballerina-platform/ballerina-action@v1.2.4
         with:
           args: 
             build --sourceroot=./distributor -a --skip-tests
@@ -26,7 +26,7 @@ jobs:
         uses: actions/checkout@v2
     
       - name: Subscriber Build
-        uses: ballerina-platform/ballerina-action@master
+        uses: ballerina-platform/ballerina-action@v1.2.4
         with:
           args: 
             build --sourceroot=./subscriber -a
@@ -40,7 +40,7 @@ jobs:
         uses: actions/checkout@v2
     
       - name: Test Driver Build
-        uses: ballerina-platform/ballerina-action@master
+        uses: ballerina-platform/ballerina-action@v1.2.4
         with:
           args: 
             build --sourceroot=./testdriver -a
