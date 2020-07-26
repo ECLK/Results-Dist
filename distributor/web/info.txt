@@ -18,6 +18,7 @@ where options are:
 	-await=true|false       do I want an "Await Results" notification (default: false)
 	-json=true|false        do I want JSON output (default: false)
 	-xml=true|false         do I want XML output (default: false)
+	-html=true|false        do I want HTML output (default: false)
 	-image=true|false       do I want release proof image (default: false)
 	-wantCode=true|false    do I want the electionCode in the filename (default: false)
 	-homeURL=URL            subscription URL (default: https://mediaresultshub.ecdev.opensource.lk)

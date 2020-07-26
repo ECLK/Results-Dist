@@ -75,7 +75,6 @@ function generateParliamentaryResultHtml(string electionCode, map<json> result, 
     boolean sorted = (result.jsonResult.'type == RN_SI || result.jsonResult.'type == RN_VS ||
                                             result.jsonResult.'type == RN_VSN) ? true : false;
     string electionName = "Parliamentary Election - " + electionCode;
-
     string timeNow = check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ");
 
     string head = "<head>";
@@ -98,9 +97,9 @@ function generateParliamentaryResultHtml(string electionCode, map<json> result, 
         RN_SI => { resTypeHeading = "ALL ISLAND CUMULATIVE SEAT ALLOCATION RESULTS AT " + <string>result.timestamp; }
         RN_VS => { resTypeHeading = "ALL ISLAND VOTES + SEAT ALLOCATION RESULT"; }
         RN_VSN => { resTypeHeading = "ALL ISLAND VOTES + SEAT ALLOCATION + NATIONAL LIST ALLOCATION RESULT"; }
-        RE_SC => { resTypeHeading = <string>result.ed_name + " ELECTORAL DISTRICT SEATS ALLOCATED CANDIDATES RESULT"; }
-        RN_NC => { resTypeHeading = "ALL ISLAND NATIONAL LIST CANDIDATES RESULT"; }
-        RN_SCNC => { resTypeHeading = "ALL ISLAND SEATS ALLOCATED + NATIONAL LIST CANDIDATES RESULT"; }
+        RE_SC => { resTypeHeading = <string>result.ed_name + " ELECTORAL DISTRICT SEATS ALLOCATED CANDIDATES"; }
+        RN_NC => { resTypeHeading = "ALL ISLAND NATIONAL LIST CANDIDATES"; }
+        RN_SCNC => { resTypeHeading = "ALL ISLAND SEATS ALLOCATION + NATIONAL LIST CANDIDATES"; }
     }
     body += "<p>" + resTypeHeading.toUpperAscii() + "</p>";
 
@@ -109,15 +108,17 @@ function generateParliamentaryResultHtml(string electionCode, map<json> result, 
         body += "<table class='table'>" +
                 "<tr>" +
                 "<th>Name of Party</th>" +
-                "<th class='text-center'>Party Abbreviaton</th>" +
-                "<th class='text-right'>Votes Received</th>" +
-                "<th class='text-right'>Percentage</th>";
-        match 'type {
-            RE_S|RN_SI|RN_VS => {
-                body += "<th class='text-right'>Seat Allocation</th>"; }
-            RN_VSN => {
-                body += "<th class='text-right'>Seat Allocation</th>" +
-                        "<th class='text-right'>Nationa List Seat Allocation</th>"; }
+                "<th class='text-center'>Party Abbreviaton</th>";
+
+        if ('type == RP_V || 'type == RE_VI || 'type == RN_VS || 'type == RN_VSN) {
+            body += "<th class='text-right'>Votes Received</th>" +
+                    "<th class='text-right'>Percentage</th>";
+        }
+        if ('type == RE_S || 'type == RN_SI || 'type == RN_VS || 'type == RN_VSN) {
+            body += "<th class='text-right'>Seat Allocation</th>";
+        }
+        if ('type == RN_VSN) {
+            body += "<th class='text-right'>Nationa List Seat Allocation</th>";
         }
         body += "</tr>";
         json[] partyResults = <json[]>result.by_party;
@@ -125,15 +126,17 @@ function generateParliamentaryResultHtml(string electionCode, map<json> result, 
             map<json> pr = <map<json>> j; // value is a json object
             body += "<tr>" +
                     "<td>" + <string>pr.party_name + "</td>" +
-                    "<td class='text-center'>" + <string>pr.party_code +"</td>" +
-                    "<td class='text-right'>" + commaFormatInt(<int>pr.vote_count) + "</td>" +
-                    "<td class='text-right'>" + <string>pr.vote_percentage + "</td>";
-            match 'type {
-                RE_S|RN_SI|RN_VS => {
-                    body += "<td class='text-right'>" + commaFormatInt(<int>pr.seat_count) + "</td>"; }
-                RN_VSN => {
-                    body += "<td class='text-right'>" + commaFormatInt(<int>pr.seat_count) + "</td>" +
-                            "<td class='text-right'>" + commaFormatInt(<int>pr.national_list_seat_count) + "</td>"; }
+                    "<td class='text-center'>" + <string>pr.party_code +"</td>";
+
+            if ('type == RP_V || 'type == RE_VI || 'type == RN_VS || 'type == RN_VSN) {
+                body += "<td class='text-right'>" + commaFormatInt(<int>pr.vote_count) + "</td>" +
+                        "<td class='text-right'>" + <string>pr.vote_percentage + "</td>";
+            }
+            if ('type == RE_S || 'type == RN_SI || 'type == RN_VS || 'type == RN_VSN) {
+                body += "<td class='text-right'>" + commaFormatInt(<int>pr.seat_count) + "</td>";
+            }
+            if ('type == RN_VSN) {
+                body += "<td class='text-right'>" + commaFormatInt(<int>pr.national_list_seat_count) + "</td>";
             }
             body += "</tr>";
         }

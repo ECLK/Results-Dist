@@ -237,8 +237,6 @@ function genFakeParliamentary() {
                 {
                     "party_code": "Bar",
                     "party_name": "Bar bar",
-                    "vote_count": 0,
-                    "vote_percentage": 0.00,
                     "seat_count": 5,
                     "national_list_seat_count": 0
                 }
@@ -271,8 +269,6 @@ function genFakeParliamentary() {
                 {
                     "party_code": "Baz",
                     "party_name": "Baz baz",
-                    "vote_count": 0,
-                    "vote_percentage": 0.00,
                     "seat_count": 1,
                     "national_list_seat_count": 0
                 }
@@ -366,8 +362,7 @@ function genFakeParliamentary() {
                     "party_code": "Foo",
                     "party_name": "Foo foo",
                     "candidate_number": "12",
-                    "candidate_name": "Lorem Ipsum",
-                    "candidate_type" : "Normal"
+                    "candidate_name": "Lorem Ipsum"
 
                 },
                 {
@@ -390,8 +385,7 @@ function genFakeParliamentary() {
                     "party_code": "Bar",
                     "party_name": "Bar bar",
                     "candidate_number": "15",
-                    "candidate_name": "Baz Qux",
-                    "candidate_type" : "Normal"
+                    "candidate_name": "Baz Qux"
                 }
             ]
         },
