@@ -1,7 +1,7 @@
 function genFakeParliamentary() {
     map<json>[] data = [
         {
-            "type": "R_V",
+            "type": "RP_V",
             "sequence_number": "0101",
             "timestamp": 1420085460.0,
             "level": "POLLING-DIVISION",
@@ -43,7 +43,7 @@ function genFakeParliamentary() {
             }
         },
         {
-            "type": "R_V",
+            "type": "RP_V",
             "sequence_number": "0102",
             "timestamp": 1420086260.0,
             "level": "POLLING-DIVISION",
@@ -85,7 +85,7 @@ function genFakeParliamentary() {
             }
         },
         {
-            "type": "R_V",
+            "type": "RP_V",
             "sequence_number": "0103",
             "timestamp": 1420087260.0,
             "level": "POLLING-DIVISION",
@@ -127,7 +127,7 @@ function genFakeParliamentary() {
             }
         },
         {
-            "type": "R_V",
+            "type": "RP_V",
             "sequence_number": "0107",
             "timestamp": 1420087561.0,
             "level": "POLLING-DIVISION",
@@ -169,7 +169,7 @@ function genFakeParliamentary() {
             }
         },
         {
-            "type": "R_V",
+            "type": "RP_V",
             "sequence_number": "0109",
             "timestamp": 1420087980.0,
             "level": "POLLING-DIVISION",
@@ -211,7 +211,7 @@ function genFakeParliamentary() {
             }
         },
         {
-            "type": "R_S",
+            "type": "RE_S",
             "sequence_number": "0120",
             "timestamp": 1420087983.0,
             "level": "ELECTORAL-DISTRICT",
@@ -243,7 +243,7 @@ function genFakeParliamentary() {
             ]
         },
         {
-            "type": "R_S",
+            "type": "RE_S",
             "sequence_number": "0125",
             "timestamp": 1420087992.0,
             "level": "ELECTORAL-DISTRICT",
@@ -275,7 +275,7 @@ function genFakeParliamentary() {
             ]
         },
         {
-            "type": "R_VS",
+            "type": "RN_VS",
             "sequence_number": "0125",
             "timestamp": 1420087998.0,
             "level": "NATIONAL",
@@ -313,7 +313,7 @@ function genFakeParliamentary() {
             }
         },
         {
-            "type": "R_VSN",
+            "type": "RN_VSN",
             "sequence_number": "0127",
             "timestamp": 1420088001.0,
             "level": "NATIONAL",
@@ -351,7 +351,7 @@ function genFakeParliamentary() {
             }
         },
         {
-            "type": "R_SC",
+            "type": "RE_SC",
             "sequence_number": "0130",
             "timestamp": 1420088002.0,
             "level": "ELECTORAL-DISTRICT",
@@ -373,7 +373,7 @@ function genFakeParliamentary() {
             ]
         },
         {
-            "type": "R_NC",
+            "type": "RN_NC",
             "sequence_number": "0137",
             "timestamp": 142008005.0,
             "level": "NATIONAL",
@@ -387,7 +387,7 @@ function genFakeParliamentary() {
             ]
         },
         {
-            "type": "R_SCNC",
+            "type": "RN_SCNC",
             "sequence_number": "0138",
             "timestamp": 1420088007.0,
             "level": "NATIONAL",

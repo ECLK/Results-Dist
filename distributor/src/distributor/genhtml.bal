@@ -112,13 +112,14 @@ function sortParliamentaryByPartyResults(json[] unsorted, string resultType) ret
     }
 
     match resultType {
-        "R_NC"|"R_SCNC" => {
+        RN_NC|RN_SCNC => {
             return unsorted;
         }
-        "R_SI" => {
+        RN_SI => {
             return sortByPartyResultsBySeatCount(unsorted);
         }
     }
+    // RN_VS, RN_VSN
     return sortByPartyResultsByVoteCount(unsorted);
 }
 

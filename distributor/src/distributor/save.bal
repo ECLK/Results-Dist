@@ -345,7 +345,7 @@ function addToParliamentaryCumulative(map<json> jm)
 }
 
 function addToParliamentaryCumulativeVotes(map<json> jm) returns ParliamentaryCumulativeVotesResult? {
-    if jm.'type != "R_V" {
+    if jm.'type != RP_V {
         return;
     }
 
@@ -396,7 +396,7 @@ function getMatchingByPartyRecord(ParliamentaryPartyResult[] partyResultArray, s
 }
 
 function addToParliamentaryCumulativeSeats(map<json> jm) returns ParliamentaryCumulativeSeatsResult? {
-    if jm.'type != "R_S" {
+    if jm.'type != RE_S {
         return;
     }
 

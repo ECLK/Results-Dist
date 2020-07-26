@@ -136,11 +136,10 @@ function getPresidentialFileNameBase(string electionCode, map<json> result) retu
 # 	NNN-{TypeCode}-{LevelCode}[-{Code}[--{EDName[--{PDName}]]].{ext}
 # where
 # 	NNN			Sequence number of the result with 0s if needed (001, 002, ..).
-#	{TypeCode}	Result type- "R_V", "R_VI", "R_S", "R_SI", "R_SC", "R_VSN", "R_NC".
+#	{TypeCode}	Result type- "RP_V", "RE_VI", "RE_S", "RN_SI", "RN_VS", "RN_VSN", "RE_SC", "RN_NC", "RN_SCNC".
 #	{LevelCode}	Result level: PD for polling division, ED for electoral district, and N for national.
 #	{Code}      If ED results, then 2 digit code of the district. If PD results then 2 digit ED code followed by one
-#	            character PD code. For Postal, Displaced and Quarantine results, the pd_code will be “PV”, “DV” and
-#	            “QV” respectively.
+#	            character PD code. For Postal and Displaced results, the pd_code will be “PV” and “DV” respectively.
 #	{EDName}	Name of the electoral district in English.
 #	{PDName}	Name of the polling division in English.
 #	{ext}		Either “json” or “xml” depending on the format of the file.

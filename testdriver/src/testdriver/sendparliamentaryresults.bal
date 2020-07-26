@@ -4,13 +4,13 @@ import ballerina/io;
 import ballerina/runtime;
 import ballerina/time;
 
-const R_V = "R_V";
-const R_S = "R_S";
-const R_VS = "R_VS";
-const R_VSN = "R_VSN";
-const R_SC = "R_SC";
-const R_NC = "R_NC";
-const R_SCNC = "R_SCNC";
+const RP_V = "RP_V";
+const RE_S = "RE_S";
+const RN_VS = "RN_VS";
+const RN_VSN = "RN_VSN";
+const RE_SC = "RE_SC";
+const RN_NC = "RN_NC";
+const RN_SCNC = "RN_SCNC";
 
 const FINAL = "FINAL";
 
@@ -20,32 +20,32 @@ function sendParliamentaryResults(string electionCode, http:Client rc, map<json>
 
         string resultType = result.'type.toString();
         match resultType {
-            R_V => {
+            RP_V => {
                 check updateByParty(<json[]>result.by_party);
                 check updateSummary(result);
                 check feedResult(rc, electionCode, resultType, result.pd_code.toString(), result);
             }
-            R_S => {
+            RE_S => {
                 check updateByParty(<json[]>result.by_party);
                 check feedResult(rc, electionCode, resultType, result.ed_code.toString(), result);
             }
-            R_VS => {
+            RN_VS => {
                 check updateByParty(<json[]>result.by_party);
                 check updateSummary(result);
                 check feedResult(rc, electionCode, resultType, FINAL, result);
             }
-            R_VSN => {
+            RN_VSN => {
                 check updateByParty(<json[]>result.by_party);
                 check updateSummary(result);
                 check feedResult(rc, electionCode, resultType, FINAL, result);
             }
-            R_SC => {
+            RE_SC => {
                 check feedResult(rc, electionCode, resultType, result.ed_code.toString(), result);
             }
-            R_NC => {
+            RN_NC => {
                 check feedResult(rc, electionCode, resultType, FINAL, result);
             }
-            R_SCNC => {
+            RN_SCNC => {
                 check feedResult(rc, electionCode, resultType, FINAL, result);
             }
         }

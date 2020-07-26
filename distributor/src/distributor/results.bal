@@ -139,7 +139,7 @@ service receiveResults on resultsListener {
 function publishResultData(Result result, string? electionCode = (), string? resultCode = ()) {
     map<json> jsonResult = result.jsonResult;
 
-    if jsonResult.level == "NATIONAL" && !(jsonResult.by_party is error) {
+    if jsonResult.level == LEVEL_N && !(jsonResult.by_party is error) {
         jsonResult["by_party"] = byPartySortFunction(<json[]> jsonResult.by_party, result.'type);
     }
 
@@ -273,10 +273,10 @@ function sendPresidentialIncrementalResult(CumulativeResult resCumResult, string
 function sendParliamentaryIncrementalResult(CumulativeResult resCumResult, string electionCode, string resultType,
                                             string resultCode, Result result) returns error? {
     if resCumResult is ParliamentaryCumulativeVotesResult {
-        return sendParliamentaryIncrementalVotesResult(resCumResult, electionCode, "R_VI", resultCode, result);
+        return sendParliamentaryIncrementalVotesResult(resCumResult, electionCode, RE_VI, resultCode, result);
     }
 
-    return sendParliamentaryIncrementalSeatsResult(resCumResult, electionCode, "R_SI", resultCode, result);
+    return sendParliamentaryIncrementalSeatsResult(resCumResult, electionCode, RN_SI, resultCode, result);
 }
 
 function sendParliamentaryIncrementalVotesResult(CumulativeResult resCumResult, string electionCode, string resultType,
