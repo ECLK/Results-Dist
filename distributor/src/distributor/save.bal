@@ -136,7 +136,7 @@ function __init() {
         byPartySortFunction = sortParliamentaryByPartyResults;
         sendIncrementalResultFunc = sendParliamentaryIncrementalResult;
         parliamentaryDistrictwiseCumVotesRes = initializeDistrictwiseCumulativeVotesMap();
-        parliamentaryCumSeatsRes = emptyParliamentaryCumSeatsResult;
+        parliamentaryCumSeatsRes = emptyParliamentaryCumSeatsResult.clone();
     } else {
         presidentialCumulativeVotesRes = emptyPresidentialCumResult.clone();
         presidentialPrefsCumulativeVotesRes = emptyPresidentialCumResult.clone();
