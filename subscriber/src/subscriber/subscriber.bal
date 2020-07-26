@@ -129,7 +129,16 @@ public function main (string? username = (),        // my username
         headers[http:AUTH_HEADER] = string `Basic ${token}`;
     }
 
-    http:WebSocketClient wsClientEp = new (wsUrl, config = {callbackService: callbackService, customHeaders: headers});
+    http:WebSocketClient wsClientEp = new (wsUrl, config = {
+        callbackService: callbackService,
+        customHeaders: headers,
+        retryConfig: {
+            intervalInMillis: 3000,
+            maxCount: 10,
+            backOffFactor: 1.5,
+            maxWaitIntervalInMillis: 20000
+        }
+    });
     
     if wsClientEp.isOpen() {
         io:println(
@@ -150,6 +159,10 @@ service resultDataOnlyClientService = @http:WebSocketServiceConfig {} service {
 
     resource function onError(http:WebSocketClient conn, error err) {
         log:printError("Error occurred", err);
+    }
+
+    resource function onClose(http:WebSocketClient wsEp, int statusCode, string reason) {
+        log:printInfo(string `Connection closed: statusCode: ${statusCode}, reason: ${reason}`);  
     }
 };
 
@@ -173,6 +186,10 @@ service awaitAndResultDataClientService = @http:WebSocketServiceConfig {} servic
 
     resource function onError(http:WebSocketClient conn, error err) {
         log:printError("Error occurred", err);
+    }
+
+    resource function onClose(http:WebSocketClient wsEp, int statusCode, string reason) {
+        log:printInfo(string `Connection closed: statusCode: ${statusCode}, reason: ${reason}`);  
     }
 };
 
@@ -198,6 +215,10 @@ service imageAndResultDataClientService = @http:WebSocketServiceConfig {} servic
 
     resource function onError(http:WebSocketClient conn, error err) {
         log:printError("Error occurred", err);
+    }
+
+    resource function onClose(http:WebSocketClient wsEp, int statusCode, string reason) {
+        log:printInfo(string `Connection closed: statusCode: ${statusCode}, reason: ${reason}`);  
     }
 };
 
@@ -231,6 +252,10 @@ service allClientService = @http:WebSocketServiceConfig {} service {
 
     resource function onError(http:WebSocketClient conn, error err) {
         log:printError("Error occurred", err);
+    }
+
+    resource function onClose(http:WebSocketClient wsEp, int statusCode, string reason) {
+        log:printInfo(string `Connection closed: statusCode: ${statusCode}, reason: ${reason}`);  
     }
 };
 
