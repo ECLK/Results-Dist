@@ -363,7 +363,6 @@ function genFakeParliamentary() {
                     "party_name": "Foo foo",
                     "candidate_number": "12",
                     "candidate_name": "Lorem Ipsum"
-
                 },
                 {
                     "party_code": "Bar",
