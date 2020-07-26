@@ -33,7 +33,8 @@ const string CREATE_RESULTS_TABLE = "CREATE TABLE IF NOT EXISTS results (" +
                                     "    PRIMARY KEY (sequenceNo))";
 const INSERT_RESULT = "INSERT INTO results (election, code, jsonResult, type) VALUES (?, ?, ?, ?)";
 const UPDATE_RESULT_JSON = "UPDATE results SET jsonResult = ? WHERE sequenceNo = ?";
-const UPDATE_RESULT_IMAGE = "UPDATE results SET imageMediaType = ?, imageData = ? WHERE election = ? AND code = ?";
+const string UPDATE_RESULT_IMAGE = "UPDATE results SET imageMediaType = ?, imageData = ? WHERE election = ? " + 
+                                "AND type = ? AND code = ?";
 const SELECT_RESULTS_DATA = "SELECT sequenceNo, election, code, type, jsonResult, imageMediaType, imageData FROM results";
 const DROP_RESULTS_TABLE = "DROP TABLE results";
 
@@ -48,11 +49,11 @@ const DROP_RECIPIENT_TABLE = "DROP TABLE smsRecipients";
 const DELETE_RECIPIENT_TABLE = "DELETE FROM smsRecipients";
 
 jdbc:Client dbClient = new ({
-    url: config:getAsString("eclk.hub.db.url"),
-    username: config:getAsString("eclk.hub.db.username"),
-    password: config:getAsString("eclk.hub.db.password"),
+    url: config:getAsString("eclk.distributor.db.url"),
+    username: config:getAsString("eclk.distributor.db.username"),
+    password: config:getAsString("eclk.distributor.db.password"),
     dbOptions: {
-        useSSL: config:getAsString("eclk.hub.db.useSsl")
+        useSSL: config:getAsString("eclk.distributor.db.useSsl")
     }    
 });
 
@@ -226,9 +227,10 @@ function saveResult(Result result) returns CumulativeResult|error? {
 
 # Save an image associated with a result
 # + return - error if unable to insert image for the given resultCode
-function saveImage(string electionCode, string resultCode, string mediaType, byte[] imageData) returns Result|error? {
+function saveImage(string electionCode, string resultType, string resultCode, string mediaType, 
+                   byte[] imageData) returns Result|error? {
     // save in DB
-    var ret = dbClient->update(UPDATE_RESULT_IMAGE, mediaType, imageData, electionCode, resultCode);
+    var ret = dbClient->update(UPDATE_RESULT_IMAGE, mediaType, imageData, electionCode, resultType, resultCode);
     if ret is jdbc:DatabaseError {
         log:printError("Unable to save image in database: " + ret.toString());
         return ret;
@@ -238,7 +240,7 @@ function saveImage(string electionCode, string resultCode, string mediaType, byt
     boolean updated = false;
     Result? res = ();
     foreach Result r in resultsCache {
-        if r.election == electionCode && r.code == resultCode {
+        if r.election == electionCode && r.'type == resultType && r.code == resultCode {
             r.imageMediaType = mediaType;
             r.imageData = imageData;
             res = r;
@@ -248,8 +250,8 @@ function saveImage(string electionCode, string resultCode, string mediaType, byt
     }
     if !updated {
         // shouldn't happen .. but don't want to panic and die either
-        log:printWarn("Updating result cache for new image for election=" + electionCode + ", code='" + resultCode +
-                      "' failed as result was missing. WEIRD!");
+        log:printWarn("Updating result cache for new image for election='" + electionCode + 
+                      "', type='" + resultType + "', code='" + resultCode + "' failed as result was missing. WEIRD!");
     }
 
     return res;
@@ -343,7 +345,7 @@ function addToParliamentaryCumulative(map<json> jm)
 }
 
 function addToParliamentaryCumulativeVotes(map<json> jm) returns ParliamentaryCumulativeVotesResult? {
-    if jm.'type != "R_V" {
+    if jm.'type != RP_V {
         return;
     }
 
@@ -394,7 +396,7 @@ function getMatchingByPartyRecord(ParliamentaryPartyResult[] partyResultArray, s
 }
 
 function addToParliamentaryCumulativeSeats(map<json> jm) returns ParliamentaryCumulativeSeatsResult? {
-    if jm.'type != "R_S" {
+    if jm.'type != RE_S {
         return;
     }
 

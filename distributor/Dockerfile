@@ -19,4 +19,4 @@ COPY  --from=build /usr/src/target /usr/src/target
 WORKDIR /usr/src/
 ADD ./web web
 
-CMD java -jar target/bin/distributor.jar --eclk.hub.db.url=jdbc:mysql://$DB_URL --eclk.hub.db.username=$DB_UN --eclk.hub.db.password=$DB_PW --eclk.hub.db.useSsl=$DB_USE_SSL --eclk.hub.db.encryptionkey=$DB_ENCRYPTION_KEY --eclk.govsms.username=$SMS_USER  --eclk.govsms.password=$SMS_PASSWORD --eclk.govsms.source=$SMS_SOURCE
+CMD java -jar target/bin/distributor.jar --eclk.distributor.db.url=jdbc:mysql://$DB_URL --eclk.distributor.db.username=$DB_UN --eclk.distributor.db.password=$DB_PW --eclk.distributor.db.useSsl=$DB_USE_SSL --eclk.govsms.username=$SMS_USER  --eclk.govsms.password=$SMS_PASSWORD --eclk.govsms.source=$SMS_SOURCE

@@ -8,17 +8,17 @@ import ballerina/test;
 // Before enabling the test, make sure the aforementioned test is executed and json files exist in the subscriber root
 @test:Config { enable : false }
 function testReceivedDataViaTesDriverFakeElection() {
-    testR_VI("0002-R_VI-ED-01--Colombo.json", 15, 65, 10, 90, 10, 100, 150);
-    testR_VI("0004-R_VI-ED-01--Colombo.json", 105, 100, 35, 240, 30, 270, 350);
-    testR_VI("0006-R_VI-ED-01--Colombo.json", 115, 100, 47, 262, 33, 295, 380);
-    testR_VI("0008-R_VI-ED-02--Gampaha.json", 10, 50, 20, 80, 10, 90, 100);
-    testR_VI("0010-R_VI-ED-02--Gampaha.json", 60, 70, 40, 170, 20, 190, 225);
+    testRE_VI("0002-RE_VI-ED-01--Colombo.json", 15, 65, 10, 90, 10, 100, 150);
+    testRE_VI("0004-RE_VI-ED-01--Colombo.json", 105, 100, 35, 240, 30, 270, 350);
+    testRE_VI("0006-RE_VI-ED-01--Colombo.json", 115, 100, 47, 262, 33, 295, 380);
+    testRE_VI("0008-RE_VI-ED-02--Gampaha.json", 10, 50, 20, 80, 10, 90, 100);
+    testRE_VI("0010-RE_VI-ED-02--Gampaha.json", 60, 70, 40, 170, 20, 190, 225);
 
-    testNational("0012-R_SI-N.json", "Foo", 10, "Bar", 5, "Baz", 3);
-    testNational("0014-R_SI-N.json", "Bar", 25, "Foo", 18, "Baz", 4);
+    testNational("0012-RN_SI-N.json", "Foo", 10, "Bar", 5, "Baz", 3);
+    testNational("0014-RN_SI-N.json", "Bar", 25, "Foo", 18, "Baz", 4);
 
-    testNational("0015-R_VS-N.json", "Foo", 100, "Bar", 75, "Baz", 25);
-    testNational("0016-R_VSN-N.json", "Foo", 100, "Bar", 75, "Baz", 25);
+    testNational("0015-RN_VS-N.json", "Foo", 100, "Bar", 75, "Baz", 25);
+    testNational("0016-RN_VSN-N.json", "Foo", 100, "Bar", 75, "Baz", 25);
 }
 
 function testNational(string filePath, string top, int topCount, string mid, int midCount, string last, int lastCount) {
@@ -40,7 +40,7 @@ function testNational(string filePath, string top, int topCount, string mid, int
 }
 
 
-function testR_VI(string filePath, int fooCount, int barCount, int bazCount, int valid, int rejected, int polled,
+function testRE_VI(string filePath, int fooCount, int barCount, int bazCount, int valid, int rejected, int polled,
         int electors) {
 
     map<json> value = getJson(filePath);

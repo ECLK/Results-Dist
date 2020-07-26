@@ -93,18 +93,18 @@ service receiveResults on resultsListener {
 
     @http:ResourceConfig {
         methods: ["POST"],
-        path: "/image/{electionCode}/{resultCode}",
+        path: "/image/{electionCode}/{resultType}/{resultCode}",
         body: "imageData"
     }
-    resource function receiveImage(http:Caller caller, http:Request req, string electionCode, string resultCode, 
-                                   byte[] imageData) returns error? {
-        log:printInfo("Result image received for " + electionCode +  "/" + resultCode);
+    resource function receiveImage(http:Caller caller, http:Request req, string electionCode, string resultType, 
+                                   string resultCode, byte[] imageData) returns error? {
+        log:printInfo("Result image received for " + electionCode +  "/" + resultType + "/" + resultCode);
 
         string mediaType = req.getContentType();
 
         // store the image in the DB against the resultCode and retrieve the relevant result
-        Result? res = check saveImage(<@untainted> electionCode, <@untainted> resultCode, <@untainted> mediaType,
-                                      <@untainted> imageData);
+        Result? res = check saveImage(<@untainted> electionCode, <@untainted> resultType, <@untainted> resultCode, 
+                                      <@untainted> mediaType, <@untainted> imageData);
 
         if (res is Result) {
             int sequenceNo = <int> res.sequenceNo;
@@ -139,7 +139,7 @@ service receiveResults on resultsListener {
 function publishResultData(Result result, string? electionCode = (), string? resultCode = ()) {
     map<json> jsonResult = result.jsonResult;
 
-    if jsonResult.level == "NATIONAL" && !(jsonResult.by_party is error) {
+    if jsonResult.level == LEVEL_N && !(jsonResult.by_party is error) {
         jsonResult["by_party"] = byPartySortFunction(<json[]> jsonResult.by_party, result.'type);
     }
 
@@ -273,10 +273,10 @@ function sendPresidentialIncrementalResult(CumulativeResult resCumResult, string
 function sendParliamentaryIncrementalResult(CumulativeResult resCumResult, string electionCode, string resultType,
                                             string resultCode, Result result) returns error? {
     if resCumResult is ParliamentaryCumulativeVotesResult {
-        return sendParliamentaryIncrementalVotesResult(resCumResult, electionCode, "R_VI", resultCode, result);
+        return sendParliamentaryIncrementalVotesResult(resCumResult, electionCode, RE_VI, resultCode, result);
     }
 
-    return sendParliamentaryIncrementalSeatsResult(resCumResult, electionCode, "R_SI", resultCode, result);
+    return sendParliamentaryIncrementalSeatsResult(resCumResult, electionCode, RN_SI, resultCode, result);
 }
 
 function sendParliamentaryIncrementalVotesResult(CumulativeResult resCumResult, string electionCode, string resultType,
