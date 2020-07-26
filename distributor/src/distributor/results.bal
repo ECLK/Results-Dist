@@ -93,18 +93,18 @@ service receiveResults on resultsListener {
 
     @http:ResourceConfig {
         methods: ["POST"],
-        path: "/image/{electionCode}/{resultCode}",
+        path: "/image/{electionCode}/{resultType}/{resultCode}",
         body: "imageData"
     }
-    resource function receiveImage(http:Caller caller, http:Request req, string electionCode, string resultCode, 
-                                   byte[] imageData) returns error? {
-        log:printInfo("Result image received for " + electionCode +  "/" + resultCode);
+    resource function receiveImage(http:Caller caller, http:Request req, string electionCode, string resultType, 
+                                   string resultCode, byte[] imageData) returns error? {
+        log:printInfo("Result image received for " + electionCode +  "/" + resultType + "/" + resultCode);
 
         string mediaType = req.getContentType();
 
         // store the image in the DB against the resultCode and retrieve the relevant result
-        Result? res = check saveImage(<@untainted> electionCode, <@untainted> resultCode, <@untainted> mediaType,
-                                      <@untainted> imageData);
+        Result? res = check saveImage(<@untainted> electionCode, <@untainted> resultType, <@untainted> resultCode, 
+                                      <@untainted> mediaType, <@untainted> imageData);
 
         if (res is Result) {
             int sequenceNo = <int> res.sequenceNo;

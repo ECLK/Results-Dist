@@ -30,8 +30,6 @@ function getAwaitResultsMessage(string electionCode, string resultType, string r
                 pdLevelName = "POSTAL";
             } else if (resultCode.endsWith("DV")) {
                 pdLevelName = "DISPLACED";
-            } else if (resultCode.endsWith("QV")) {
-                pdLevelName = "QUARANTINE";
             } else {
                 pdLevelName = "POLLING-DIVISION";
             }
@@ -42,6 +40,9 @@ function getAwaitResultsMessage(string electionCode, string resultType, string r
             string electoralDistrict = "/" + (ed_name ?: "<unknown electoral district>");
 
             message  = "Await ELECTORAL-DISTRICT results for " + electionCode + resultType + electoralDistrict;
+        }
+        LEVEL_N => {
+            message  = "Await NATIONAL results for " + electionCode + resultType;
         }
         LEVEL_NF => {
             message  = "Await NATIONAL-FINAL results for " + electionCode + resultType;

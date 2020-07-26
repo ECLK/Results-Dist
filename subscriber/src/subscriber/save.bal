@@ -9,7 +9,8 @@ const PRESIDENTIAL_RESULT = "PRESIDENTIAL-FIRST";
 const LEVEL_PD = "POLLING-DIVISION";
 const LEVEL_ED = "ELECTORAL-DISTRICT";
 const LEVEL_NI = "NATIONAL-INCREMENTAL";
-const LEVEL_NF = "NATIONAL";
+const LEVEL_N = "NATIONAL";
+const LEVEL_NF = "NATIONAL-FINAL";
 
 function(string electionCode, map<json> result) returns string getFileNameBase =
     electionType == ELECTION_TYPE_PARLIAMENTARY ? getParliamentaryFileNameBase : getPresidentialFileNameBase;
@@ -156,7 +157,7 @@ function getParliamentaryFileNameBase(string electionCode, map<json> result) ret
     match resultLevel {
         LEVEL_PD => { name = name + "PD" + "-" + result.pd_code.toString(); }
         LEVEL_ED => { name = name + "ED" + "-" + result.ed_code.toString(); }
-        LEVEL_NF => { name = name + "N"; }
+        LEVEL_N => { name = name + "N"; }
     }
 
     // add electoral district / polling division names if needed with spaces replaced with _
