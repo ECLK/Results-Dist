@@ -22,7 +22,7 @@ map<string> electionCode2Name = {
     "2015-PRE-REPLAY-015": "PRESIDENTIAL ELECTION - 08/01/2015 RESULT REPLAY"
 };
 
-function generateHtml (string electionCode, map<json> result, boolean sorted) returns string|error {
+function generatePresidentialResultHtml(string electionCode, map<json> result, boolean sorted) returns string|error {
     boolean firstRound = (result.'type == PRESIDENTIAL_RESULT);
     string electionName = electionCode2Name[electionCode] ?: ("Presidential Election - " + electionCode);
     electionName +=  firstRound ? " (FIRST PREFERENCES)" : " (REVISED WITH 2nd/3rd PREFERENCES)";
@@ -84,6 +84,121 @@ function generateHtml (string electionCode, map<json> result, boolean sorted) re
             "    <div class='col-md-2 text-right'>" + commaFormatInt(<int>result.summary.electors) + 
             "    </div><div class='col-md-2'></div>";
     body += "</div>";
+    body += "</body>";
+    return "<html>" + head + body + "</html>";
+}
+
+function generateParliamentaryResultHtml(string electionCode, map<json> result, boolean sorted) returns string|error {
+    string electionName = "Parliamentary Election - " + electionCode;
+    string timeNow = check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+
+    string head = "<head>";
+    head += "<title>Sri Lanka Elections Commission</title>";
+    head += "<link rel=\"stylesheet\" href=\"https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css\">";
+    head += "</head>";
+    string body = "<body style='margin: 5%'>";
+    body += "<div class='container-fluid'>";
+    body += "<h1>" + electionName + "</h1>";
+
+    string resTypeHeading = "";
+
+    string 'type = result.'type.toString();
+    match 'type {
+        RP_V => { resTypeHeading = <string>result.ed_name + " ELECTORAL DISTRICT, " + <string>result.pd_name +
+                                    " POLLING DIVISION (" + <string>result.pd_code + ") RESULT"; }
+        RE_VI => { resTypeHeading = <string>result.ed_name + " ELECTORAL DISTRICT CUMULATIVE RESULTS AT " +
+                                    <string>result.timestamp; }
+        RE_S => { resTypeHeading = <string>result.ed_name + " ELECTORAL DISTRICT SEAT ALLOCATION RESULT"; }
+        RN_SI => { resTypeHeading = "ALL ISLAND CUMULATIVE SEAT ALLOCATION RESULTS AT " + <string>result.timestamp; }
+        RN_VS => { resTypeHeading = "ALL ISLAND VOTES + SEAT ALLOCATION RESULT"; }
+        RN_VSN => { resTypeHeading = "ALL ISLAND VOTES + SEAT ALLOCATION + NATIONAL LIST ALLOCATION RESULT"; }
+        RE_SC => { resTypeHeading = <string>result.ed_name + " ELECTORAL DISTRICT SEATS ALLOCATED CANDIDATES RESULT"; }
+        RN_NC => { resTypeHeading = "ALL ISLAND NATIONAL LIST CANDIDATES RESULT"; }
+        RN_SCNC => { resTypeHeading = "ALL ISLAND SEATS ALLOCATED + NATIONAL LIST CANDIDATES RESULT"; }
+    }
+    body += "<p>" + resTypeHeading.toUpperAscii() + "</p>";
+
+    if (result.hasKey("by_party")) {
+        body += "<p>Votes received by each party" + (sorted ? ", sorted highest to lowest" : "") + "</p>";
+        body += "<table class='table'>" +
+                "<tr>" +
+                "<th>Name of Party</th>" +
+                "<th class='text-center'>Party Abbreviaton</th>" +
+                "<th class='text-right'>Votes Received</th>" +
+                "<th class='text-right'>Percentage</th>";
+        match 'type {
+            RE_S|RN_SI|RN_VS => {
+                body += "<th class='text-right'>Seat Allocation</th>"; }
+            RN_VSN => {
+                body += "<th class='text-right'>Seat Allocation</th>" +
+                        "<th class='text-right'>Nationa List Seat Allocation</th>"; }
+        }
+        body += "</tr>";
+        json[] partyResults = sorted ? sortParliamentaryByPartyResults(<json[]>result.by_party, 'type)
+                                : <json[]>result.by_party;
+        foreach json j in partyResults {
+            map<json> pr = <map<json>> j; // value is a json object
+            body += "<tr>" +
+                    "<td>" + <string>pr.party_name + "</td>" +
+                    "<td class='text-center'>" + <string>pr.party_code +"</td>" +
+                    "<td class='text-right'>" + commaFormatInt(<int>pr.vote_count) + "</td>" +
+                    "<td class='text-right'>" + <string>pr.vote_percentage + "</td>";
+            match 'type {
+                RE_S|RN_SI|RN_VS => {
+                    body += "<td class='text-right'>" + commaFormatInt(<int>pr.seat_count) + "</td>"; }
+                RN_VSN => {
+                    body += "<td class='text-right'>" + commaFormatInt(<int>pr.seat_count) + "</td>" +
+                            "<td class='text-right'>" + commaFormatInt(<int>pr.national_list_seat_count) + "</td>"; }
+            }
+            body += "</tr>";
+        }
+        body += "</table>";
+    }
+
+    if (result.hasKey("by_candidate")) {
+        body += "<table class='table'>" +
+                "<tr>" +
+                "<th>Name of Candidate</th>" +
+                "<th class='text-center'>Candidate Number</th>" +
+                "<th class='text-center'>Party Abbreviaton</th>";
+        match 'type {
+            RN_SCNC => {
+                body += "<th class='text-right'>Type of Candidate</th>"; }
+        }
+        body += "</tr>";
+
+        json[] partyResults = <json[]>result.by_candidate;
+        foreach json j in partyResults {
+            map<json> pr = <map<json>> j; // value is a json object
+            body += "<tr>" +
+                    "<td>" + <string>pr.candidate_name + "</td>" +
+                    "<td class='text-center'>" + <string>pr.candidate_number + "</td>" +
+                    "<td class='text-center'>" + <string>pr.party_code + "</td>";
+            match 'type {
+                RN_SCNC => {
+                    body += "<td class='text-right'>" + <string>pr.candidate_type + "</td>"; }
+            }
+            body += "</tr>";
+        }
+        body += "</table>";
+    }
+    if (result.hasKey("summary")) {
+        body += "</div>";
+        body += "<div class='container-fluid'>";
+        body += "  <div class='col-md-4 col-md-offset-2'>Total Valid Votes</div>" +
+                "    <div class='col-md-2 text-right'>" + commaFormatInt(<int>result.summary.valid) +
+                "    </div><div class='col-md-2 text-right'>" + <string>result.summary.percent_valid + "%</div><div class='col-md-2'></div>";
+        body += "  <div class='col-md-4 col-md-offset-2'>Rejected Votes</div>" +
+                "    <div class='col-md-2 text-right'>" + commaFormatInt(<int>result.summary.rejected) +
+                "    </div><div class='col-md-2 text-right'>" + <string>result.summary.percent_rejected + "%</div><div class='col-md-2'></div>";
+        body += "  <div class='col-md-4 col-md-offset-2'>Total Polled</div>" +
+                "    <div class='col-md-2 text-right'>" + commaFormatInt(<int>result.summary.polled) +
+                "    </div><div class='col-md-2 text-right'>" + <string>result.summary.percent_polled + "%</div><div class='col-md-2'></div>";
+        body += "  <div class='col-md-4 col-md-offset-2'>Registered No. of Electors</div>" +
+                "    <div class='col-md-2 text-right'>" + commaFormatInt(<int>result.summary.electors) +
+                "    </div><div class='col-md-2'></div>";
+        body += "</div>";
+    }
     body += "</body>";
     return "<html>" + head + body + "</html>";
 }

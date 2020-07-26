@@ -4,16 +4,9 @@ import ballerina/log;
 import ballerina/xmlutils;
 import ballerina/stringutils as su;
 
-const PRESIDENTIAL_RESULT = "PRESIDENTIAL-FIRST";
-
-const LEVEL_PD = "POLLING-DIVISION";
-const LEVEL_ED = "ELECTORAL-DISTRICT";
-const LEVEL_NI = "NATIONAL-INCREMENTAL";
-const LEVEL_N = "NATIONAL";
-const LEVEL_NF = "NATIONAL-FINAL";
-
-function(string electionCode, map<json> result) returns string getFileNameBase =
-    electionType == ELECTION_TYPE_PARLIAMENTARY ? getParliamentaryFileNameBase : getPresidentialFileNameBase;
+function(string electionCode, map<json> result) returns string getFileNameBase = getPresidentialFileNameBase;
+function(string electionCode, map<json> result, boolean sorted) returns string|error generateHtml =
+                                                                            generatePresidentialResultHtml;
 
 function saveResult(map<json> resultAll) {
     string electionCode = resultAll.election_code.toString();

@@ -21,6 +21,8 @@ function(map<json>) returns CumulativeResult? addToCumulativeFunc = addToPreside
 function(CumulativeResult, string, string, string, Result) returns error? sendIncrementalResultFunc = 
                                                                                 sendPresidentialIncrementalResult;
 function(json[], string) returns json[] byPartySortFunction = sortPresidentialByPartyResults;
+function(string electionCode, map<json> result, boolean sorted) returns string|error generateHtml =
+                                                                                generatePresidentialResultHtml;
 
 const string CREATE_RESULTS_TABLE = "CREATE TABLE IF NOT EXISTS results (" +
                                     "    sequenceNo INT NOT NULL AUTO_INCREMENT," + 
@@ -137,10 +139,14 @@ function __init() {
         sendIncrementalResultFunc = sendParliamentaryIncrementalResult;
         parliamentaryDistrictwiseCumVotesRes = initializeDistrictwiseCumulativeVotesMap();
         parliamentaryCumSeatsRes = emptyParliamentaryCumSeatsResult;
+        generateHtml = generateParliamentaryResultHtml;
     } else {
         presidentialCumulativeVotesRes = emptyPresidentialCumResult.clone();
         presidentialPrefsCumulativeVotesRes = emptyPresidentialCumResult.clone();
     }
+
+    // uncomment following line to clean the db if needed
+    //_ = checkpanic dbClient->update(DROP_RESULTS_TABLE);
 
     // create tables
     _ = checkpanic dbClient->update(CREATE_RESULTS_TABLE);

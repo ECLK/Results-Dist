@@ -5,28 +5,12 @@ import ballerina/log;
 
 import maryamzi/sound;
 
-const WANT_IMAGE = "image=true";
-const WANT_AWAIT_RESULTS = "await=true";
-
-const MY_VERSION = "2020-07-25";
-
-const UNDERSOCRE = "_";
-const COLON = ":";
-
-const JSON_EXT = ".json";
-const XML_EXT = ".xml";
-const TEXT_EXT = ".txt";
-const PDF_EXT = ".pdf";
-
 boolean wantJson = false;
 boolean wantXml = false;
 boolean wantHtml = false;
 boolean sortedHtml = false;
 
 boolean wantCode = false;
-
-const ELECTION_TYPE_PRESIDENTIAL = "PRESIDENTIAL";
-const ELECTION_TYPE_PARLIAMENTARY = "PARLIAMENTARY";
 
 public type ElectionType ELECTION_TYPE_PRESIDENTIAL|ELECTION_TYPE_PARLIAMENTARY;
 
@@ -41,23 +25,28 @@ public function main (string? username = (),        // my username
                       boolean 'json = false,        // do I want json?
                       boolean 'xml = false,         // do I want xml?
                       boolean image = false,        // do I want the image?
-                    //   boolean html = false,         // do I want HTML?
-                    //   boolean sorted = true,        // do I want HTML results sorted highest to lowest
+                      boolean html = false,         // do I want HTML?
+                      //boolean sorted = true,        // do I want HTML results sorted highest to lowest
                       boolean wantCode = false,     // do I want electionCode in the filename
                       string homeURL = "https://mediaresultshub.ecdev.opensource.lk" // where do I connect at
                     ) returns @tainted error? {
     // Set the election type
     electionType = ELECTION_TYPE_PARLIAMENTARY;
 
+    if electionType == ELECTION_TYPE_PARLIAMENTARY {
+        getFileNameBase = getParliamentaryFileNameBase;
+        generateHtml = generateParliamentaryResultHtml;
+    }
+
     // check what format the user wants results in
     wantJson = <@untainted>'json;
     wantXml = <@untainted>'xml;
-    // wantHtml = <@untainted>html;
+    wantHtml = <@untainted>html;
     if !(wantJson || wantXml || wantHtml) {
         // default to giving json
         wantJson = true;
     }
-    // sortedHtml = <@untainted>sorted;
+    //sortedHtml = <@untainted>sorted;
 
     // set up auth
     string? token = ();
