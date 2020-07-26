@@ -63,7 +63,7 @@ service mediaWebsite on mediaListener {
         path: "/",
         methods: ["GET"]
     }
-    resource function showAll (http:Caller caller, http:Request req) returns error? {
+    resource function showAll(http:Caller caller, http:Request req) returns error? {
         string head = "<head>";
         head += "<title>Sri Lanka Elections Commission</title>";
         head += "<link rel=\"stylesheet\" href=\"https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css\">";
@@ -74,9 +74,8 @@ service mediaWebsite on mediaListener {
         body = body + "<h1>Released Results Data for Media Partners</h1>";
         string tt = check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ");
         body += "<p>Current time: " + tt + "</p>";
-        
-        body += generateResultsTable(PRESIDENTIAL_PREFS_RESULT);
-        body += generateResultsTable(PRESIDENTIAL_RESULT);
+
+        body += getTables();
         body = body + "<p/>";
         body = body + "<p>All  results released so far as single JSON value: "
                     + "<a href='/allresults'>All Results</a>";
@@ -90,7 +89,7 @@ service mediaWebsite on mediaListener {
         return caller->ok(hr);
     }
 
-    resource function allresults (http:Caller caller, http:Request req) returns error? {
+    resource function allresults(http:Caller caller, http:Request req) returns error? {
         json[] results = [];
 
         // return results in reverse order
@@ -108,7 +107,7 @@ service mediaWebsite on mediaListener {
         path: "/result/{election}/{seqNo}",
         methods: ["GET"]
     }
-    resource function data (http:Caller caller, http:Request req, string election, int seqNo) returns error? {
+    resource function data(http:Caller caller, http:Request req, string election, int seqNo) returns error? {
         // what's the format they want? we'll default to json if they don't say or get messy
         string format = req.getQueryParamValue ("format") ?: "json";
         if format != "xml" && format != "json" && format != "html" {
@@ -122,7 +121,8 @@ service mediaWebsite on mediaListener {
                     return caller->ok(r.jsonResult);
                 } else if format == "html" {
                     http:Response hr = new;
-                    boolean sorted = (r.jsonResult.level == LEVEL_NF) ? true : false;
+                    boolean sorted = (r.jsonResult.'type == RN_SI || r.jsonResult.'type == RN_VS ||
+                                        r.jsonResult.'type == RN_VSN) ? true : false;
                     hr.setTextPayload(<@untainted>check generateHtml(election, r.jsonResult, sorted));
                     hr.setContentType("text/html");
                     return caller->ok(hr);
@@ -311,10 +311,21 @@ service mediaWebsite on mediaListener {
     }
 }
 
+function getTables() returns string {
+    string body = "";
+    if electionType == ELECTION_TYPE_PARLIAMENTARY {
+        body = generateParliamentaryResultsTable();
+    } else {
+        body += generatePresidentialResultsTable(PRESIDENTIAL_PREFS_RESULT);
+        body += generatePresidentialResultsTable(PRESIDENTIAL_RESULT);
+    }
+    return body;
+}
+
 # Print the results
 # 
 # + return - HTML string for results of the given type from the results cache
-function generateResultsTable(string 'type) returns string {
+function generatePresidentialResultsTable(string 'type) returns string {
     string tab = "";
     int i = resultsCache.length();
     boolean first = true;
@@ -360,6 +371,61 @@ function generateResultsTable(string 'type) returns string {
                     "<td>" + election + "</td>" +
                     "<td>" + seqNo + "</td>" +
                     "<td>" + timestamp + "</td>" +
+                    "<td>" + code + "</td>" +
+                    "<td>" + level + "</td>" +
+                    "<td>" + edName + "</td>" +
+                    "<td>" + pdName + "</td>" +
+                    "<td><a href='/result/" + r.election + "/" + seqNo + "?format=json'>JSON</a>" + "</td>" +
+                    "<td><a href='/result/" + r.election + "/" + seqNo + "?format=xml'>XML</a>" + "</td>" +
+                    "<td><a href='/result/" + r.election + "/" + seqNo + "?format=html'>HTML</a>" + "</td>" +
+                    "<td><a href='/release/" + r.election + "/" + seqNo + "'>Release</a>" + "</td>" +
+                    "</tr>";
+    }
+    tab = tab + "</table>";
+    return tab;
+}
+
+# Print the parliamentary election results
+#
+# + return - HTML string for results from the results cache
+function generateParliamentaryResultsTable() returns string {
+    string tab = "<table class='table'><tr><th>Election</th><th>Sequence No</th><th>Release Time</th>" +
+                 "<th>Type</th><th>Code</th><th>Level</th><th>Electoral District</th><th>Polling Division</th>" +
+                 "<th>JSON</th><th>XML</th><th>HTML</th><th>Document</th></tr>";
+    int i = resultsCache.length();
+    while i > 0 { // show results in reverse order of release
+        i -= 1;
+        Result r = resultsCache[i];
+
+        string election = r.election;
+        string seqNo = r.jsonResult.sequence_number.toString();
+        string timestamp = r.jsonResult.timestamp.toString();
+        string 'type = r.jsonResult.'type.toString();
+        string code = "-";
+        string level = r.jsonResult.level.toString();
+        // figure out and ED / PD name if needed
+        string edName = "-";
+        string pdName = "-";
+        match level {
+            LEVEL_PD => {
+                code = r.jsonResult.pd_code.toString(); //  has 2 digit ED code and 1 letter PD code
+                edName = r.jsonResult.ed_name.toString();
+                pdName = r.jsonResult.pd_name.toString();
+            }
+            LEVEL_ED => {
+                code = r.jsonResult.ed_code.toString();
+                edName = r.jsonResult.ed_name.toString();
+            }
+            LEVEL_N => {
+                code = r.code.toString();
+            }
+        }
+
+        tab = tab + "<tr>" +
+                    "<td>" + election + "</td>" +
+                    "<td>" + seqNo + "</td>" +
+                    "<td>" + timestamp + "</td>" +
+                    "<td>" + 'type + "</td>" +
                     "<td>" + code + "</td>" +
                     "<td>" + level + "</td>" +
                     "<td>" + edName + "</td>" +

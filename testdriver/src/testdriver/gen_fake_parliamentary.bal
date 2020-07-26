@@ -363,12 +363,15 @@ function genFakeParliamentary() {
                     "party_name": "Foo foo",
                     "candidate_number": "12",
                     "candidate_name": "Lorem Ipsum"
+
                 },
                 {
                     "party_code": "Bar",
                     "party_name": "Bar bar",
                     "candidate_number": "3",
-                    "candidate_name": "Dolor sit"
+                    "candidate_name": "Dolor sit",
+                    "candidate_type" : "Normal"
+
                 }
             ]
         },
@@ -396,19 +399,22 @@ function genFakeParliamentary() {
                     "party_code": "Foo",
                     "party_name": "Foo foo",
                     "candidate_number": "12",
-                    "candidate_name": "Lorem Ipsum"
+                    "candidate_name": "Lorem Ipsum",
+                    "candidate_type" : "Normal"
                 },
                 {
                     "party_code": "Bar",
                     "party_name": "Bar bar",
                     "candidate_number": "3",
-                    "candidate_name": "Dolor Sit"
+                    "candidate_name": "Dolor Sit",
+                    "candidate_type" : "Normal"
                 },
                 {
                     "party_code": "Bar",
                     "party_name": "Bar bar",
                     "candidate_number": "15",
-                    "candidate_name": "Baz Qux"
+                    "candidate_name": "Baz Qux",
+                    "candidate_type" : "National List"
                 }
             ]
         }
