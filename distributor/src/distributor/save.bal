@@ -48,11 +48,11 @@ const DROP_RECIPIENT_TABLE = "DROP TABLE smsRecipients";
 const DELETE_RECIPIENT_TABLE = "DELETE FROM smsRecipients";
 
 jdbc:Client dbClient = new ({
-    url: config:getAsString("eclk.hub.db.url"),
-    username: config:getAsString("eclk.hub.db.username"),
-    password: config:getAsString("eclk.hub.db.password"),
+    url: config:getAsString("eclk.distributor.db.url"),
+    username: config:getAsString("eclk.distributor.db.username"),
+    password: config:getAsString("eclk.distributor.db.password"),
     dbOptions: {
-        useSSL: config:getAsString("eclk.hub.db.useSsl")
+        useSSL: config:getAsString("eclk.distributor.db.useSsl")
     }    
 });
 

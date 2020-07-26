@@ -12,7 +12,7 @@ listener http:Listener resultsListener = new (config:getAsInt("eclk.pub.port", 8
 http:BasicAuthHandler inboundBasicAuthHandler = new (new auth:InboundBasicAuthProvider());
 
 # Listener for media orgs to subscribe, for the website and for them to pull specific results.
-listener http:Listener mediaListener = new (config:getAsInt("eclk.hub.port", 9090), config = {
+listener http:Listener mediaListener = new (config:getAsInt("eclk.distributor.port", 9090), config = {
     auth: {
         authHandlers: [inboundBasicAuthHandler],
         position: 1,

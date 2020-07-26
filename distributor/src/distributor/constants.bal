@@ -1,4 +1,4 @@
-const ERROR_REASON = "{eclk/pubhub}Error";
+const ERROR_REASON = "{eclk/distributor}Error";
 
 const ELECTION_TYPE_PRESIDENTIAL = "PRESIDENTIAL";
 const ELECTION_TYPE_PARLIAMENTARY = "PARLIAMENTARY";
