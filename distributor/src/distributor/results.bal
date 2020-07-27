@@ -149,9 +149,13 @@ function publishResultData(Result result, string? electionCode = (), string? res
         result : jsonResult
     };
 
-    foreach var con in jsonConnections {
-        log:printInfo("Sending JSON data for " + con.getConnectionId());
-        _ = start pushData(con, "results data", resultAll);
+    string[] keys = jsonConnections.keys();
+    foreach string k in keys {
+        http:WebSocketCaller? con = jsonConnections[k];
+        if !(con is ()) {
+           log:printInfo("Sending JSON data for " + con.getConnectionId());
+           _ = start pushData(con, "results data", resultAll);
+        }
     }
 }
 
@@ -164,17 +168,25 @@ function pushData(http:WebSocketCaller con, string kind, json data) {
 
 # Publish results image.
 function publishResultImage(json imageData) {
-    foreach var con in imageConnections {
-        log:printInfo("Sending image data for " + con.getConnectionId());
-        _ = start pushData(con, "image data", imageData);
+    string[] keys = imageConnections.keys();
+    foreach string k in keys {
+        http:WebSocketCaller? con = imageConnections[k];
+        if !(con is ()) {
+           log:printInfo("Sending image data for " + con.getConnectionId());
+           _ = start pushData(con, "image data", imageData);
+        }
     }
 }
 
 function pushAwaitNotification(string message) {
     string jsonString = "\"" + message + "\"";
-    foreach var con in awaitConnections {
-        log:printInfo("Sending await notification for " + con.getConnectionId());
-        _ = start pushData(con, "await notification", jsonString);
+    string[] keys = awaitConnections.keys();
+    foreach string k in keys {
+        http:WebSocketCaller? con = awaitConnections[k];
+        if !(con is ()) {
+           log:printInfo("Sending await notification for " + con.getConnectionId());
+           _ = start pushData(con, "await notification", jsonString);
+        }
     }
 }
 
