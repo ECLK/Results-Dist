@@ -131,13 +131,13 @@ public function main (string? username = (),        // my username
 
     http:WebSocketClient wsClientEp = new (wsUrl, config = {
         callbackService: callbackService,
-        customHeaders: headers,
-        retryConfig: {
-            intervalInMillis: 3000,
-            maxCount: 10,
-            backOffFactor: 1.5,
-            maxWaitIntervalInMillis: 20000
-        }
+        customHeaders: headers
+        // retryConfig: {
+        //     intervalInMillis: 3000,
+        //     maxCount: 10,
+        //     backOffFactor: 1.5,
+        //     maxWaitIntervalInMillis: 20000
+        // }
     });
     
     if wsClientEp.isOpen() {
