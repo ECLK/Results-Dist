@@ -77,7 +77,7 @@ function sendResults(string resultType, string electionCode, http:Client rc, map
             if val is error {
                 // already a string so let it go
             } else {
-                onePr["vote_percentage"] = io:sprintf ("%.2f", val);
+                onePr["vote_percentage"] = string `${io:sprintf ("%.2f", val * 100.0)}%`;
             }
            // this line causes generated code to hang here: the cast is in error but no runtime error but just STOP!
            // looks like updating a json property that is already there really upsets the code :(
@@ -86,9 +86,9 @@ function sendResults(string resultType, string electionCode, http:Client rc, map
 
         // set the percentages in the summary
         map<json> summary = <map<json>>resultsByPD[pdCode].summary;
-        summary["percent_valid"] = (<int>resultsByPD[pdCode].summary.polled == 0) ? "0.00" : io:sprintf("%.2f", <int>resultsByPD[pdCode].summary.valid*100.0/<int>resultsByPD[pdCode].summary.polled);
-        summary["percent_rejected"] = (<int>resultsByPD[pdCode].summary.polled == 0) ? "0.00" : io:sprintf("%.2f", <int>resultsByPD[pdCode].summary.rejected*100.0/<int>resultsByPD[pdCode].summary.polled);
-        summary["percent_polled"] = (<int>resultsByPD[pdCode].summary.electors == 0) ? "0.00" : io:sprintf("%.2f", <int>resultsByPD[pdCode].summary.polled*100.0/<int>resultsByPD[pdCode].summary.electors);
+        summary["percent_valid"] = (<int>resultsByPD[pdCode].summary.polled == 0) ? "0.00%" : string `${io:sprintf("%.2f", <int>resultsByPD[pdCode].summary.valid*100.0/<int>resultsByPD[pdCode].summary.polled)}%`;
+        summary["percent_rejected"] = (<int>resultsByPD[pdCode].summary.polled == 0) ? "0.00%" : string `${io:sprintf("%.2f", <int>resultsByPD[pdCode].summary.rejected*100.0/<int>resultsByPD[pdCode].summary.polled)}%`;
+        summary["percent_polled"] = (<int>resultsByPD[pdCode].summary.electors == 0) ? "0.00%" : string `${io:sprintf("%.2f", <int>resultsByPD[pdCode].summary.polled*100.0/<int>resultsByPD[pdCode].summary.electors)}%`;
 
         string resCode = resultsByPD[pdCode]?.pd_code.toString();
         string edCodeFromPD = resultsByPD[pdCode]?.ed_code.toString();
@@ -196,13 +196,13 @@ function createEDResult (string resultType, map<map<json>>[] results, map<json>[
             distByParty[i]["votes2nd"] = votes2nd_by_party[i];
             distByParty[i]["votes3rd"] = votes3rd_by_party[i];
         }
-        distByParty[i]["vote_percentage"] = (distSummary.valid == 0) ? "0.00" : io:sprintf ("%.2f", votes_by_party[i]*100.0/distSummary.valid);
+        distByParty[i]["vote_percentage"] = (distSummary.valid == 0) ? "0.00%" : string `${io:sprintf("%.2f", votes_by_party[i]*100.0/distSummary.valid)}%`;
     }
 
     // set the percentages in the summary
-    distSummary.percent_valid = (distSummary.polled == 0) ? "0.00" : io:sprintf("%.2f", distSummary.valid*100.0/distSummary.polled);
-    distSummary.percent_rejected = (distSummary.polled == 0) ? "0.00" : io:sprintf("%.2f", distSummary.rejected*100.0/distSummary.polled);
-    distSummary.percent_polled = (distSummary.electors == 0) ? "0.00" : io:sprintf("%.2f", distSummary.polled*100.0/distSummary.electors);
+    distSummary.percent_valid = (distSummary.polled == 0) ? "0.00%" : string `${io:sprintf("%.2f", distSummary.valid*100.0/distSummary.polled)}%`;
+    distSummary.percent_rejected = (distSummary.polled == 0) ? "0.00%" : string `${io:sprintf("%.2f", distSummary.rejected*100.0/distSummary.polled)}%`;
+    distSummary.percent_polled = (distSummary.electors == 0) ? "0.00%" : string `${io:sprintf("%.2f", distSummary.polled*100.0/distSummary.electors)}%`;
 
     return {
         'type: resultType, 
@@ -279,13 +279,13 @@ function createNationalResult (string resultType, map<map<json>>[] results, map<
             natByParty[i]["votes2nd"] = votes2nd_by_party[i];
             natByParty[i]["votes3rd"] = votes3rd_by_party[i];
         }
-        natByParty[i]["vote_percentage"] = (natSummary.valid == 0) ? "0.00" : io:sprintf ("%.2f", votes_by_party[i]*100.0/natSummary.valid);
+        natByParty[i]["vote_percentage"] = (natSummary.valid == 0) ? "0.00%" : string `${io:sprintf("%.2f", votes_by_party[i]*100.0/natSummary.valid)}%`;
     }
 
     // set the percentages in the summary
-    natSummary.percent_valid = (natSummary.polled == 0) ? "0.00" : io:sprintf("%.2f", natSummary.valid*100.0/natSummary.polled);
-    natSummary.percent_rejected = (natSummary.polled == 0) ? "0.00" : io:sprintf("%.2f", natSummary.rejected*100.0/natSummary.polled);
-    natSummary.percent_polled = (natSummary.electors == 0) ? "0.00" : io:sprintf("%.2f", natSummary.polled*100.0/natSummary.electors);
+    natSummary.percent_valid = (natSummary.polled == 0) ? "0.00%" : string `${io:sprintf("%.2f", natSummary.valid*100.0/natSummary.polled)}%`;
+    natSummary.percent_rejected = (natSummary.polled == 0) ? "0.00%" : string `${io:sprintf("%.2f", natSummary.rejected*100.0/natSummary.polled)}%`;
+    natSummary.percent_polled = (natSummary.electors == 0) ? "0.00%" : string `${io:sprintf("%.2f", natSummary.polled*100.0/natSummary.electors)}%`;
 
     return {
         'type: resultType, 
