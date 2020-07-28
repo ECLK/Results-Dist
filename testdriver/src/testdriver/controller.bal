@@ -74,7 +74,11 @@ function startParliamentaryResults(http:Caller caller, http:Request req, string 
     log:printInfo("Publishing new result set for " + electionName + " starting at " + time:currentTime().toString());
 
     http:Client rc = new (resultsURL);
-    _ = check rc->get("/result/reset"); // reset the results store
+    var result = rc->get("/result/reset"); // reset the results store
+    if (result is error) {
+        alreadyRunning = false;
+        return result;
+    }
 
     var e = sendParliamentaryResults(electionName, rc, parliamentaryFake);
     if e is error {
