@@ -2,15 +2,15 @@
 
 ****** IMPORTANT *******
 **
-** The latest version of the subscriber JAR is subscriber-20200728-I.jar
+** The latest version of the subscriber JAR is subscriber-20200728-II.jar
 ** 	
-** Available at https://github.com/ECLK/Results-Dist/releases/tag/v2020-07-28-I
+** Available at https://github.com/ECLK/Results-Dist/releases/tag/v2020-07-28-II
 **
 ****** IMPORTANT *******
 
 Run it as follows:
 
-java -jar subscriber-20200728-I.jar [options]
+java -jar subscriber-20200728-II.jar [options]
 
 where options are:
 	-username=name          my username for authentication

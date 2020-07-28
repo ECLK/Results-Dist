@@ -2,6 +2,7 @@ import ballerina/file;
 import ballerina/http;
 import ballerina/log;
 import ballerina/mime;
+import ballerina/task;
 import ballerina/time;
 import ballerina/xmlutils;
 
@@ -438,4 +439,32 @@ function generateParliamentaryResultsTable() returns string {
     }
     tab = tab + "</table>";
     return tab;
+}
+
+task:TimerConfiguration timerConfiguration = {
+    intervalInMillis: 30000,
+    initialDelayInMillis: 30000
+};
+listener task:Listener timer = new (timerConfiguration);
+
+service timerService on timer {
+    resource function onTrigger() {
+        string[] keys = jsonConnections.keys();
+        foreach string k in keys {
+            http:WebSocketCaller? con = jsonConnections[k];
+            if !(con is ()) {
+                log:printDebug("Pinging " + con.getConnectionId());
+                _ = start ping(con);
+            }
+        }  
+    }
+}
+
+final byte[] pingData = "ping".toBytes();
+
+function ping(http:WebSocketCaller con) {
+    var err = con->ping(pingData);
+    if (err is http:WebSocketError) {
+        log:printError(string `Error pinging ${con.getConnectionId()}`, err);
+    }
 }
