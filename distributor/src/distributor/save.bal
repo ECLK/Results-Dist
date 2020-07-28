@@ -300,8 +300,6 @@ function addToPresidentialCumulative(map<json> jm) returns PresidentialCumulativ
         accum.summary.valid += <int>jm.summary.valid;
         accum.summary.rejected += <int>jm.summary.rejected;
         accum.summary.polled += <int>jm.summary.polled;
-        // don't add up electors from postal PDs as those are already in the district elsewhere
-        string pdCode = <string>jm.pd_code; // check 
         accum.summary.electors += <int>jm.summary.electors;
         accum.summary.percent_valid = (accum.summary.polled == 0) ? "0.00" : io:sprintf("%.2f", accum.summary.valid*100.0/accum.summary.polled);
         accum.summary.percent_rejected = (accum.summary.polled == 0) ? "0.00" : io:sprintf("%.2f", accum.summary.rejected*100.0/accum.summary.polled);
@@ -365,12 +363,10 @@ function addToParliamentaryCumulativeVotes(map<json> jm) returns ParliamentaryCu
     summary.valid += <int>jm.summary.valid;
     summary.rejected += <int>jm.summary.rejected;
     summary.polled += <int>jm.summary.polled;
-    // // don't add up electors from postal PDs as those are already in the district elsewhere
-    // string pdCode = <string>jm.pd_code; // check 
     summary.electors += <int>jm.summary.electors;
-    summary.percent_valid = (accum.summary.polled == 0) ? "0.00" : io:sprintf("%.2f", accum.summary.valid*100.0/accum.summary.polled);
-    summary.percent_rejected = (accum.summary.polled == 0) ? "0.00" : io:sprintf("%.2f", accum.summary.rejected*100.0/accum.summary.polled);
-    summary.percent_polled = (accum.summary.electors == 0) ? "0.00" : io:sprintf("%.2f", accum.summary.polled*100.0/accum.summary.electors);
+    summary.percent_valid = (accum.summary.polled == 0) ? "0.00%" : string `${io:sprintf("%.2f", accum.summary.valid*100.0/accum.summary.polled)}%`;
+    summary.percent_rejected = (accum.summary.polled == 0) ? "0.00%" : string `${io:sprintf("%.2f", accum.summary.rejected*100.0/accum.summary.polled)}%`;
+    summary.percent_polled = (accum.summary.electors == 0) ? "0.00%" : string `${io:sprintf("%.2f", accum.summary.polled*100.0/accum.summary.electors)}%`;
 
     if accum.nadded == 0 {
         pr.forEach(x => accum.by_party.push(checkpanic ParliamentaryPartyResult.constructFrom(x)));
@@ -384,7 +380,7 @@ function addToParliamentaryCumulativeVotes(map<json> jm) returns ParliamentaryCu
             } else {
                 int accumVoteCount = <int> accum.by_party[i]?.vote_count + <int>pr[i].vote_count;
                 accum.by_party[i].vote_count = accumVoteCount;
-                accum.by_party[i].vote_percentage = (accum.summary.valid == 0) ? "0.00" : io:sprintf ("%.2f", ((accumVoteCount*1.0)/accum.summary.valid));
+                accum.by_party[i].vote_percentage = (accum.summary.valid == 0) ? "0.00%" : string `${io:sprintf ("%.2f", ((accumVoteCount*100.0)/accum.summary.valid))}%`;
             }
         }
     }

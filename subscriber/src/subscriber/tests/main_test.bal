@@ -49,17 +49,17 @@ function testRE_VI(string filePath, int fooCount, int barCount, int bazCount, in
     map<json> party = <map<json>>parties[0];
     test:assertEquals(party["party_name"], "Foo foo");
     test:assertEquals(party["vote_count"], fooCount);
-    test:assertEquals(party["vote_percentage"], io:sprintf("%.2f", ((fooCount*1.0)/valid)));
+    test:assertEquals(party["vote_percentage"], string `${io:sprintf("%.2f", ((fooCount*100.0)/valid))}%`);
 
     party = <map<json>>parties[1];
     test:assertEquals(party["party_name"], "Bar bar");
     test:assertEquals(party["vote_count"], barCount);
-    test:assertEquals(party["vote_percentage"], io:sprintf("%.2f", ((barCount*1.0)/valid)));
+    test:assertEquals(party["vote_percentage"], string `${io:sprintf("%.2f", ((barCount*100.0)/valid))}%`);
 
     party = <map<json>>parties[2];
     test:assertEquals(party["party_name"], "Baz baz");
     test:assertEquals(party["vote_count"], bazCount);
-    test:assertEquals(party["vote_percentage"], io:sprintf("%.2f", ((bazCount*1.0)/valid)));
+    test:assertEquals(party["vote_percentage"], string `${io:sprintf("%.2f", ((bazCount*100.0)/valid))}%`);
 
     map<json> edSummary = <map<json>>value.summary;
     test:assertEquals(edSummary["valid"], valid);

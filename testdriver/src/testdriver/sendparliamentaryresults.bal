@@ -62,7 +62,7 @@ function updateByParty(json[] byPartyJson) returns error? {
         json val = party["vote_percentage"];
 
         if val is float {
-            party["vote_percentage"] = io:sprintf ("%.2f", val);
+            party["vote_percentage"] = string `${io:sprintf ("%.2f", val * 100.0)}%`;
         } else {
             // already a string so let it go
         }
@@ -72,9 +72,9 @@ function updateByParty(json[] byPartyJson) returns error? {
 function updateSummary(map<json> result) returns error? {
     // set the percentages in the summary
     map<json> summary = <map<json>>result.summary;
-    summary["percent_valid"] = (<int>result.summary.polled == 0) ? "0.00" : io:sprintf("%.2f", <int>result.summary.valid*100.0/<int>result.summary.polled);
-    summary["percent_rejected"] = (<int>result.summary.polled == 0) ? "0.00" : io:sprintf("%.2f", <int>result.summary.rejected*100.0/<int>result.summary.polled);
-    summary["percent_polled"] = (<int>result.summary.electors == 0) ? "0.00" : io:sprintf("%.2f", <int>result.summary.polled*100.0/<int>result.summary.electors);
+    summary["percent_valid"] = (<int>result.summary.polled == 0) ? "0.00%" : string `${io:sprintf("%.2f", <int>result.summary.valid*100.0/<int>result.summary.polled)}%`;
+    summary["percent_rejected"] = (<int>result.summary.polled == 0) ? "0.00%" : string `${io:sprintf("%.2f", <int>result.summary.rejected*100.0/<int>result.summary.polled)}%`;
+    summary["percent_polled"] = (<int>result.summary.electors == 0) ? "0.00%" : string `${io:sprintf("%.2f", <int>result.summary.polled*100.0/<int>result.summary.electors)}%`;
 }
 
 

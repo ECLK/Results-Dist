@@ -196,7 +196,7 @@ function createEDResult (string resultType, map<map<json>>[] results, map<json>[
             distByParty[i]["votes2nd"] = votes2nd_by_party[i];
             distByParty[i]["votes3rd"] = votes3rd_by_party[i];
         }
-        distByParty[i]["vote_percentage"] = (distSummary.valid == 0) ? "0.00" : io:sprintf ("%.2f", votes_by_party[i]*100.0/distSummary.valid);
+        distByParty[i]["vote_percentage"] = (distSummary.valid == 0) ? "0.00" : io:sprintf("%.2f", votes_by_party[i]*100.0/distSummary.valid);
     }
 
     // set the percentages in the summary
@@ -279,13 +279,13 @@ function createNationalResult (string resultType, map<map<json>>[] results, map<
             natByParty[i]["votes2nd"] = votes2nd_by_party[i];
             natByParty[i]["votes3rd"] = votes3rd_by_party[i];
         }
-        natByParty[i]["vote_percentage"] = (natSummary.valid == 0) ? "0.00" : io:sprintf ("%.2f", votes_by_party[i]*100.0/natSummary.valid);
+        natByParty[i]["vote_percentage"] = (natSummary.valid == 0) ? "0.00" : io:sprintf("%.2f", votes_by_party[i]*100.0/natSummary.valid);
     }
 
     // set the percentages in the summary
     natSummary.percent_valid = (natSummary.polled == 0) ? "0.00" : io:sprintf("%.2f", natSummary.valid*100.0/natSummary.polled);
     natSummary.percent_rejected = (natSummary.polled == 0) ? "0.00" : io:sprintf("%.2f", natSummary.rejected*100.0/natSummary.polled);
-    natSummary.percent_polled = (natSummary.electors == 0) ? "0.00" : io:sprintf("%.2f", natSummary.polled*100.0/natSummary.electors);
+    natSummary.percent_polled = (natSummary.electors == 0) ? "0.00" :  io:sprintf("%.2f", natSummary.polled*100.0/natSummary.electors);
 
     return {
         'type: resultType, 

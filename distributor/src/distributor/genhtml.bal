@@ -191,13 +191,13 @@ function generateParliamentaryResultHtml(string electionCode, map<json> result, 
         body += "<div class='container-fluid'>";
         body += "  <div class='col-md-4 col-md-offset-2'>Total Valid Votes</div>" +
                 "    <div class='col-md-2 text-right'>" + commaFormatInt(<int>result.summary.valid) +
-                "    </div><div class='col-md-2 text-right'>" + <string>result.summary.percent_valid + "%</div><div class='col-md-2'></div>";
+                "    </div><div class='col-md-2 text-right'>" + <string>result.summary.percent_valid + "</div><div class='col-md-2'></div>";
         body += "  <div class='col-md-4 col-md-offset-2'>Rejected Votes</div>" +
                 "    <div class='col-md-2 text-right'>" + commaFormatInt(<int>result.summary.rejected) +
-                "    </div><div class='col-md-2 text-right'>" + <string>result.summary.percent_rejected + "%</div><div class='col-md-2'></div>";
+                "    </div><div class='col-md-2 text-right'>" + <string>result.summary.percent_rejected + "</div><div class='col-md-2'></div>";
         body += "  <div class='col-md-4 col-md-offset-2'>Total Polled</div>" +
                 "    <div class='col-md-2 text-right'>" + commaFormatInt(<int>result.summary.polled) +
-                "    </div><div class='col-md-2 text-right'>" + <string>result.summary.percent_polled + "%</div><div class='col-md-2'></div>";
+                "    </div><div class='col-md-2 text-right'>" + <string>result.summary.percent_polled + "</div><div class='col-md-2'></div>";
         body += "  <div class='col-md-4 col-md-offset-2'>Registered No. of Electors</div>" +
                 "    <div class='col-md-2 text-right'>" + commaFormatInt(<int>result.summary.electors) +
                 "    </div><div class='col-md-2'></div>";
