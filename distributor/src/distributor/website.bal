@@ -432,9 +432,13 @@ function generateParliamentaryResultsTable() returns string {
                     "<td>" + pdName + "</td>" +
                     "<td><a href='/result/" + r.election + "/" + seqNo + "?format=json'>JSON</a>" + "</td>" +
                     "<td><a href='/result/" + r.election + "/" + seqNo + "?format=xml'>XML</a>" + "</td>" +
-                    "<td><a href='/result/" + r.election + "/" + seqNo + "?format=html'>HTML</a>" + "</td>" +
-                    "<td><a href='/release/" + r.election + "/" + seqNo + "'>Release</a>" + "</td>" +
-                    "</tr>";
+                    "<td><a href='/result/" + r.election + "/" + seqNo + "?format=html'>HTML</a>" + "</td>";
+        if ('type == RE_VI || 'type == RN_SI) {
+            tab += "<td>" + "-" + "</td>";
+        } else {
+            tab += "<td><a href='/release/" + r.election + "/" + seqNo + "'>Release</a>" + "</td>";
+        }
+        tab += "</tr>";
     }
     tab = tab + "</table>";
     return tab;
