@@ -4,6 +4,7 @@ import ballerina/io;
 import ballerina/log;
 
 import maryamzi/sound;
+import ballerina/lang.'string;
 
 boolean wantJson = false;
 boolean wantXml = false;
@@ -164,6 +165,10 @@ service resultDataOnlyClientService = @http:WebSocketServiceConfig {} service {
     resource function onClose(http:WebSocketClient wsEp, int statusCode, string reason) {
         log:printInfo(string `Connection closed: statusCode: ${statusCode}, reason: ${reason}`);  
     }
+
+    resource function onPing(http:WebSocketClient wsEp, byte[] data) {
+        logPingIfRequired(wsEp, data);
+    }
 };
 
 service awaitAndResultDataClientService = @http:WebSocketServiceConfig {} service {
@@ -190,6 +195,10 @@ service awaitAndResultDataClientService = @http:WebSocketServiceConfig {} servic
 
     resource function onClose(http:WebSocketClient wsEp, int statusCode, string reason) {
         log:printInfo(string `Connection closed: statusCode: ${statusCode}, reason: ${reason}`);  
+    }
+
+    resource function onPing(http:WebSocketClient wsEp, byte[] data) {
+        logPingIfRequired(wsEp, data);
     }
 };
 
@@ -219,6 +228,10 @@ service imageAndResultDataClientService = @http:WebSocketServiceConfig {} servic
 
     resource function onClose(http:WebSocketClient wsEp, int statusCode, string reason) {
         log:printInfo(string `Connection closed: statusCode: ${statusCode}, reason: ${reason}`);  
+    }
+
+    resource function onPing(http:WebSocketClient wsEp, byte[] data) {
+        logPingIfRequired(wsEp, data);
     }
 };
 
@@ -257,6 +270,10 @@ service allClientService = @http:WebSocketServiceConfig {} service {
     resource function onClose(http:WebSocketClient wsEp, int statusCode, string reason) {
         log:printInfo(string `Connection closed: statusCode: ${statusCode}, reason: ${reason}`);  
     }
+
+    resource function onPing(http:WebSocketClient wsEp, byte[] data) {
+        logPingIfRequired(wsEp, data);
+    }
 };
 
 function notifyAwait() {
@@ -264,4 +281,11 @@ function notifyAwait() {
     if !(pingStatus is ()) {
         log:printError("Error pinging on await notification", pingStatus);
     }
+}
+
+function logPingIfRequired(http:WebSocketClient wsEp, byte[] data) {
+    log:printDebug(function () returns string {
+        string|error res = 'string:fromBytes(data);
+        return "onPing: " +  (res is string ? res : data.toString());
+    });
 }
