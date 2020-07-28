@@ -301,9 +301,9 @@ function addToPresidentialCumulative(map<json> jm) returns PresidentialCumulativ
         accum.summary.rejected += <int>jm.summary.rejected;
         accum.summary.polled += <int>jm.summary.polled;
         accum.summary.electors += <int>jm.summary.electors;
-        accum.summary.percent_valid = (accum.summary.polled == 0) ? "0.00%" : string `${io:sprintf("%.2f", accum.summary.valid*100.0/accum.summary.polled)}%`;
-        accum.summary.percent_rejected = (accum.summary.polled == 0) ? "0.00%" : string `${io:sprintf("%.2f", accum.summary.rejected*100.0/accum.summary.polled)}%`;
-        accum.summary.percent_polled = (accum.summary.electors == 0) ? "0.00%" : string `${io:sprintf("%.2f", accum.summary.polled*100.0/accum.summary.electors)}%`;
+        accum.summary.percent_valid = (accum.summary.polled == 0) ? "0.00" : io:sprintf("%.2f", accum.summary.valid*100.0/accum.summary.polled);
+        accum.summary.percent_rejected = (accum.summary.polled == 0) ? "0.00" : io:sprintf("%.2f", accum.summary.rejected*100.0/accum.summary.polled);
+        accum.summary.percent_polled = (accum.summary.electors == 0) ? "0.00" : io:sprintf("%.2f", accum.summary.polled*100.0/accum.summary.electors);
     }
 
     // if first PD being added to cumulative then just copy the party results over
@@ -321,7 +321,7 @@ function addToPresidentialCumulative(map<json> jm) returns PresidentialCumulativ
                 accum.by_party[i]["votes2nd"] = (accum.by_party[i]["votes2nd"] ?: 0) + <int>pr[i].votes2nd;
                 accum.by_party[i]["votes3rd"] = (accum.by_party[i]["votes3rd"] ?: 0) + <int>pr[i].votes3rd;
             }
-            accum.by_party[i].vote_percentage = (accum.summary.valid == 0) ? "0.00%" : string `${io:sprintf ("%.2f", ((accum.by_party[i].vote_count*100.0)/accum.summary.valid))}%`;
+            accum.by_party[i].vote_percentage = (accum.summary.valid == 0) ? "0.00" : io:sprintf ("%.2f", ((accum.by_party[i].vote_count*100.0)/accum.summary.valid));
         }
     }
     accum.nadded += 1;

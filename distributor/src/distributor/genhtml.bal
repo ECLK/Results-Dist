@@ -57,14 +57,14 @@ function generatePresidentialResultHtml(string electionCode, map<json> result, b
     foreach json j in partyResults {
         map<json> pr = <map<json>> j; // value is a json object
         if firstRound {
-            body += "<tr><td>" + <string>pr.candidate + "</td><td class='text-center'>" + <string>pr.party_code + "</td><td class='text-right'>" + commaFormatInt(<int>pr.vote_count) + "</td><td class='text-right'>" + <string>pr.vote_percentage + "</td></tr>";
+            body += "<tr><td>" + <string>pr.candidate + "</td><td class='text-center'>" + <string>pr.party_code + "</td><td class='text-right'>" + commaFormatInt(<int>pr.vote_count) + "</td><td class='text-right'>" + <string>pr.vote_percentage + "%</td></tr>";
         } else {
             body += "<tr><td>" + <string>pr.candidate + "</td><td class='text-center'>" + <string>pr.party_code 
                                + "</td><td class='text-right'>" + commaFormatInt(<int>pr.votes1st) 
                                + "</td><td class='text-right'>" + commaFormatInt(<int>pr.votes2nd) 
                                + "</td><td class='text-right'>" + commaFormatInt(<int>pr.votes3rd) 
                                + "</td><td class='text-right'>" + commaFormatInt(<int>pr.vote_count) 
-                               + "</td><td class='text-right'>" + <string>pr.vote_percentage + "</td></tr>";
+                               + "</td><td class='text-right'>" + <string>pr.vote_percentage + "%</td></tr>";
         }
     }
     body += "</table>";
@@ -73,13 +73,13 @@ function generatePresidentialResultHtml(string electionCode, map<json> result, b
     body += "<div class='container-fluid'>";
     body += "  <div class='col-md-4 col-md-offset-2'>Total Valid Votes</div>" + 
             "    <div class='col-md-2 text-right'>" + commaFormatInt(<int>result.summary.valid) + 
-            "    </div><div class='col-md-2 text-right'>" + <string>result.summary.percent_valid + "</div><div class='col-md-2'></div>";
+            "    </div><div class='col-md-2 text-right'>" + <string>result.summary.percent_valid + "%</div><div class='col-md-2'></div>";
     body += "  <div class='col-md-4 col-md-offset-2'>Rejected Votes</div>" + 
             "    <div class='col-md-2 text-right'>" + commaFormatInt(<int>result.summary.rejected) + 
-            "    </div><div class='col-md-2 text-right'>" + <string>result.summary.percent_rejected + "</div><div class='col-md-2'></div>";
+            "    </div><div class='col-md-2 text-right'>" + <string>result.summary.percent_rejected + "%</div><div class='col-md-2'></div>";
     body += "  <div class='col-md-4 col-md-offset-2'>Total Polled</div>" + 
             "    <div class='col-md-2 text-right'>" + commaFormatInt(<int>result.summary.polled) + 
-            "    </div><div class='col-md-2 text-right'>" + <string>result.summary.percent_polled + "</div><div class='col-md-2'></div>";
+            "    </div><div class='col-md-2 text-right'>" + <string>result.summary.percent_polled + "%</div><div class='col-md-2'></div>";
     body += "  <div class='col-md-4 col-md-offset-2'>Registered No. of Electors</div>" + 
             "    <div class='col-md-2 text-right'>" + commaFormatInt(<int>result.summary.electors) + 
             "    </div><div class='col-md-2'></div>";
