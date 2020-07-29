@@ -11,7 +11,7 @@ boolean wantXml = false;
 boolean wantHtml = false;
 boolean sortedHtml = false;
 
-boolean wantCode = false;
+boolean addCode = false;
 
 public type ElectionType ELECTION_TYPE_PRESIDENTIAL|ELECTION_TYPE_PARLIAMENTARY;
 
@@ -38,6 +38,9 @@ public function main (string? username = (),        // my username
         getFileNameBase = getParliamentaryFileNameBase;
         generateHtml = generateParliamentaryResultHtml;
     }
+
+    // check whether the user wants electionCode in the filename
+    addCode = <@untainted>wantCode;
 
     // check what format the user wants results in
     wantJson = <@untainted>'json;
