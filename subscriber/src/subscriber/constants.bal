@@ -9,7 +9,7 @@ const LEVEL_NF = "NATIONAL-FINAL";
 const WANT_IMAGE = "image=true";
 const WANT_AWAIT_RESULTS = "await=true";
 
-const MY_VERSION = "2020-07-28-II";
+const MY_VERSION = "2020-07-31-I";
 
 const UNDERSOCRE = "_";
 const COLON = ":";
