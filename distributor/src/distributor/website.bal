@@ -122,8 +122,8 @@ service mediaWebsite on mediaListener {
                     return caller->ok(r.jsonResult);
                 } else if format == "html" {
                     http:Response hr = new;
-                    boolean sorted = (r.jsonResult.'type == RN_SI || r.jsonResult.'type == RN_VS ||
-                                        r.jsonResult.'type == RN_VSN) ? true : false;
+                    boolean sorted = (r.jsonResult.'type == RN_SI || r.jsonResult.'type == RN_V ||
+                                      r.jsonResult.'type == RN_VS || r.jsonResult.'type == RN_VSN) ? true : false;
                     hr.setTextPayload(<@untainted>check generateHtml(election, r.jsonResult, sorted));
                     hr.setContentType("text/html");
                     return caller->ok(hr);

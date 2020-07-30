@@ -100,7 +100,7 @@ function testSubscriberRegistration() {
     // Test bulk success registration
     req = new;
     req.setFileAsPayload("src/distributor/tests/resources/contact1.json");
-    response = httpEndpoint->post("/sms/addall", req);
+    response = httpEndpoint->post("/sms/all", req);
     if (response is http:Response) {
         var result = response.getTextPayload();
         if (result is string) {
@@ -115,11 +115,11 @@ function testSubscriberRegistration() {
     // Test bulk registration with invalid nos
     req = new;
     req.setFileAsPayload("src/distributor/tests/resources/contact2.json");
-    response = httpEndpoint->post("/sms/addall", req);
+    response = httpEndpoint->post("/sms/all", req);
     if (response is http:Response) {
         var result = response.getTextPayload();
         if (result is string) {
-            test:assertEquals(result, "Validation failed: invalid recipient mobile no: newuser1:+00771234562");
+            test:assertEquals(result, "Validation failed: invalid recipient mobile no: newuser1:+00771234567976902");
         } else {
             test:assertFail(msg = "Invalid response message:");
         }
@@ -130,7 +130,7 @@ function testSubscriberRegistration() {
     // Test bulk registration with malformed JSON
     req = new;
     req.setFileAsPayload("src/distributor/tests/resources/contact3.json");
-    response = httpEndpoint->post("/sms/addall", req);
+    response = httpEndpoint->post("/sms/all", req);
     if (response is http:Response) {
         var result = response.getTextPayload();
         if (result is string) {
@@ -156,7 +156,7 @@ function testResetRecipients() {
         }
     });
     http:Request req = new;
-    var response = httpEndpoint->delete("/sms/reset", req);
+    var response = httpEndpoint->delete("/sms/all", req);
     if (response is http:Response) {
         var result = response.getTextPayload();
         if (result is string) {
@@ -182,15 +182,15 @@ function testValidateFunction() {
     test:assertTrue(validate("+94716181195") == "94716181195", msg = "Failed assertion : 94716181195");
 
     // validate invalid local numbers
-    error err = <error> validate("07161811948979870");
-    string detail = <string> err.detail()?.message;
-    test:assertTrue(stringutils:contains(detail, "Invalid mobile number. Resend the request as follows: If the " +
-            "mobile no is 0771234567, send POST request to  '/sms' with JSON payload '{\"username\":\"myuser\", " +
-            "\"mobile\":\"0771234567\"}'"));
+    //error err = <error> validate("07161811948979870");
+    //string detail = <string> err.detail()?.message;
+    //test:assertTrue(stringutils:contains(detail, "Invalid mobile number. Resend the request as follows: If the " +
+    //        "mobile no is 0771234567, send POST request to  '/sms' with JSON payload '{\"username\":\"myuser\", " +
+    //        "\"mobile\":\"0771234567\"}'"));
 
     // validate invalid local numbers with non numeric chars
-    err = <error> validate("07161811AB");
-    detail = <string> err.detail()?.message;
+    error err = <error> validate("07161811AB");
+    string detail = <string> err.detail()?.message;
     test:assertTrue(stringutils:contains(detail, "Invalid mobile number. Given mobile number contains non numeric " +
                                                     "characters: 07161811AB"));
 

@@ -65,11 +65,15 @@ function sendSMS(string message, string resultId) {
     }
     string logMessage = "Sending SMS for " + resultId;
     log:printInfo(logMessage);
-    foreach string targetMobile in mobileSubscribers {
-        log:printInfo(logMessage + " to " + targetMobile);
-        var response = smsClient->sendSms(sourceDepartment, message, targetMobile);
-        if response is error {
-            log:printError("Message sending failed for \'" + targetMobile + "\'", response);
+    string[] keys = mobileSubscribers.keys();
+    foreach string userName in keys {
+        string? targetMobile = mobileSubscribers[userName];
+        if !(targetMobile is ()) {
+           log:printInfo(logMessage + " to " + targetMobile);
+           var response = smsClient->sendSms(sourceDepartment, message, targetMobile);
+           if response is error {
+               log:printError("Message sending failed for \'" + targetMobile + "\'", response);
+           }
         }
     }
 }
@@ -81,7 +85,7 @@ function sendSMS(string message, string resultId) {
 function validate(string mobileNo) returns string|error {
     string mobile = <@untained> mobileNo.trim();
 
-    if (mobile.startsWith("+94") && mobile.length() == 12) {
+    if (mobile.startsWith("+") && mobile.length() == 12) {
         mobile = mobile.substring(1);
     }
 
@@ -91,18 +95,19 @@ function validate(string mobileNo) returns string|error {
         log:printError(errorMsg);
         return error(ERROR_REASON, message = errorMsg);
     }
+    return mobile;
 
-    if (mobile.startsWith("0") && mobile.length() == 10) {
-        return mobile;
-    }
-    if (mobile.startsWith("94") && mobile.length() == 11) {
-        return mobile;
-    }
-    // Allow only the local mobile numbers to register via public API. International number are avoided.
-    log:printError("Invalid mobile number : " + mobile);
-    return error(ERROR_REASON, message = "Invalid mobile number. Resend the request as follows: If the " +
-                                     "mobile no is 0771234567, send POST request to  \'/sms\' with JSON payload " +
-                                     "\'{\"username\":\"myuser\", \"mobile\":\"0771234567\"}\'");
+    //if (mobile.startsWith("0") && mobile.length() == 10) {
+    //    return mobile;
+    //}
+    //if (mobile.startsWith("94") && mobile.length() == 11) {
+    //    return mobile;
+    //}
+    //// Allow only the local mobile numbers to register via public API. International number are avoided.
+    //log:printError("Invalid mobile number : " + mobile);
+    //return error(ERROR_REASON, message = "Invalid mobile number. Resend the request as follows: If the " +
+    //                                 "mobile no is 0771234567, send POST request to  \'/sms\' with JSON payload " +
+    //                                 "\'{\"username\":\"myuser\", \"mobile\":\"0771234567\"}\'");
 }
 
 # Register recipient in the mobileSubscribers list and persist in the smsRecipients db table.

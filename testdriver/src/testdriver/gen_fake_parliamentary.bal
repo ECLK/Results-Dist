@@ -211,6 +211,46 @@ function genFakeParliamentary() {
             }
         },
         {
+            "type": "RE_V",
+            "sequence_number": "0110",
+            "timestamp": 1420087982.0,
+            "level": "ELECTORAL-DISTRICT",
+            "ed_code": "02",
+            "ed_name": "Gampaha",
+            "by_party": [
+                {
+                    "party_code": "Foo",
+                    "party_name": "Foo foo",
+                    "vote_count": 350,
+                    "vote_percentage": "46.66%",
+                    "seat_count": 0,
+                    "national_list_seat_count": 0
+                },
+                {
+                    "party_code": "Bar",
+                    "party_name": "Bar bar",
+                    "vote_count": 220,
+                    "vote_percentage": "29.33%",
+                    "seat_count": 0,
+                    "national_list_seat_count": 0
+                },
+                {
+                    "party_code": "Baz",
+                    "party_name": "Baz baz",
+                    "vote_count": 180,
+                    "vote_percentage": "24.00%",
+                    "seat_count": 0,
+                    "national_list_seat_count": 0
+                }
+            ],
+            "summary": {
+                "valid": 750,
+                "rejected": 50,
+                "polled": 800,
+                "electors": 925
+            }
+        },
+        {
             "type": "RE_S",
             "sequence_number": "0120",
             "timestamp": 1420087983.0,
@@ -218,14 +258,6 @@ function genFakeParliamentary() {
             "ed_code": "02",
             "ed_name": "Gampaha",
             "by_party": [
-                {
-                    "party_code": "Baz",
-                    "party_name": "Baz baz",
-                    "vote_count": 0,
-                    "vote_percentage": "0.00%",
-                    "seat_count": 3,
-                    "national_list_seat_count": 0
-                },
                 {
                     "party_code": "Foo",
                     "party_name": "Foo foo",
@@ -237,10 +269,60 @@ function genFakeParliamentary() {
                 {
                     "party_code": "Bar",
                     "party_name": "Bar bar",
+                    "vote_count": 0,
+                    "vote_percentage": "0.00%",
                     "seat_count": 5,
+                    "national_list_seat_count": 0
+                },
+                {
+                    "party_code": "Baz",
+                    "party_name": "Baz baz",
+                    "vote_count": 0,
+                    "vote_percentage": "0.00%",
+                    "seat_count": 3,
                     "national_list_seat_count": 0
                 }
             ]
+        },
+        {
+            "type": "RE_V",
+            "sequence_number": "0123",
+            "timestamp": 1420087991.0,
+            "level": "ELECTORAL-DISTRICT",
+            "ed_code": "01",
+            "ed_name": "Colombo",
+            "by_party": [
+                {
+                    "party_code": "Foo",
+                    "party_name": "Foo foo",
+                    "vote_count": 950,
+                    "vote_percentage": "28.35%",
+                    "seat_count": 0,
+                    "national_list_seat_count": 0
+                },
+                {
+                    "party_code": "Bar",
+                    "party_name": "Bar bar",
+                    "vote_count": 2220,
+                    "vote_percentage": "66.26%",
+                    "seat_count": 0,
+                    "national_list_seat_count": 0
+                },
+                {
+                    "party_code": "Baz",
+                    "party_name": "Baz baz",
+                    "vote_count": 180,
+                    "vote_percentage": "05.37%",
+                    "seat_count": 0,
+                    "national_list_seat_count": 0
+                }
+            ],
+            "summary": {
+                "valid": 3350,
+                "rejected": 250,
+                "polled": 3500,
+                "electors": 765
+            }
         },
         {
             "type": "RE_S",
@@ -269,14 +351,54 @@ function genFakeParliamentary() {
                 {
                     "party_code": "Baz",
                     "party_name": "Baz baz",
+                    "vote_count": 0,
+                    "vote_percentage": "0.00%",
                     "seat_count": 1,
                     "national_list_seat_count": 0
                 }
             ]
         },
         {
+            "type": "RN_V",
+            "sequence_number": "0126",
+            "timestamp": 1420087998.0,
+            "level": "NATIONAL",
+            "by_party": [
+                {
+                    "party_code": "Bar",
+                    "party_name": "Bar bar",
+                    "vote_count": 12540,
+                    "vote_percentage": "32.79%",
+                    "seat_count": 0,
+                    "national_list_seat_count": 0
+                },
+                {
+                    "party_code": "Baz",
+                    "party_name": "Baz baz",
+                    "vote_count": 7500,
+                    "vote_percentage": "19.61%",
+                    "seat_count": 0,
+                    "national_list_seat_count": 0
+                },
+                {
+                    "party_code": "Foo",
+                    "party_name": "Foo foo",
+                    "vote_count": 18200,
+                    "vote_percentage": "47.59%",
+                    "seat_count": 0,
+                    "national_list_seat_count": 0
+                }
+            ],
+            "summary": {
+                "valid": 38240,
+                "rejected": 300,
+                "polled": 38540,
+                "electors": 40000
+            }
+        },
+        {
             "type": "RN_VS",
-            "sequence_number": "0125",
+            "sequence_number": "0127",
             "timestamp": 1420087998.0,
             "level": "NATIONAL",
             "by_party": [
@@ -314,7 +436,7 @@ function genFakeParliamentary() {
         },
         {
             "type": "RN_VSN",
-            "sequence_number": "0127",
+            "sequence_number": "0128",
             "timestamp": 1420088001.0,
             "level": "NATIONAL",
             "by_party": [
@@ -362,7 +484,8 @@ function genFakeParliamentary() {
                     "party_code": "Foo",
                     "party_name": "Foo foo",
                     "candidate_number": "12",
-                    "candidate_name": "Lorem Ipsum"
+                    "candidate_name": "Lorem Ipsum",
+                    "candidate_type" : "Normal"
                 },
                 {
                     "party_code": "Bar",
@@ -384,7 +507,8 @@ function genFakeParliamentary() {
                     "party_code": "Bar",
                     "party_name": "Bar bar",
                     "candidate_number": "15",
-                    "candidate_name": "Baz Qux"
+                    "candidate_name": "Baz Qux",
+                    "candidate_type" : "National List"
                 }
             ]
         },

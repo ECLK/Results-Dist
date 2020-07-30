@@ -5,7 +5,9 @@ import ballerina/runtime;
 import ballerina/time;
 
 const RP_V = "RP_V";
+const RE_V = "RE_V";
 const RE_S = "RE_S";
+const RN_V = "RN_V";
 const RN_VS = "RN_VS";
 const RN_VSN = "RN_VSN";
 const RE_SC = "RE_SC";
@@ -25,9 +27,19 @@ function sendParliamentaryResults(string electionCode, http:Client rc, map<json>
                 check updateSummary(result);
                 check feedResult(rc, electionCode, resultType, result.pd_code.toString(), result);
             }
+            RE_V => {
+                check updateByParty(<json[]>result.by_party);
+                check updateSummary(result);
+                check feedResult(rc, electionCode, resultType, result.ed_code.toString(), result);
+            }
             RE_S => {
                 check updateByParty(<json[]>result.by_party);
                 check feedResult(rc, electionCode, resultType, result.ed_code.toString(), result);
+            }
+            RN_V => {
+                check updateByParty(<json[]>result.by_party);
+                check updateSummary(result);
+                check feedResult(rc, electionCode, resultType, FINAL, result);
             }
             RN_VS => {
                 check updateByParty(<json[]>result.by_party);
@@ -78,8 +90,8 @@ function updateSummary(map<json> result) returns error? {
 }
 
 
-function feedResult (http:Client hc, string electionCode, string resType, string resCode, map<json> result) returns
-error? {
+function feedResult(http:Client hc, string electionCode, string resType, string resCode, map<json> result) returns
+        error? {
     // reset time stamp of the result to now
     result["timestamp"] = check time:format(time:currentTime(), "yyyy-MM-dd'T'HH:mm:ss.SSSZ");
     http:Response hr;
