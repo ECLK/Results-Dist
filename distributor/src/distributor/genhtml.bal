@@ -108,8 +108,10 @@ function generateParliamentaryResultHtml(string electionCode, map<json> result, 
                                     " POLLING DIVISION (" + <string>result.pd_code + ") RESULT"; }
         RE_VI => { resTypeHeading = <string>result.ed_name + " ELECTORAL DISTRICT CUMULATIVE RESULTS AT " +
                                     <string>result.timestamp; }
+        RE_V => { resTypeHeading = <string>result.ed_name + " ELECTORAL DISTRICT VOTES RESULT"; }
         RE_S => { resTypeHeading = <string>result.ed_name + " ELECTORAL DISTRICT SEAT ALLOCATION RESULT"; }
         RN_SI => { resTypeHeading = "ALL ISLAND CUMULATIVE SEAT ALLOCATION RESULTS AT " + <string>result.timestamp; }
+        RN_V => { resTypeHeading = "ALL ISLAND VOTES RESULT"; }
         RN_VS => { resTypeHeading = "ALL ISLAND VOTES + SEAT ALLOCATION RESULT"; }
         RN_VSN => { resTypeHeading = "ALL ISLAND VOTES + SEAT ALLOCATION + NATIONAL LIST ALLOCATION RESULT"; }
         RE_SC => { resTypeHeading = <string>result.ed_name + " ELECTORAL DISTRICT SEATS ALLOCATED CANDIDATES"; }
@@ -125,7 +127,7 @@ function generateParliamentaryResultHtml(string electionCode, map<json> result, 
                 "<th>Name of Party</th>" +
                 "<th class='text-center'>Party Abbreviaton</th>";
 
-        if ('type == RP_V || 'type == RE_VI || 'type == RN_VS || 'type == RN_VSN) {
+        if ('type == RP_V || 'type == RE_VI || 'type == RE_V || 'type == RN_V || 'type == RN_VS || 'type == RN_VSN) {
             body += "<th class='text-right'>Votes Received</th>" +
                     "<th class='text-right'>Percentage</th>";
         }
@@ -144,7 +146,7 @@ function generateParliamentaryResultHtml(string electionCode, map<json> result, 
                     "<td>" + <string>pr.party_name + "</td>" +
                     "<td class='text-center'>" + <string>pr.party_code +"</td>";
 
-            if ('type == RP_V || 'type == RE_VI || 'type == RN_VS || 'type == RN_VSN) {
+            if ('type == RP_V || 'type == RE_VI || 'type == RE_V || 'type == RN_V || 'type == RN_VS || 'type == RN_VSN) {
                 body += "<td class='text-right'>" + commaFormatInt(<int>pr.vote_count) + "</td>" +
                         "<td class='text-right'>" + <string>pr.vote_percentage + "</td>";
             }
@@ -238,7 +240,7 @@ function sortParliamentaryByPartyResults(json[] unsorted, string resultType) ret
             return sortByPartyResultsBySeatCount(unsorted);
         }
     }
-    // RN_VS, RN_VSN
+    // RN_V, RN_VS, RN_VSN
     return sortByPartyResultsByVoteCount(unsorted);
 }
 

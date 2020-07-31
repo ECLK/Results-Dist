@@ -9,7 +9,7 @@ const LEVEL_NF = "NATIONAL-FINAL";
 const WANT_IMAGE = "image=true";
 const WANT_AWAIT_RESULTS = "await=true";
 
-const MY_VERSION = "2020-07-28-II";
+const MY_VERSION = "2020-07-31-I";
 
 const UNDERSOCRE = "_";
 const COLON = ":";
@@ -24,8 +24,10 @@ const ELECTION_TYPE_PARLIAMENTARY = "PARLIAMENTARY";
 
 const RP_V = "RP_V";
 const RE_VI = "RE_VI";
+const RE_V = "RE_V";
 const RE_S = "RE_S";
 const RN_SI = "RN_SI";
+const RN_V = "RN_V";
 const RN_VS = "RN_VS";
 const RN_VSN = "RN_VSN";
 const RE_SC = "RE_SC";
