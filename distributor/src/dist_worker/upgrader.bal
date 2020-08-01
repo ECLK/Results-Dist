@@ -1,3 +1,5 @@
+import ballerina/auth;
+import ballerina/config;
 import ballerina/file;
 import ballerina/http;
 import ballerina/log;
@@ -48,7 +50,7 @@ service connector = @http:WebSocketServiceConfig {} service {
 @http:ServiceConfig {
     basePath: "/"
 }
-service disseminator on new http:Listener(8080) {
+service receiver on new http:Listener(config:getAsInt("eclk.dist_worker.receiver.port", 8080)) {
     
     @http:ResourceConfig {
         methods: ["POST"],
@@ -93,7 +95,24 @@ service disseminator on new http:Listener(8080) {
         // respond accepted
         return caller->accepted();
     }
+}
 
+http:BasicAuthHandler inboundBasicAuthHandler = new (new auth:InboundBasicAuthProvider());
+
+# Listener for media orgs to subscribe, for the website and for them to pull specific results.
+listener http:Listener subscriptionListener = new (config:getAsInt("eclk.dist_worker.disseminator.port", 8282), config = {
+    auth: {
+        authHandlers: [inboundBasicAuthHandler],
+        mandateSecureSocket: false
+    }
+});
+
+
+@http:ServiceConfig {
+    basePath: "/"
+}
+service disseminator on subscriptionListener {
+    
     # Hook for subscriber to be sent some info to display. Can put some HTML content into 
     # web/info.html and it'll get shown at subscriber startup
     # + return - error if problem
