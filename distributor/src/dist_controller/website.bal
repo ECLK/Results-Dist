@@ -1,8 +1,6 @@
-import ballerina/file;
 import ballerina/http;
 import ballerina/log;
 import ballerina/mime;
-import ballerina/task;
 import ballerina/time;
 import ballerina/xmlutils;
 
@@ -11,48 +9,6 @@ const LEVEL_ED = "ELECTORAL-DISTRICT";
 const LEVEL_NI = "NATIONAL-INCREMENTAL";
 const LEVEL_N = "NATIONAL";
 const LEVEL_NF = "NATIONAL-FINAL";
-
-const WANT_IMAGE = "image";
-const WANT_AWAIT_RESULTS = "await";
-
-map<http:WebSocketCaller> jsonConnections = {};
-map<http:WebSocketCaller> imageConnections = {};
-map<http:WebSocketCaller> awaitConnections = {};
-
-service disseminator = @http:WebSocketServiceConfig {} service {
-
-    resource function onOpen(http:WebSocketCaller caller) {
-        string connectionId = caller.getConnectionId();
-
-        log:printInfo("Registered: " + connectionId);
-
-        jsonConnections[connectionId] = <@untainted> caller;
-
-        if <anydata> caller.getAttribute(WANT_IMAGE) == true {
-            imageConnections[connectionId] = <@untainted> caller;
-        }
-
-        if <anydata> caller.getAttribute(WANT_AWAIT_RESULTS) == true {
-            awaitConnections[connectionId] = <@untainted> caller;
-        }
-    }
-
-    resource function onClose(http:WebSocketCaller caller, int statusCode, string reason) {
-        string connectionId = caller.getConnectionId();
-
-        _ = jsonConnections.remove(connectionId);
-
-        if imageConnections.hasKey(connectionId) {
-            _ = imageConnections.remove(connectionId);
-        }
-
-        if awaitConnections.hasKey(connectionId) {
-            _ = awaitConnections.remove(connectionId);
-        }
-
-        log:printInfo(string `Unregistered: ${connectionId}, statusCode: ${statusCode}, reason: ${reason}`);     
-    }
-};
 
 # Show a website for media people to get a list of all released results with
 # links to each json value and the image with the signed official document.
@@ -170,30 +126,6 @@ service mediaWebsite on mediaListener {
         return caller->notFound();
     }
 
-    # Hook for subscriber to be sent some info to display. Can put some HTML content into 
-    # web/info.html and it'll get shown at subscriber startup
-    # + return - error if problem
-    resource function info(http:Caller caller, http:Request request) returns error? {
-        http:Response hr = new;
-        hr.setFileAsPayload("web/info.txt", "text/plain");
-        check caller->ok(hr);
-    }
-
-    # Hook for subscriber to check whether their version is still active. If version is active
-    # then must have file web/active-{versionNo}. If its missing will return 404.
-    # + return - error if problem
-    @http:ResourceConfig {
-        path: "/isactive/{versionNo}",
-        methods: ["GET"]
-    }
-    resource function isactive(http:Caller caller, http:Request request, string versionNo) returns error? {
-        if file:exists("web/active-" + <@untainted> versionNo) {
-            return caller->ok("Still good");
-        } else {
-            return caller->notFound("This version is no longer active; please upgrade (see status message).");
-        }
-    }
-
     @http:ResourceConfig {
         path: "/sms",
         methods: ["POST"],
@@ -286,30 +218,6 @@ service mediaWebsite on mediaListener {
             return caller->internalServerError(<string> status.detail()?.message);
         }
         return caller->ok("Successfully unregistered all");
-    }
-
-    // May have to move to a separate service.
-    @http:ResourceConfig {
-        webSocketUpgrade: {
-            upgradePath: "/connect",
-            upgradeService: disseminator
-        }
-    }
-    resource function upgrader(http:Caller caller, http:Request req) {
-        map<string[]> queryParams = req.getQueryParams();
-
-        http:WebSocketCaller|http:WebSocketError wsEp = caller->acceptWebSocketUpgrade({});
-        if (wsEp is http:WebSocketCaller) {
-            if queryParams.hasKey(WANT_IMAGE) {
-                wsEp.setAttribute(WANT_IMAGE, true);
-            }
-
-            if queryParams.hasKey(WANT_AWAIT_RESULTS) {
-                wsEp.setAttribute(WANT_AWAIT_RESULTS, true);
-            }
-        } else {
-            log:printError("Error occurred during WebSocket upgrade", wsEp);
-        }
     }
 }
 
@@ -444,32 +352,4 @@ function generateParliamentaryResultsTable() returns string {
     }
     tab = tab + "</table>";
     return tab;
-}
-
-task:TimerConfiguration timerConfiguration = {
-    intervalInMillis: 30000,
-    initialDelayInMillis: 30000
-};
-listener task:Listener timer = new (timerConfiguration);
-
-service timerService on timer {
-    resource function onTrigger() {
-        string[] keys = jsonConnections.keys();
-        foreach string k in keys {
-            http:WebSocketCaller? con = jsonConnections[k];
-            if !(con is ()) {
-                log:printDebug("Pinging " + con.getConnectionId());
-                _ = start ping(con);
-            }
-        }  
-    }
-}
-
-final byte[] pingData = "ping".toBytes();
-
-function ping(http:WebSocketCaller con) {
-    var err = con->ping(pingData);
-    if (err is http:WebSocketError) {
-        log:printError(string `Error pinging ${con.getConnectionId()}`, err);
-    }
 }

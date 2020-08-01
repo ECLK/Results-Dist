@@ -14,11 +14,11 @@ function testReceivedDataViaTesDriverFakeElection() {
     testRE_VI("0008-RE_VI-ED-02--Gampaha.json", 10, 50, 20, 80, 10, 90, 100);
     testRE_VI("0010-RE_VI-ED-02--Gampaha.json", 60, 70, 40, 170, 20, 190, 225);
 
-    testNational("0012-RN_SI-N.json", "Foo", 10, "Bar", 5, "Baz", 3);
-    testNational("0014-RN_SI-N.json", "Bar", 25, "Foo", 18, "Baz", 4);
+    testNational("0013-RN_SI-N.json", "Foo", 10, "Bar", 5, "Baz", 3);
+    testNational("0016-RN_SI-N.json", "Bar", 25, "Foo", 18, "Baz", 4);
 
-    testNational("0015-RN_VS-N.json", "Foo", 100, "Bar", 75, "Baz", 25);
-    testNational("0016-RN_VSN-N.json", "Foo", 100, "Bar", 75, "Baz", 25);
+    testNational("0018-RN_VS-N.json", "Foo", 100, "Bar", 75, "Baz", 25);
+    testNational("0019-RN_VSN-N.json", "Foo", 100, "Bar", 75, "Baz", 25);
 }
 
 function testNational(string filePath, string top, int topCount, string mid, int midCount, string last, int lastCount) {

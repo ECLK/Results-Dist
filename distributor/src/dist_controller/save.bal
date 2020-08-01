@@ -1,4 +1,5 @@
 import ballerina/config;
+import ballerina/http;
 import ballerina/io;
 import ballerina/log;
 import ballerinax/java.jdbc;
@@ -144,6 +145,20 @@ function __init() {
         presidentialCumulativeVotesRes = emptyPresidentialCumResult.clone();
         presidentialPrefsCumulativeVotesRes = emptyPresidentialCumResult.clone();
     }
+
+    secondaryDistributors = [];
+    var pushClientFunc = function (string url) {
+        if url == "" {
+            return;
+        }
+        secondaryDistributors.push(new http:Client(url));
+    };
+
+    pushClientFunc(config:getAsString("eclk.distributor.w1"));
+    pushClientFunc(config:getAsString("eclk.distributor.w2"));
+    pushClientFunc(config:getAsString("eclk.distributor.w3"));
+    pushClientFunc(config:getAsString("eclk.distributor.w4"));
+    pushClientFunc(config:getAsString("eclk.distributor.w5"));
 
     // uncomment following line to clean the db if needed
     //_ = checkpanic dbClient->update(DROP_RESULTS_TABLE);

@@ -4,6 +4,8 @@ import ballerina/lang.'int;
 import ballerina/log;
 import ballerina/time;
 
+http:Client[] secondaryDistributors = [];
+
 # Service for results tabulation to publish results to. We assume that results tabulation will deliver
 # a result in two separate messages - one with the json result data and another with an image of the
 # signed result document with both messages referring to the same message code which must be unique
@@ -41,7 +43,7 @@ service receiveResults on resultsListener {
         string? pd_name = req.getQueryParamValue("pd_name");
         string message = getAwaitResultsMessage(electionCode, "/" + resultType, resultCode, level, ed_name, pd_name);
 
-        _ = start pushAwaitNotification(message);        
+        triggerAwaitNotification(<@untainted> message);        
 
          if validSmsClient {
              _ = start sendSMS(<@untainted> message, <@untainted> (electionCode + "/" + resultType + "/" + resultCode));
@@ -80,8 +82,7 @@ service receiveResults on resultsListener {
         // store the result in the DB against the resultCode and assign it a sequence #
         CumulativeResult? resCumResult = check saveResult(result);
     
-        // publish the received result
-        publishResultData(result);
+        triggerResultDelivery(constructResultData(result));
 
         if !(resCumResult is ()) {
             check sendIncrementalResultFunc(resCumResult, electionCode, resultType, resultCode, result);
@@ -119,7 +120,7 @@ service receiveResults on resultsListener {
                 pd_name: res.jsonResult.pd_name.toString(),
                 ed_name: res.jsonResult.ed_name.toString()
             };
-            publishResultImage(update);
+            triggerImageDelivery(<@untainted> update);
         }
 
         // respond accepted
@@ -133,10 +134,46 @@ service receiveResults on resultsListener {
     }
 }
 
-# Publish the results as follows:
-# - update the website with the result
-# - deliver the result data to all subscribers
-function publishResultData(Result result, string? electionCode = (), string? resultCode = ()) {
+function triggerAwaitNotification(string message) {
+    foreach http:Client cl in secondaryDistributors {
+        _ = start triggerAwaitNotificationFoSecondaryDistributor(cl, message);
+    }
+}
+
+function triggerAwaitNotificationFoSecondaryDistributor(http:Client cl, string message) {
+    var res = cl->post("/await", message);
+    if res is error {
+        log:printError("Error triggering await notification for " + cl.url, res);
+    }
+}
+
+function triggerResultDelivery(json data) {
+    foreach http:Client cl in secondaryDistributors {
+        _ = start triggerResultDeliveryFoSecondaryDistributor(cl, data);
+    }
+}
+
+function triggerResultDeliveryFoSecondaryDistributor(http:Client cl, json result) {
+    var res = cl->post("/result", result);
+    if res is error {
+        log:printError("Error triggering result delivery for " + cl.url, res);
+    }
+}
+
+function triggerImageDelivery(json image) {
+    foreach http:Client cl in secondaryDistributors {
+        _ = start triggerImageDeliveryFoSecondaryDistributor(cl, image);
+    }
+}
+
+function triggerImageDeliveryFoSecondaryDistributor(http:Client cl, json image) {
+    var res = cl->post("/image", image);
+    if res is error {
+        log:printError("Error triggering image delivery for " + cl.url, res);
+    }
+}
+
+function constructResultData(Result result, string? electionCode = (), string? resultCode = ()) returns json {
     map<json> jsonResult = result.jsonResult;
 
     if jsonResult.level == LEVEL_N && !(jsonResult.by_party is error) {
@@ -144,50 +181,10 @@ function publishResultData(Result result, string? electionCode = (), string? res
     }
 
     // push it out with the election code and the json result as the message
-    json resultAll = {
+    return {
         election_code : result.election,
         result : jsonResult
     };
-
-    string[] keys = jsonConnections.keys();
-    foreach string k in keys {
-        http:WebSocketCaller? con = jsonConnections[k];
-        if !(con is ()) {
-           log:printInfo("Sending JSON data for " + con.getConnectionId());
-           _ = start pushData(con, "results data", resultAll);
-        }
-    }
-}
-
-function pushData(http:WebSocketCaller con, string kind, json data) {
-    var err = con->pushText(data);
-    if (err is http:WebSocketError) {
-        log:printError(string `Error pushing ${kind} for ${con.getConnectionId()}`, err);
-    }
-}
-
-# Publish results image.
-function publishResultImage(json imageData) {
-    string[] keys = imageConnections.keys();
-    foreach string k in keys {
-        http:WebSocketCaller? con = imageConnections[k];
-        if !(con is ()) {
-           log:printInfo("Sending image data for " + con.getConnectionId());
-           _ = start pushData(con, "image data", imageData);
-        }
-    }
-}
-
-function pushAwaitNotification(string message) {
-    string jsonString = "\"" + message + "\"";
-    string[] keys = awaitConnections.keys();
-    foreach string k in keys {
-        http:WebSocketCaller? con = awaitConnections[k];
-        if !(con is ()) {
-           log:printInfo("Sending await notification for " + con.getConnectionId());
-           _ = start pushData(con, "await notification", jsonString);
-        }
-    }
 }
 
 function cleanupPresidentialJson(map<json> jin) {
@@ -279,7 +276,7 @@ function sendPresidentialIncrementalResult(CumulativeResult resCumResult, string
     _ = check saveResult(cumResult);
 
     // publish the received cumulative result
-    publishResultData(cumResult);
+    triggerResultDelivery(constructResultData(cumResult));
 }
 
 function sendParliamentaryIncrementalResult(CumulativeResult resCumResult, string electionCode, string resultType,
@@ -321,7 +318,7 @@ function sendParliamentaryIncrementalVotesResult(CumulativeResult resCumResult, 
     _ = check saveResult(cumResult);
 
     // publish the received cumulative result
-    publishResultData(cumResult);
+    triggerResultDelivery(constructResultData(cumResult));
 }
 
 function sendParliamentaryIncrementalSeatsResult(CumulativeResult resCumResult, string electionCode, string resultType,
@@ -351,5 +348,5 @@ function sendParliamentaryIncrementalSeatsResult(CumulativeResult resCumResult, 
     _ = check saveResult(cumResult);
 
     // publish the received cumulative result
-    publishResultData(cumResult);
+    triggerResultDelivery(constructResultData(cumResult));
 }
