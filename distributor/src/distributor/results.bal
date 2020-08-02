@@ -2,6 +2,7 @@ import ballerina/http;
 import ballerina/io;
 import ballerina/lang.'int;
 import ballerina/log;
+import ballerina/runtime;
 import ballerina/time;
 
 # Service for results tabulation to publish results to. We assume that results tabulation will deliver
@@ -320,6 +321,8 @@ function sendParliamentaryIncrementalVotesResult(CumulativeResult resCumResult, 
     // Ignore the non-error return value, since it would be `()`, when saving an incremental result
     _ = check saveResult(cumResult);
 
+    // add small delay between original result and incremental result publish
+    runtime:sleep(1000);
     // publish the received cumulative result
     publishResultData(cumResult);
 }
@@ -350,6 +353,8 @@ function sendParliamentaryIncrementalSeatsResult(CumulativeResult resCumResult, 
     // Ignore the non-error return value, since it would be `()`, when saving an incremental result
     _ = check saveResult(cumResult);
 
+    // add small delay between original result and incremental result publish
+    runtime:sleep(1000);
     // publish the received cumulative result
     publishResultData(cumResult);
 }
