@@ -108,7 +108,7 @@ public function main (string? username = (),        // my username
             callbackService = imageAndResultDataClientService;
             kinds = "result data and PDF";
         } else {
-            queryString = "&" + WANT_IMAGE; 
+            queryString = queryString + "&" + WANT_IMAGE; 
             callbackService = allClientService;
             kinds = "await notification, result data, and PDF";
         }

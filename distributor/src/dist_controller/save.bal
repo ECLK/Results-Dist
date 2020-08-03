@@ -1,4 +1,5 @@
 import ballerina/config;
+import ballerina/http;
 import ballerina/io;
 import ballerina/log;
 import ballerinax/java.jdbc;
@@ -144,6 +145,8 @@ function __init() {
         presidentialCumulativeVotesRes = emptyPresidentialCumResult.clone();
         presidentialPrefsCumulativeVotesRes = emptyPresidentialCumResult.clone();
     }
+
+    secondaryDistributor = new http:Client(config:getAsString("eclk.distributor.worker", "http://localhost:8080"));
 
     // uncomment following line to clean the db if needed
     //_ = checkpanic dbClient->update(DROP_RESULTS_TABLE);

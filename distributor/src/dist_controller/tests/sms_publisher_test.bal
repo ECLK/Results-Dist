@@ -99,7 +99,7 @@ function testSubscriberRegistration() {
 
     // Test bulk success registration
     req = new;
-    req.setFileAsPayload("src/distributor/tests/resources/contact1.json");
+    req.setFileAsPayload("src/distributor_primary/tests/resources/contact1.json");
     response = httpEndpoint->post("/sms/all", req);
     if (response is http:Response) {
         var result = response.getTextPayload();
@@ -114,7 +114,7 @@ function testSubscriberRegistration() {
 
     // Test bulk registration with invalid nos
     req = new;
-    req.setFileAsPayload("src/distributor/tests/resources/contact2.json");
+    req.setFileAsPayload("src/distributor_primary/tests/resources/contact2.json");
     response = httpEndpoint->post("/sms/all", req);
     if (response is http:Response) {
         var result = response.getTextPayload();
@@ -129,7 +129,7 @@ function testSubscriberRegistration() {
 
     // Test bulk registration with malformed JSON
     req = new;
-    req.setFileAsPayload("src/distributor/tests/resources/contact3.json");
+    req.setFileAsPayload("src/distributor_primary/tests/resources/contact3.json");
     response = httpEndpoint->post("/sms/all", req);
     if (response is http:Response) {
         var result = response.getTextPayload();
