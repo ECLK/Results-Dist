@@ -48,13 +48,21 @@ service mediaWebsite on mediaListener {
 
     resource function allresults(http:Caller caller, http:Request req) returns error? {
         json[] results = [];
-
         // return results in reverse order
         int i = resultsCache.length();
-        while i > 0 { // show non-incremental results in reverse order of release
-            i = i - 1;
-            if resultsCache[i].jsonResult.level != "NATIONAL-INCREMENTAL" {
-                results.push(resultsCache[i].jsonResult);
+        if electionType == ELECTION_TYPE_PARLIAMENTARY {
+            while i > 0 { // show non-incremental results in reverse order of release
+                i = i - 1;
+                if !(resultsCache[i].'type == RE_VI || resultsCache[i].'type == RN_SI) {
+                    results.push(resultsCache[i].jsonResult);
+                }
+            }
+        } else {
+            while i > 0 { // show non-incremental results in reverse order of release
+                i = i - 1;
+                if resultsCache[i].jsonResult.level != "NATIONAL-INCREMENTAL" {
+                    results.push(resultsCache[i].jsonResult);
+                }
             }
         }
         return caller->ok(results);
