@@ -29,7 +29,7 @@ public function main (string? username = (),        // my username
                       boolean html = false,         // do I want HTML?
                       //boolean sorted = true,        // do I want HTML results sorted highest to lowest
                       boolean wantCode = false,     // do I want electionCode in the filename
-                      string homeURL = "https://mediaresultshub.ecdev.opensource.lk" // where do I connect at
+                      string homeURL = "https://mediaresultshub.ecstag.opensource.lk" // where do I connect at
                     ) returns @tainted error? {
     // Set the election type
     electionType = ELECTION_TYPE_PARLIAMENTARY;
@@ -108,7 +108,7 @@ public function main (string? username = (),        // my username
             callbackService = imageAndResultDataClientService;
             kinds = "result data and PDF";
         } else {
-            queryString = "&" + WANT_IMAGE; 
+            queryString = queryString + "&" + WANT_IMAGE; 
             callbackService = allClientService;
             kinds = "await notification, result data, and PDF";
         }
