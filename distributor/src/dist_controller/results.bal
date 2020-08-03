@@ -2,6 +2,7 @@ import ballerina/http;
 import ballerina/io;
 import ballerina/lang.'int;
 import ballerina/log;
+import ballerina/runtime;
 import ballerina/time;
 
 http:Client? secondaryDistributor = ();
@@ -302,6 +303,8 @@ function sendParliamentaryIncrementalVotesResult(CumulativeResult resCumResult, 
     // Ignore the non-error return value, since it would be `()`, when saving an incremental result
     _ = check saveResult(cumResult);
 
+    // add small delay between original result and incremental result publish
+    runtime:sleep(1000);
     // publish the received cumulative result
     _ = start triggerResultDelivery(constructResultData(cumResult));
 }
@@ -332,6 +335,8 @@ function sendParliamentaryIncrementalSeatsResult(CumulativeResult resCumResult, 
     // Ignore the non-error return value, since it would be `()`, when saving an incremental result
     _ = check saveResult(cumResult);
 
+    // add small delay between original result and incremental result publish
+    runtime:sleep(1000);
     // publish the received cumulative result
     _ = start triggerResultDelivery(constructResultData(cumResult));
 }
