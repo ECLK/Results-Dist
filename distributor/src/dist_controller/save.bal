@@ -146,19 +146,7 @@ function __init() {
         presidentialPrefsCumulativeVotesRes = emptyPresidentialCumResult.clone();
     }
 
-    secondaryDistributors = [];
-    var pushClientFunc = function (string url) {
-        if url == "" {
-            return;
-        }
-        secondaryDistributors.push(new http:Client(url));
-    };
-
-    pushClientFunc(config:getAsString("eclk.distributor.w1"));
-    pushClientFunc(config:getAsString("eclk.distributor.w2"));
-    pushClientFunc(config:getAsString("eclk.distributor.w3"));
-    pushClientFunc(config:getAsString("eclk.distributor.w4"));
-    pushClientFunc(config:getAsString("eclk.distributor.w5"));
+    secondaryDistributor = new http:Client(config:getAsString("eclk.distributor.worker", "http://localhost:8080"));
 
     // uncomment following line to clean the db if needed
     //_ = checkpanic dbClient->update(DROP_RESULTS_TABLE);

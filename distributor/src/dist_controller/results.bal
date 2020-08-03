@@ -4,7 +4,7 @@ import ballerina/lang.'int;
 import ballerina/log;
 import ballerina/time;
 
-http:Client[] secondaryDistributors = [];
+http:Client? secondaryDistributor = ();
 
 # Service for results tabulation to publish results to. We assume that results tabulation will deliver
 # a result in two separate messages - one with the json result data and another with an image of the
@@ -43,7 +43,7 @@ service receiveResults on resultsListener {
         string? pd_name = req.getQueryParamValue("pd_name");
         string message = getAwaitResultsMessage(electionCode, "/" + resultType, resultCode, level, ed_name, pd_name);
 
-        triggerAwaitNotification(<@untainted> message);        
+        _ = start triggerAwaitNotification(<@untainted> message);        
 
          if validSmsClient {
              _ = start sendSMS(<@untainted> message, <@untainted> (electionCode + "/" + resultType + "/" + resultCode));
@@ -82,7 +82,7 @@ service receiveResults on resultsListener {
         // store the result in the DB against the resultCode and assign it a sequence #
         CumulativeResult? resCumResult = check saveResult(result);
     
-        triggerResultDelivery(constructResultData(result));
+        _ = start triggerResultDelivery(constructResultData(result));
 
         if !(resCumResult is ()) {
             check sendIncrementalResultFunc(resCumResult, electionCode, resultType, resultCode, result);
@@ -120,7 +120,7 @@ service receiveResults on resultsListener {
                 pd_name: res.jsonResult.pd_name.toString(),
                 ed_name: res.jsonResult.ed_name.toString()
             };
-            triggerImageDelivery(<@untainted> update);
+            _ = start triggerImageDelivery(<@untainted> update);
         }
 
         // respond accepted
@@ -135,12 +135,7 @@ service receiveResults on resultsListener {
 }
 
 function triggerAwaitNotification(string message) {
-    foreach http:Client cl in secondaryDistributors {
-        _ = start triggerAwaitNotificationFoSecondaryDistributor(cl, message);
-    }
-}
-
-function triggerAwaitNotificationFoSecondaryDistributor(http:Client cl, string message) {
+    http:Client cl = <http:Client> secondaryDistributor;
     var res = cl->post("/await", message);
     if res is error {
         log:printError("Error triggering await notification for " + cl.url, res);
@@ -148,25 +143,15 @@ function triggerAwaitNotificationFoSecondaryDistributor(http:Client cl, string m
 }
 
 function triggerResultDelivery(json data) {
-    foreach http:Client cl in secondaryDistributors {
-        _ = start triggerResultDeliveryFoSecondaryDistributor(cl, data);
-    }
-}
-
-function triggerResultDeliveryFoSecondaryDistributor(http:Client cl, json result) {
-    var res = cl->post("/result", result);
+    http:Client cl = <http:Client> secondaryDistributor;
+    var res = cl->post("/result", data);
     if res is error {
         log:printError("Error triggering result delivery for " + cl.url, res);
     }
 }
 
 function triggerImageDelivery(json image) {
-    foreach http:Client cl in secondaryDistributors {
-        _ = start triggerImageDeliveryFoSecondaryDistributor(cl, image);
-    }
-}
-
-function triggerImageDeliveryFoSecondaryDistributor(http:Client cl, json image) {
+    http:Client cl = <http:Client> secondaryDistributor;
     var res = cl->post("/image", image);
     if res is error {
         log:printError("Error triggering image delivery for " + cl.url, res);
@@ -276,7 +261,7 @@ function sendPresidentialIncrementalResult(CumulativeResult resCumResult, string
     _ = check saveResult(cumResult);
 
     // publish the received cumulative result
-    triggerResultDelivery(constructResultData(cumResult));
+    _ = start triggerResultDelivery(constructResultData(cumResult));
 }
 
 function sendParliamentaryIncrementalResult(CumulativeResult resCumResult, string electionCode, string resultType,
@@ -318,7 +303,7 @@ function sendParliamentaryIncrementalVotesResult(CumulativeResult resCumResult, 
     _ = check saveResult(cumResult);
 
     // publish the received cumulative result
-    triggerResultDelivery(constructResultData(cumResult));
+    _ = start triggerResultDelivery(constructResultData(cumResult));
 }
 
 function sendParliamentaryIncrementalSeatsResult(CumulativeResult resCumResult, string electionCode, string resultType,
@@ -348,5 +333,5 @@ function sendParliamentaryIncrementalSeatsResult(CumulativeResult resCumResult, 
     _ = check saveResult(cumResult);
 
     // publish the received cumulative result
-    triggerResultDelivery(constructResultData(cumResult));
+    _ = start triggerResultDelivery(constructResultData(cumResult));
 }
