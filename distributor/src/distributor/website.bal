@@ -1,3 +1,4 @@
+import ballerina/auth;
 import ballerina/file;
 import ballerina/http;
 import ballerina/log;
@@ -15,6 +16,8 @@ const LEVEL_NF = "NATIONAL-FINAL";
 const WANT_IMAGE = "image";
 const WANT_AWAIT_RESULTS = "await";
 
+const USERNAME = "username";
+
 map<http:WebSocketCaller> jsonConnections = {};
 map<http:WebSocketCaller> imageConnections = {};
 map<http:WebSocketCaller> awaitConnections = {};
@@ -24,7 +27,13 @@ service disseminator = @http:WebSocketServiceConfig {} service {
     resource function onOpen(http:WebSocketCaller caller) {
         string connectionId = caller.getConnectionId();
 
-        log:printInfo("Registered: " + connectionId);
+        any username = caller.getAttribute(USERNAME);
+
+        if username is string {
+            log:printInfo(string `Registered user: ${username}, connectionId: ${connectionId}`);
+        } else {
+            log:printInfo("Registered: " + connectionId);
+        }
 
         jsonConnections[connectionId] = <@untainted> caller;
 
@@ -50,7 +59,13 @@ service disseminator = @http:WebSocketServiceConfig {} service {
             _ = awaitConnections.remove(connectionId);
         }
 
-        log:printInfo(string `Unregistered: ${connectionId}, statusCode: ${statusCode}, reason: ${reason}`);     
+        any username = caller.getAttribute(USERNAME);
+
+        if username is string {
+            log:printInfo(string `Unregistered user: ${username}, connectionId: ${connectionId}, statusCode: ${statusCode}, reason: ${reason}`);
+        } else {
+            log:printInfo(string `Unregistered: ${connectionId}, statusCode: ${statusCode}, reason: ${reason}`);     
+        }
     }
 };
 
@@ -315,6 +330,8 @@ service mediaWebsite on mediaListener {
             if queryParams.hasKey(WANT_AWAIT_RESULTS) {
                 wsEp.setAttribute(WANT_AWAIT_RESULTS, true);
             }
+
+            wsEp.setAttribute(USERNAME, getUsername(req));
         } else {
             log:printError("Error occurred during WebSocket upgrade", wsEp);
         }
@@ -471,6 +488,28 @@ service timerService on timer {
             }
         }  
     }
+}
+
+function getUsername(http:Request request) returns string? {
+    if !request.hasHeader(http:AUTH_HEADER) {
+        return;
+    }
+
+    string headerValue = request.getHeader(http:AUTH_HEADER);
+    
+    if !(headerValue.startsWith(auth:AUTH_SCHEME_BASIC)) {
+        return;
+    }
+
+    string credential = headerValue.substring(5, headerValue.length()).trim();
+
+    var result = auth:extractUsernameAndPassword(credential);
+
+    string? username = ();
+    if (result is [string, string]) {
+        [username, _] = result;
+    }
+    return <@untainted> username;
 }
 
 final byte[] pingData = "ping".toBytes();

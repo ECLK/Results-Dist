@@ -145,7 +145,7 @@ public function main (string? username = (),        // my username
     });
     
     if wsClientEp.isOpen() {
-        io:println(
+        log:printInfo(
             string `Established a connection to receive ${kinds}. Connection ID: ${wsClientEp.getConnectionId()}`);
     }    
 }
