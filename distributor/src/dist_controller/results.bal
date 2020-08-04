@@ -45,7 +45,7 @@ service receiveResults on resultsListener {
         string? pd_name = req.getQueryParamValue("pd_name");
         string message = getAwaitResultsMessage(electionCode, "/" + resultType, resultCode, level, ed_name, pd_name);
 
-        _ = start triggerAwaitNotification(<@untainted> message);        
+        triggerAwaitNotification(<@untainted> message);        
 
          if validSmsClient {
              _ = start sendSMS(<@untainted> message, <@untainted> (electionCode + "/" + resultType + "/" + resultCode));
@@ -84,7 +84,7 @@ service receiveResults on resultsListener {
         // store the result in the DB against the resultCode and assign it a sequence #
         CumulativeResult? resCumResult = check saveResult(result);
     
-        _ = start triggerResultDelivery(constructResultData(result));
+        triggerResultDelivery(constructResultData(result));
 
         if !(resCumResult is ()) {
             check sendIncrementalResultFunc(resCumResult, electionCode, resultType, resultCode, result);
@@ -122,7 +122,7 @@ service receiveResults on resultsListener {
                 pd_name: res.jsonResult.pd_name.toString(),
                 ed_name: res.jsonResult.ed_name.toString()
             };
-            _ = start triggerImageDelivery(<@untainted> update);
+            triggerImageDelivery(<@untainted> update);
         }
 
         // respond accepted
@@ -160,7 +160,7 @@ function triggerAwaitNotification(string message) {
     foreach string k in keys {
         http:WebSocketCaller? cl = workers[k];
         if cl is http:WebSocketCaller {
-            triggerAwaitNotificationByClient(cl, "\"" + message + "\"");
+            _ = start triggerAwaitNotificationByClient(cl, "\"" + message + "\"");
         }
     }
 }
@@ -177,7 +177,7 @@ function triggerResultDelivery(json data) {
     foreach string k in keys {
         http:WebSocketCaller? cl = workers[k];
         if cl is http:WebSocketCaller {
-            triggerResultDeliveryByClient(cl, data);
+            _ = start triggerResultDeliveryByClient(cl, data);
         }
     }
 }
@@ -194,7 +194,7 @@ function triggerImageDelivery(json image) {
     foreach string k in keys {
         http:WebSocketCaller? cl = workers[k];
         if cl is http:WebSocketCaller {
-            triggerImageDeliveryByClient(cl, image);
+            _ = start triggerImageDeliveryByClient(cl, image);
         }
     }
 }
@@ -309,7 +309,7 @@ function sendPresidentialIncrementalResult(CumulativeResult resCumResult, string
     _ = check saveResult(cumResult);
 
     // publish the received cumulative result
-    _ = start triggerResultDelivery(constructResultData(cumResult));
+    triggerResultDelivery(constructResultData(cumResult));
 }
 
 function sendParliamentaryIncrementalResult(CumulativeResult resCumResult, string electionCode, string resultType,
@@ -353,7 +353,7 @@ function sendParliamentaryIncrementalVotesResult(CumulativeResult resCumResult, 
     // add small delay between original result and incremental result publish
     runtime:sleep(1000);
     // publish the received cumulative result
-    _ = start triggerResultDelivery(constructResultData(cumResult));
+    triggerResultDelivery(constructResultData(cumResult));
 }
 
 function sendParliamentaryIncrementalSeatsResult(CumulativeResult resCumResult, string electionCode, string resultType,
@@ -385,7 +385,7 @@ function sendParliamentaryIncrementalSeatsResult(CumulativeResult resCumResult, 
     // add small delay between original result and incremental result publish
     runtime:sleep(1000);
     // publish the received cumulative result
-    _ = start triggerResultDelivery(constructResultData(cumResult));
+    triggerResultDelivery(constructResultData(cumResult));
 }
 
 service workerService = @http:WebSocketServiceConfig {} service {
