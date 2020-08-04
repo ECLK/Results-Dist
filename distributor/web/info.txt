@@ -22,6 +22,7 @@ where options are:
 	-image=true|false       do I want release proof image (default: false)
 	-wantCode=true|false    do I want the electionCode in the filename (default: false)
 	-homeURL=URL            subscription URL (default: https://mediaresultshub.ecstag.opensource.lk)
+	-imageURL=URL           website URL (default: https://mediaresultshub-tests.ecdev.opensource.lk)
 
 
 *** End Message

@@ -19,4 +19,4 @@ COPY  --from=build /usr/src/target /usr/src/target
 WORKDIR /usr/src/
 ADD ./web web
 
-CMD java -jar target/bin/dist_worker.jar
+CMD java -jar target/bin/dist_worker.jar --eclk.controller.url=$CTRLLR

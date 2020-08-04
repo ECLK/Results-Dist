@@ -2,7 +2,7 @@
  import ballerina/io;
  import ballerina/log;
  import ballerina/stringutils;
- import chamil/govsms;
+ import chamil/govsms version 0.1.2;
 
 govsms:Configuration govsmsConfig = {
      username: config:getAsString("eclk.govsms.username"),

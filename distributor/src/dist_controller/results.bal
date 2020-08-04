@@ -6,6 +6,7 @@ import ballerina/runtime;
 import ballerina/time;
 
 http:Client? secondaryDistributor = ();
+map<http:WebSocketCaller> workers = {};
 
 # Service for results tabulation to publish results to. We assume that results tabulation will deliver
 # a result in two separate messages - one with the json result data and another with an image of the
@@ -44,7 +45,7 @@ service receiveResults on resultsListener {
         string? pd_name = req.getQueryParamValue("pd_name");
         string message = getAwaitResultsMessage(electionCode, "/" + resultType, resultCode, level, ed_name, pd_name);
 
-        _ = start triggerAwaitNotification(<@untainted> message);        
+        triggerAwaitNotification(<@untainted> message);        
 
          if validSmsClient {
              _ = start sendSMS(<@untainted> message, <@untainted> (electionCode + "/" + resultType + "/" + resultCode));
@@ -83,7 +84,7 @@ service receiveResults on resultsListener {
         // store the result in the DB against the resultCode and assign it a sequence #
         CumulativeResult? resCumResult = check saveResult(result);
     
-        _ = start triggerResultDelivery(constructResultData(result), result.sequenceNo.toString());
+        triggerResultDelivery(constructResultData(result));
 
         if !(resCumResult is ()) {
             check sendIncrementalResultFunc(resCumResult, electionCode, resultType, resultCode, result);
@@ -111,7 +112,7 @@ service receiveResults on resultsListener {
         if (res is Result) {
             string sequenceNo =  io:sprintf("%04d", <int> res.sequenceNo);
 
-            map<json> update = {
+            json update = {
                 election_code: electionCode,
                 sequence_number: sequenceNo,
                 'type: res.'type,
@@ -121,7 +122,7 @@ service receiveResults on resultsListener {
                 pd_name: res.jsonResult.pd_name.toString(),
                 ed_name: res.jsonResult.ed_name.toString()
             };
-            _ = start triggerImageDelivery(<@untainted> update, sequenceNo);
+            triggerImageDelivery(<@untainted> update);
         }
 
         // respond accepted
@@ -135,36 +136,73 @@ service receiveResults on resultsListener {
     }
 }
 
+@http:ServiceConfig {
+    basePath: "/"
+}
+service workerReg on workerListener {
+    
+    @http:ResourceConfig {
+        webSocketUpgrade: {
+            upgradePath: "/workerRegister",
+            upgradeService: workerService
+        }
+    }
+    resource function upgrader(http:Caller caller, http:Request req) {
+        http:WebSocketCaller|http:WebSocketError wsEp = caller->acceptWebSocketUpgrade({});
+        if (wsEp is error) {
+            log:printError("Error occurred during WebSocket upgrade", wsEp);
+        }
+    }
+}
+
 function triggerAwaitNotification(string message) {
-    http:Client cl = <http:Client> secondaryDistributor;
-    var res = cl->post("/await", message);
-    if res is error {
-        log:printError("Error triggering await notification for " + cl.url, res);
-    } else if res.statusCode != http:STATUS_ACCEPTED {
-        log:printError("Unexpected status code on await notification trigger for " +  cl.url + ": " + 
-                       res.statusCode.toString());
+    string[] keys = workers.keys();
+    foreach string k in keys {
+        http:WebSocketCaller? cl = workers[k];
+        if cl is http:WebSocketCaller {
+            _ = start triggerAwaitNotificationByClient(cl, "\"" + message + "\"");
+        }
     }
 }
 
-function triggerResultDelivery(json data, string sequenceNo) {
-    http:Client cl = <http:Client> secondaryDistributor;
-    var res = cl->post(string `/result/${sequenceNo}`, data);
+function triggerAwaitNotificationByClient(http:WebSocketCaller cl, string message) {
+    var res = cl->pushText(message);
     if res is error {
-        log:printError("Error triggering result delivery for " + cl.url, res);
-    } else if res.statusCode != http:STATUS_ACCEPTED {
-        log:printError("Unexpected status code on result delivery trigger for " +  cl.url + ": " + 
-                       res.statusCode.toString());
+        log:printError("Error triggering await notification for " + cl.getConnectionId(), res);
     }
 }
 
-function triggerImageDelivery(json image, string sequenceNo) {
-    http:Client cl = <http:Client> secondaryDistributor;
-    var res = cl->post(string `/image/${sequenceNo}`, image);
+function triggerResultDelivery(json data) {
+    string[] keys = workers.keys();
+    foreach string k in keys {
+        http:WebSocketCaller? cl = workers[k];
+        if cl is http:WebSocketCaller {
+            _ = start triggerResultDeliveryByClient(cl, data);
+        }
+    }
+}
+
+function triggerResultDeliveryByClient(http:WebSocketCaller cl, json data) {
+    var res = cl->pushText(data);
     if res is error {
-        log:printError("Error triggering image delivery for " + cl.url, res);
-    } else if res.statusCode != http:STATUS_ACCEPTED {
-        log:printError("Unexpected status code on image delivery trigger for " +  cl.url + ": " + 
-                       res.statusCode.toString());
+        log:printError("Error triggering result delivery for " + cl.getConnectionId());
+    }
+}
+
+function triggerImageDelivery(json image) {
+    string[] keys = workers.keys();
+    foreach string k in keys {
+        http:WebSocketCaller? cl = workers[k];
+        if cl is http:WebSocketCaller {
+            _ = start triggerImageDeliveryByClient(cl, image);
+        }
+    }
+}
+
+function triggerImageDeliveryByClient(http:WebSocketCaller cl, json image) {
+    var res = cl->pushText(image);
+    if res is error {
+        log:printError("Error triggering image delivery for " + cl.getConnectionId());
     }
 }
 
@@ -271,7 +309,7 @@ function sendPresidentialIncrementalResult(CumulativeResult resCumResult, string
     _ = check saveResult(cumResult);
 
     // publish the received cumulative result
-    _ = start triggerResultDelivery(constructResultData(cumResult), cumResult.sequenceNo.toString());
+    triggerResultDelivery(constructResultData(cumResult));
 }
 
 function sendParliamentaryIncrementalResult(CumulativeResult resCumResult, string electionCode, string resultType,
@@ -315,7 +353,7 @@ function sendParliamentaryIncrementalVotesResult(CumulativeResult resCumResult, 
     // add small delay between original result and incremental result publish
     runtime:sleep(1000);
     // publish the received cumulative result
-    _ = start triggerResultDelivery(constructResultData(cumResult), cumResult.sequenceNo.toString());
+    triggerResultDelivery(constructResultData(cumResult));
 }
 
 function sendParliamentaryIncrementalSeatsResult(CumulativeResult resCumResult, string electionCode, string resultType,
@@ -347,5 +385,23 @@ function sendParliamentaryIncrementalSeatsResult(CumulativeResult resCumResult, 
     // add small delay between original result and incremental result publish
     runtime:sleep(1000);
     // publish the received cumulative result
-    _ = start triggerResultDelivery(constructResultData(cumResult), cumResult.sequenceNo.toString());
+    triggerResultDelivery(constructResultData(cumResult));
 }
+
+service workerService = @http:WebSocketServiceConfig {} service {
+
+    resource function onOpen(http:WebSocketCaller caller) {
+        string connectionId = caller.getConnectionId();
+
+        log:printInfo("Registered dist worker: " + connectionId);
+        workers[connectionId] = <@untainted> caller;
+    }
+
+    resource function onClose(http:WebSocketCaller caller, int statusCode, string reason) {
+        string connectionId = caller.getConnectionId();
+
+        _ = workers.remove(connectionId);
+
+        log:printInfo(string `Unregistered dist worker: ${connectionId}, statusCode: ${statusCode}, reason: ${reason}`);     
+    }
+};
