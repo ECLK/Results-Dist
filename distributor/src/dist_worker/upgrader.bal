@@ -67,30 +67,28 @@ service receiver on new http:Listener(config:getAsInt("eclk.dist_worker.receiver
 
     @http:ResourceConfig {
         methods: ["POST"],
-        path: "/result",
+        path: "/result/{sequenceNo}",
         body: "jsonResult"
     }
-    resource function receiveData(http:Caller caller, http:Request req, json jsonResult) returns error? {
-        map<json> resultObject = <map<json>> jsonResult; 
-        map<json> result = <map<json>> resultObject.result;
+    resource function receiveData(http:Caller caller, http:Request req, string sequenceNo, json jsonResult) 
+            returns error? {
+        log:printInfo("Result dissemination initiated for " + sequenceNo);
 
-        log:printInfo("Result dissemination initiated for " + result.sequence_number.toString());
-
-        publishResultData(resultObject);
+        publishResultData(jsonResult);
 
         return caller->accepted();
      }
 
     @http:ResourceConfig {
         methods: ["POST"],
-        path: "/image",
+        path: "/image/{sequenceNo}",
         body: "imageData"
     }
-    resource function receiveImage(http:Caller caller, http:Request req, json imageData) returns error? {
-        map<json> update = <map<json>> imageData; 
-        log:printInfo("Image PDF dissemination initiated for " + update.sequence_number.toString());
+    resource function receiveImage(http:Caller caller, http:Request req, string sequenceNo, json imageData) 
+            returns error? {
+        log:printInfo("Image PDF dissemination initiated for " + sequenceNo);
 
-        publishResultImage(update);
+        publishResultImage(imageData);
 
         // respond accepted
         return caller->accepted();

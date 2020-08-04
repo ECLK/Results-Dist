@@ -83,7 +83,7 @@ service receiveResults on resultsListener {
         // store the result in the DB against the resultCode and assign it a sequence #
         CumulativeResult? resCumResult = check saveResult(result);
     
-        _ = start triggerResultDelivery(constructResultData(result));
+        _ = start triggerResultDelivery(constructResultData(result), result.sequenceNo.toString());
 
         if !(resCumResult is ()) {
             check sendIncrementalResultFunc(resCumResult, electionCode, resultType, resultCode, result);
@@ -109,11 +109,11 @@ service receiveResults on resultsListener {
                                       <@untainted> mediaType, <@untainted> imageData);
 
         if (res is Result) {
-            int sequenceNo = <int> res.sequenceNo;
+            string sequenceNo =  io:sprintf("%04d", <int> res.sequenceNo);
 
             map<json> update = {
                 election_code: electionCode,
-                sequence_number: io:sprintf("%04d", sequenceNo),
+                sequence_number: sequenceNo,
                 'type: res.'type,
                 level: res.jsonResult.level.toString(),
                 pd_code: res.jsonResult.pd_code.toString(),
@@ -121,7 +121,7 @@ service receiveResults on resultsListener {
                 pd_name: res.jsonResult.pd_name.toString(),
                 ed_name: res.jsonResult.ed_name.toString()
             };
-            _ = start triggerImageDelivery(<@untainted> update);
+            _ = start triggerImageDelivery(<@untainted> update, sequenceNo);
         }
 
         // respond accepted
@@ -140,22 +140,31 @@ function triggerAwaitNotification(string message) {
     var res = cl->post("/await", message);
     if res is error {
         log:printError("Error triggering await notification for " + cl.url, res);
+    } else if res.statusCode != http:STATUS_ACCEPTED {
+        log:printError("Unexpected status code on await notification trigger for " +  cl.url + ": " + 
+                       res.statusCode.toString());
     }
 }
 
-function triggerResultDelivery(json data) {
+function triggerResultDelivery(json data, string sequenceNo) {
     http:Client cl = <http:Client> secondaryDistributor;
-    var res = cl->post("/result", data);
+    var res = cl->post(string `/result/${sequenceNo}`, data);
     if res is error {
         log:printError("Error triggering result delivery for " + cl.url, res);
+    } else if res.statusCode != http:STATUS_ACCEPTED {
+        log:printError("Unexpected status code on result delivery trigger for " +  cl.url + ": " + 
+                       res.statusCode.toString());
     }
 }
 
-function triggerImageDelivery(json image) {
+function triggerImageDelivery(json image, string sequenceNo) {
     http:Client cl = <http:Client> secondaryDistributor;
-    var res = cl->post("/image", image);
+    var res = cl->post(string `/image/${sequenceNo}`, image);
     if res is error {
         log:printError("Error triggering image delivery for " + cl.url, res);
+    } else if res.statusCode != http:STATUS_ACCEPTED {
+        log:printError("Unexpected status code on image delivery trigger for " +  cl.url + ": " + 
+                       res.statusCode.toString());
     }
 }
 
@@ -262,7 +271,7 @@ function sendPresidentialIncrementalResult(CumulativeResult resCumResult, string
     _ = check saveResult(cumResult);
 
     // publish the received cumulative result
-    _ = start triggerResultDelivery(constructResultData(cumResult));
+    _ = start triggerResultDelivery(constructResultData(cumResult), cumResult.sequenceNo.toString());
 }
 
 function sendParliamentaryIncrementalResult(CumulativeResult resCumResult, string electionCode, string resultType,
@@ -306,7 +315,7 @@ function sendParliamentaryIncrementalVotesResult(CumulativeResult resCumResult, 
     // add small delay between original result and incremental result publish
     runtime:sleep(1000);
     // publish the received cumulative result
-    _ = start triggerResultDelivery(constructResultData(cumResult));
+    _ = start triggerResultDelivery(constructResultData(cumResult), cumResult.sequenceNo.toString());
 }
 
 function sendParliamentaryIncrementalSeatsResult(CumulativeResult resCumResult, string electionCode, string resultType,
@@ -338,5 +347,5 @@ function sendParliamentaryIncrementalSeatsResult(CumulativeResult resCumResult, 
     // add small delay between original result and incremental result publish
     runtime:sleep(1000);
     // publish the received cumulative result
-    _ = start triggerResultDelivery(constructResultData(cumResult));
+    _ = start triggerResultDelivery(constructResultData(cumResult), cumResult.sequenceNo.toString());
 }
