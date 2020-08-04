@@ -29,7 +29,8 @@ public function main (string? username = (),        // my username
                       boolean html = false,         // do I want HTML?
                       //boolean sorted = true,        // do I want HTML results sorted highest to lowest
                       boolean wantCode = false,     // do I want electionCode in the filename
-                      string homeURL = "https://mediaresultshub.ecstag.opensource.lk" // where do I connect at
+                      string homeURL = "https://mediaresultshub.ecdev.opensource.lk", // where do I connect at
+                      string imageURL = "https://mediaresultshub-tests.ecdev.opensource.lk" // where do I get the image from
                     ) returns @tainted error? {
     // Set the election type
     electionType = ELECTION_TYPE_PARLIAMENTARY;
@@ -101,7 +102,7 @@ public function main (string? username = (),        // my username
     }
 
     if image {
-        imageClient = <@untainted> new (homeURL, {auth: auth});
+        imageClient = <@untainted> new (imageURL, {auth: auth});
         
         if queryString is () {
             queryString = WANT_IMAGE;

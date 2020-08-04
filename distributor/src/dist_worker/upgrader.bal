@@ -47,53 +47,61 @@ service connector = @http:WebSocketServiceConfig {} service {
     }
 };
 
-@http:ServiceConfig {
-    basePath: "/"
-}
-service receiver on new http:Listener(config:getAsInt("eclk.dist_worker.receiver.port", 8080)) {
-    
-    @http:ResourceConfig {
-        methods: ["POST"],
-        path: "/await",
-        body: "message"
+public function main() {
+    string connectUrl = config:getAsString("eclk.controller.url");
+    string wsUrl;
+
+    if connectUrl.startsWith("http://") {
+        wsUrl = "ws" + connectUrl.substring(<int> connectUrl.indexOf("http") + 4) + "/workerRegister";
+    } else if connectUrl.startsWith("https://") {
+        wsUrl = "wss" + connectUrl.substring(<int> connectUrl.indexOf("https") + 5) + "/workerRegister";
+    } else {
+        panic error("InvalidHomeUrlError");
     }
-    resource function receiveNotification(http:Caller caller, http:Request req, string message) returns error? {
-        log:printInfo("Notification initiated for '" + message + "'");
+    http:WebSocketClient wsClientEp = new (wsUrl, config = {
+        callbackService: receiver
+    });
 
-        pushAwaitNotification(message);        
-
-        return caller->accepted();
-    }
-
-    @http:ResourceConfig {
-        methods: ["POST"],
-        path: "/result/{sequenceNo}",
-        body: "jsonResult"
-    }
-    resource function receiveData(http:Caller caller, http:Request req, string sequenceNo, json jsonResult) 
-            returns error? {
-        log:printInfo("Result dissemination initiated for " + sequenceNo);
-
-        publishResultData(jsonResult);
-
-        return caller->accepted();
-     }
-
-    @http:ResourceConfig {
-        methods: ["POST"],
-        path: "/image/{sequenceNo}",
-        body: "imageData"
-    }
-    resource function receiveImage(http:Caller caller, http:Request req, string sequenceNo, json imageData) 
-            returns error? {
-        log:printInfo("Image PDF dissemination initiated for " + sequenceNo);
-
-        publishResultImage(imageData);
-
-        // respond accepted
-        return caller->accepted();
+    if wsClientEp.isOpen() {
+        log:printInfo("Connection established with the controller: " + wsClientEp.getConnectionId());
     }
 }
+
+service receiver = @http:WebSocketServiceConfig {} service {
+
+    resource function onText(http:WebSocketClient conn, json payload) {
+        if payload is string {
+            log:printInfo("Notification initiated for '" + payload + "'");
+            pushAwaitNotification(payload);      
+            return;
+        }
+
+        if !(payload is map<json>) {
+            log:printError("Expected map<json> payload, received:" + payload.toString());
+            return;
+        }
+
+        map<json> objPayload = <map<json>> payload;
+
+        if objPayload["result"] is () {
+            // Image notification.
+            log:printInfo("Image PDF dissemination initiated for " + objPayload.sequence_number.toString());
+            publishResultImage(objPayload);
+            return;
+        }
+
+        log:printInfo("Result dissemination initiated for " + payload.result.sequence_number.toString());
+        publishResultData(payload);
+    }
+
+    resource function onError(http:WebSocketClient conn, error err) {
+        log:printError("Error occurred", err);
+    }
+
+    resource function onClose(http:WebSocketClient wsEp, int statusCode, string reason) {
+        log:printInfo(string `Connection closed: statusCode: ${statusCode}, reason: ${reason}`);  
+    }
+};
 
 http:BasicAuthHandler inboundBasicAuthHandler = new (new auth:InboundBasicAuthProvider());
 
