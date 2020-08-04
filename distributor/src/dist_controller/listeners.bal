@@ -9,7 +9,7 @@ listener http:Listener resultsListener = new (config:getAsInt("eclk.pub.port", 8
     }
 });
 
-listener http:Listener workerListener = new (config:getAsInt("eclk.pub.port", 8383));
+listener http:Listener workerListener = new (config:getAsInt("eclk.worker_listener.port", 8383));
 
 http:BasicAuthHandler inboundBasicAuthHandler = new (new auth:InboundBasicAuthProvider());
 
