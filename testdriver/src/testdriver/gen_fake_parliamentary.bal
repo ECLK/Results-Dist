@@ -91,7 +91,7 @@ function genFakeParliamentary() {
             "level": "POLLING-DIVISION",
             "ed_code": "01",
             "ed_name": "Colombo",
-            "pd_code": "PV",
+            "pd_code": "01PV",
             "pd_name": "Postal Votes",
             "by_party": [
                 {

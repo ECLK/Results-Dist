@@ -14,3 +14,5 @@ const RN_VSN = "RN_VSN";
 const RE_SC = "RE_SC";
 const RN_NC = "RN_NC";
 const RN_SCNC = "RN_SCNC";
+
+const FINAL = "FINAL";

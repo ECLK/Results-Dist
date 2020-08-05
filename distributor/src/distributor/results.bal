@@ -293,7 +293,7 @@ function sendParliamentaryIncrementalResult(CumulativeResult resCumResult, strin
         return sendParliamentaryIncrementalVotesResult(resCumResult, electionCode, RE_VI, resultCode, result);
     }
 
-    return sendParliamentaryIncrementalSeatsResult(resCumResult, electionCode, RN_SI, resultCode, result);
+    return sendParliamentaryIncrementalSeatsResult(resCumResult, electionCode, RN_SI, FINAL, result);
 }
 
 function sendParliamentaryIncrementalVotesResult(CumulativeResult resCumResult, string electionCode, string resultType,
@@ -347,7 +347,7 @@ function sendParliamentaryIncrementalSeatsResult(CumulativeResult resCumResult, 
         sequenceNo: -1, // wil be updated with DB sequence # upon storage
         election: result.election,
         'type: resultType,
-        code: result.code,
+        code: resultCode,
         jsonResult: cumJsonResult,
         imageMediaType: (),
         imageData: ()
