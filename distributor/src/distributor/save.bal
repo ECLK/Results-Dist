@@ -40,15 +40,15 @@ const string UPDATE_RESULT_IMAGE = "UPDATE results SET imageMediaType = ?, image
 const SELECT_RESULTS_DATA = "SELECT sequenceNo, election, code, type, jsonResult, imageMediaType, imageData FROM results";
 const DROP_RESULTS_TABLE = "DROP TABLE results";
 
-const string CREATE_RECIPIENT_TABLE = "CREATE TABLE IF NOT EXISTS smsRecipients (" +
-                                    "    username VARCHAR(100) NOT NULL," +
-                                    "    mobileNo VARCHAR(50) NOT NULL," +
-                                    "    PRIMARY KEY (username))";
-const INSERT_RECIPIENT = "INSERT INTO smsRecipients (username, mobileNo) VALUES (?, ?)";
-const DELETE_RECIPIENT = "DELETE FROM smsRecipients WHERE username = ?";
-const SELECT_RECIPIENT_DATA = "SELECT * FROM smsRecipients";
-const DROP_RECIPIENT_TABLE = "DROP TABLE smsRecipients";
-const DELETE_RECIPIENT_TABLE = "DELETE FROM smsRecipients";
+//const string CREATE_RECIPIENT_TABLE = "CREATE TABLE IF NOT EXISTS smsRecipients (" +
+//                                    "    username VARCHAR(100) NOT NULL," +
+//                                    "    mobileNo VARCHAR(50) NOT NULL," +
+//                                    "    PRIMARY KEY (username))";
+//const INSERT_RECIPIENT = "INSERT INTO smsRecipients (username, mobileNo) VALUES (?, ?)";
+//const DELETE_RECIPIENT = "DELETE FROM smsRecipients WHERE username = ?";
+//const SELECT_RECIPIENT_DATA = "SELECT * FROM smsRecipients";
+//const DROP_RECIPIENT_TABLE = "DROP TABLE smsRecipients";
+//const DELETE_RECIPIENT_TABLE = "DELETE FROM smsRecipients";
 
 jdbc:Client dbClient = new ({
     url: config:getAsString("eclk.distributor.db.url"),
@@ -150,7 +150,7 @@ function __init() {
 
     // create tables
     _ = checkpanic dbClient->update(CREATE_RESULTS_TABLE);
-    _ = checkpanic dbClient->update(CREATE_RECIPIENT_TABLE);
+    //_ = checkpanic dbClient->update(CREATE_RECIPIENT_TABLE);
 
     // load any results in there to our cache - the order will match the autoincrement and will be the sequence #
     table<record {}> res = checkpanic dbClient->select(SELECT_RESULTS_DATA, DataResult);
@@ -184,26 +184,26 @@ function __init() {
     }
 
     // load sms recipients to in-memory map
-    table<record {}> retrievedRes = checkpanic dbClient->select(SELECT_RECIPIENT_DATA, Recipient);
-    table<Recipient> retrievedNos = <table<Recipient>> retrievedRes;
-    count = 0;
-    while (retrievedNos.hasNext()) {
-        Recipient recipient = <Recipient> retrievedNos.getNext();
-        mobileSubscribers[recipient.username] = <@untainted> recipient.mobile;
-        count += 1;
-    }
-    if (count > 0) {
-        log:printInfo("Loaded " + count.toString() + " previous SMS recipient(s) from database");
-    }
-    // validate GovSMS authentication
-    var account = smsClient->sendSms(sourceDepartment, "Test authentication", "");
-    if account is error {
-        log:printError("SMS notification is disabled due to '" + <string> account.detail()?.message +
-                       "'. Please provide valid 'eclk.govsms.username'/'password'/'source'(department title)");
-    } else {
-        validSmsClient = true;
-        log:printInfo("SMS notification is enabled");
-    }
+    //table<record {}> retrievedRes = checkpanic dbClient->select(SELECT_RECIPIENT_DATA, Recipient);
+    //table<Recipient> retrievedNos = <table<Recipient>> retrievedRes;
+    //count = 0;
+    //while (retrievedNos.hasNext()) {
+    //    Recipient recipient = <Recipient> retrievedNos.getNext();
+    //    mobileSubscribers[recipient.username] = <@untainted> recipient.mobile;
+    //    count += 1;
+    //}
+    //if (count > 0) {
+    //    log:printInfo("Loaded " + count.toString() + " previous SMS recipient(s) from database");
+    //}
+    //// validate GovSMS authentication
+    //var account = smsClient->sendSms(sourceDepartment, "Test authentication", "");
+    //if account is error {
+    //    log:printError("SMS notification is disabled due to '" + <string> account.detail()?.message +
+    //                   "'. Please provide valid 'eclk.govsms.username'/'password'/'source'(department title)");
+    //} else {
+    //    validSmsClient = true;
+    //    log:printInfo("SMS notification is enabled");
+    //}
 }
 
 # Save an incoming result to make sure we don't lose it after getting it
@@ -267,7 +267,7 @@ function saveImage(string electionCode, string resultType, string resultCode, st
 # + return - error if something goes wrong
 function resetResults() returns error? {
     _ = check dbClient->update(DROP_RESULTS_TABLE);
-    _ = check dbClient->update(DROP_RECIPIENT_TABLE);
+    //_ = check dbClient->update(DROP_RECIPIENT_TABLE);
     __init();
 }
 
