@@ -74,7 +74,7 @@ function startParliamentaryResults(http:Caller caller, http:Request req, string 
     log:printInfo("Publishing new result set for " + electionName + " starting at " + time:currentTime().toString());
 
     http:Client rc = new (resultsURL);
-    var result = rc->get("/result/reset"); // reset the results store
+    var result = rc->get("/result/reset/" + ec); // reset the results store
     if (result is error) {
         alreadyRunning = false;
         return result;
@@ -107,7 +107,7 @@ function startPresidentialResults(http:Caller caller, http:Request req, string e
     log:printInfo("Publishing new result set for " + ec + " starting at " + time:currentTime().toString());
 
     http:Client rc = new (resultsURL);
-    _ = check rc->get("/result/reset"); // reset the results store
+    _ = check rc->get("/result/reset/" + ec); // reset the results store
     var e = sendResults("PRESIDENTIAL-FIRST", ec, rc, results, resultsByPD);
     if e is error {
         log:printError("Error publishing results: " + e.toString());

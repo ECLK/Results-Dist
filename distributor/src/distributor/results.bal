@@ -127,8 +127,12 @@ service receiveResults on resultsListener {
         return caller->accepted();
     }
 
-    resource function reset(http:Caller caller, http:Request req) returns error? {
+    @http:ResourceConfig {
+        path: "/reset/{electionCode}"
+    }
+    resource function reset(http:Caller caller, http:Request req, string electionCode) returns error? {
         log:printInfo("Resetting all results ..");
+        currentElectionCode = <@untainted> electionCode;
         check resetResults();
         return caller->accepted();
     }
