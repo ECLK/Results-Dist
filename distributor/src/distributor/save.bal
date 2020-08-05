@@ -37,7 +37,7 @@ const INSERT_RESULT = "INSERT INTO results (election, code, jsonResult, type) VA
 const UPDATE_RESULT_JSON = "UPDATE results SET jsonResult = ? WHERE sequenceNo = ?";
 const string UPDATE_RESULT_IMAGE = "UPDATE results SET imageMediaType = ?, imageData = ? WHERE election = ? " + 
                                 "AND type = ? AND code = ?";
-const SELECT_RESULTS_DATA = "SELECT sequenceNo, election, code, type, jsonResult, imageMediaType, imageData FROM results";
+const SELECT_RESULTS_DATA = "SELECT sequenceNo, election, code, type, jsonResult, imageMediaType, imageData FROM results WHERE election = ?";
 const DROP_RESULTS_TABLE = "DROP TABLE results";
 
 //const string CREATE_RECIPIENT_TABLE = "CREATE TABLE IF NOT EXISTS smsRecipients (" +
@@ -128,6 +128,8 @@ map<ParliamentaryCumulativeVotesResult> parliamentaryDistrictwiseCumVotesRes = i
 
 ParliamentaryCumulativeSeatsResult parliamentaryCumSeatsRes = emptyParliamentaryCumSeatsResult;
 
+string currentElectionCode = config:getAsString("eclk.distributor.election", "PE2020");
+
 # Set the election type and relevant modes.
 # Create database and set up at module init time and load any data in there to
 # memory for the website to show. Panic if there's any issue.
@@ -153,7 +155,7 @@ function __init() {
     //_ = checkpanic dbClient->update(CREATE_RECIPIENT_TABLE);
 
     // load any results in there to our cache - the order will match the autoincrement and will be the sequence #
-    table<record {}> res = checkpanic dbClient->select(SELECT_RESULTS_DATA, DataResult);
+    table<record {}> res = checkpanic dbClient->select(SELECT_RESULTS_DATA, DataResult, currentElectionCode);
     table<DataResult> ret = <table<DataResult>> res;
     int count = 0;
     resultsCache = [];

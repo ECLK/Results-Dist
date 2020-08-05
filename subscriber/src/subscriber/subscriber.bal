@@ -145,7 +145,7 @@ public function main (string? username = (),        // my username
     });
     
     if wsClientEp.isOpen() {
-        io:println(
+        log:printInfo(
             string `Established a connection to receive ${kinds}. Connection ID: ${wsClientEp.getConnectionId()}`);
     }    
 }
@@ -167,6 +167,7 @@ service resultDataOnlyClientService = @http:WebSocketServiceConfig {} service {
 
     resource function onClose(http:WebSocketClient wsEp, int statusCode, string reason) {
         log:printInfo(string `Connection closed: statusCode: ${statusCode}, reason: ${reason}`);  
+        alertOnClose();
     }
 
     resource function onPing(http:WebSocketClient wsEp, byte[] data) {
@@ -197,7 +198,8 @@ service awaitAndResultDataClientService = @http:WebSocketServiceConfig {} servic
     }
 
     resource function onClose(http:WebSocketClient wsEp, int statusCode, string reason) {
-        log:printInfo(string `Connection closed: statusCode: ${statusCode}, reason: ${reason}`);  
+        log:printInfo(string `Connection closed: statusCode: ${statusCode}, reason: ${reason}`); 
+        alertOnClose(); 
     }
 
     resource function onPing(http:WebSocketClient wsEp, byte[] data) {
@@ -230,7 +232,8 @@ service imageAndResultDataClientService = @http:WebSocketServiceConfig {} servic
     }
 
     resource function onClose(http:WebSocketClient wsEp, int statusCode, string reason) {
-        log:printInfo(string `Connection closed: statusCode: ${statusCode}, reason: ${reason}`);  
+        log:printInfo(string `Connection closed: statusCode: ${statusCode}, reason: ${reason}`); 
+        alertOnClose(); 
     }
 
     resource function onPing(http:WebSocketClient wsEp, byte[] data) {
@@ -272,6 +275,7 @@ service allClientService = @http:WebSocketServiceConfig {} service {
 
     resource function onClose(http:WebSocketClient wsEp, int statusCode, string reason) {
         log:printInfo(string `Connection closed: statusCode: ${statusCode}, reason: ${reason}`);  
+        alertOnClose();
     }
 
     resource function onPing(http:WebSocketClient wsEp, byte[] data) {
@@ -291,4 +295,17 @@ function logPingIfRequired(http:WebSocketClient wsEp, byte[] data) {
         string|error res = 'string:fromBytes(data);
         return "onPing: " +  (res is string ? res : data.toString());
     });
+}
+
+function alertOnClose() {
+    alert();
+    alert();
+    alert();
+}
+
+function alert() {
+    error? alertStatus = sound:alert();
+    if !(alertStatus is ()) {
+        log:printError("Error pinging on await notification", alertStatus);
+    }
 }
