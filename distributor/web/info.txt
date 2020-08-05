@@ -2,15 +2,15 @@
 
 ****** IMPORTANT *******
 **
-** The latest version of the subscriber JAR is subscriber-20200804-I.jar
+** The latest version of the subscriber JAR is subscriber-20200803-I.jar
 ** 	
-** Available at https://github.com/ECLK/Results-Dist/releases/tag/v2020-08-04-I
+** Available at https://github.com/ECLK/Results-Dist/releases/tag/v2020-08-03-I
 **
 ****** IMPORTANT *******
 
 Run it as follows:
 
-java -jar subscriber-20200804-I.jar [options]
+java -jar subscriber-20200803-I.jar [options]
 
 where options are:
 	-username=name          my username for authentication
@@ -21,7 +21,7 @@ where options are:
 	-html=true|false        do I want HTML output (default: false)
 	-image=true|false       do I want release proof image (default: false)
 	-wantCode=true|false    do I want the electionCode in the filename (default: false)
-	-homeURL=URL            subscription URL (default: https://mediaresultshub-subs.ecstag.opensource.lk)
+	-homeURL=URL            subscription URL (default: https://mediaresultshub.ecstag.opensource.lk)
 
 
 *** End Message
