@@ -44,9 +44,9 @@ service receiveResults on resultsListener {
 
         _ = start pushAwaitNotification(message);        
 
-         if validSmsClient {
-             _ = start sendSMS(<@untainted> message, <@untainted> (electionCode + "/" + resultType + "/" + resultCode));
-         }
+         //if validSmsClient {
+         //    _ = start sendSMS(<@untainted> message, <@untainted> (electionCode + "/" + resultType + "/" + resultCode));
+         //}
 
         // respond accepted
         return caller->accepted();
