@@ -1,9 +1,10 @@
 import ballerina/auth;
 import ballerina/file;
 import ballerina/http;
+import ballerina/lang.'object;
 import ballerina/log;
 import ballerina/mime;
-import ballerina/task;
+import ballerina/runtime;
 import ballerina/time;
 import ballerina/xmlutils;
 
@@ -471,25 +472,6 @@ function generateParliamentaryResultsTable() returns string {
     return tab;
 }
 
-task:TimerConfiguration timerConfiguration = {
-    intervalInMillis: 30000,
-    initialDelayInMillis: 30000
-};
-listener task:Listener timer = new (timerConfiguration);
-
-service timerService on timer {
-    resource function onTrigger() {
-        string[] keys = jsonConnections.keys();
-        foreach string k in keys {
-            http:WebSocketCaller? con = jsonConnections[k];
-            if !(con is ()) {
-                log:printDebug("Pinging " + con.getConnectionId());
-                _ = start ping(con);
-            }
-        }  
-    }
-}
-
 function getUsername(http:Request request) returns string? {
     if !request.hasHeader(http:AUTH_HEADER) {
         return;
@@ -519,4 +501,42 @@ function ping(http:WebSocketCaller con) {
     if (err is http:WebSocketError) {
         log:printError(string `Error pinging ${con.getConnectionId()}`, err);
     }
+}
+
+function pingSubscribers() {
+    while true {
+        string[] keys = jsonConnections.keys();
+        foreach string k in keys {
+            http:WebSocketCaller? con = jsonConnections[k];
+            if !(con is ()) {
+                log:printDebug("Pinging " + con.getConnectionId());
+                _ = start ping(con);
+            }
+        }
+        runtime:sleep(30000);
+    }
+}
+
+type PingListener object {
+    *'object:Listener;
+
+    public function __attach(service s, string? name) returns error? {
+    }
+
+    public function __detach(service s) returns error? {
+    }
+
+    public function __start() returns error? {
+        _ = @strand {thread: "any"} start pingSubscribers();
+    }
+
+    public function __gracefulStop() returns error? {
+    }
+
+    public function __immediateStop() returns error? {
+    }
+};
+
+service PingingService on new PingListener() {
+
 }
