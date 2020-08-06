@@ -380,9 +380,9 @@ function addToParliamentaryCumulativeVotes(map<json> jm) returns ParliamentaryCu
             if res is () {
                 accum.by_party.push(checkpanic ParliamentaryPartyResult.constructFrom(currentPartyRes));
             } else {
-                int accumVoteCount = <int> accum.by_party[i]?.vote_count + <int>pr[i].vote_count;
-                accum.by_party[i].vote_count = accumVoteCount;
-                accum.by_party[i].vote_percentage = (accum.summary.valid == 0) ? "0.00%" : string `${io:sprintf ("%.2f", ((accumVoteCount*100.0)/accum.summary.valid))}%`;
+                int accumVoteCount = <int> res?.vote_count + <int>pr[i].vote_count;
+                res.vote_count = accumVoteCount;
+                res.vote_percentage = (accum.summary.valid == 0) ? "0.00%" : string `${io:sprintf ("%.2f", ((accumVoteCount*100.0)/accum.summary.valid))}%`;
             }
         }
     }
