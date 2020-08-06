@@ -129,12 +129,12 @@ service mediaWebsite on mediaListener {
 
     resource function allresultswithincremental(http:Caller caller, http:Request req) returns error? {
         json[] results = [];
-        // return results in reverse order
-        int i = resultsCache.length();
+        // return results in released order
+        int i = 0;
         if electionType == ELECTION_TYPE_PARLIAMENTARY {
-            while i > 0 { // show non-incremental results in reverse order of release
-                i = i - 1;
+            while i < resultsCache.length() {
                 results.push(resultsCache[i].jsonResult);
+                i = i + 1;
             }
         } else {
             while i > 0 { // show non-incremental results in reverse order of release
