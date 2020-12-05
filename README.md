@@ -4,7 +4,7 @@
 
 This system distributes results to registered entities.
 
-## High Level Architecture
+## Overview
 
 ![alt text](images/high_level_architecture.png)
 
