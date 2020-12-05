@@ -1,7 +1,7 @@
 import ballerina/config;
 import ballerina/log;
 import ballerina/runtime;
-import ballerina/test;
+//import ballerina/test;
 import ballerina/websub;
 
 const TWO_DAYS_IN_SECONDS = 172800;
@@ -79,7 +79,7 @@ const map<map<int>> jsonUpdate = {"Result": {"candOne": 110500, "candTwo": 9500}
 final xml xmlUpdate = xml `<Result><candOne>110500</candOne><candTwo>9500</candTwo></Result>`;
 const textUpdate = "Result: candOne: 110500, candTwo: 9500";
 
-@test:BeforeSuite
+//@test:BeforeSuite
 function publish() {
     runtime:sleep(5000); // wait for subscription process to complete.
 //    checkpanic webSubHub.publishUpdate("https://github.com/ECLK/Results-Dist-json", jsonUpdate, "application/json");
@@ -88,7 +88,7 @@ function publish() {
     runtime:sleep(5000); // wait for update notification
 }
 
-@test:Config {}
+//@test:Config {}
 function testContentReceipt() {
 //    test:assertEquals(receivedJsonOrNil, jsonUpdate);
 //    test:assertEquals(receivedXmlOrNil, xmlUpdate);
