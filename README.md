@@ -135,7 +135,7 @@ A log will be printed with the connection ID if the connection is established su
 
 ### Test Driver
 
-Start the test driver service by running `testdriver.jar`, either using `ballerina run` or `java -jar`, using the `url` option to point to the distributor's results receiving endpoint. The `delay` option can be used to specify the delay between two consecutive results 
+Start the test driver service by running `testdriver.jar`, either using `ballerina run` or `java -jar`, using the `url` option to point to the distributor's results receiving endpoint. The `delay` option can be used to specify the delay between two consecutive results. 
 
 ```cmd
 $ ballerina run testdriver.jar -url=http://localhost:8181 -delay=1000
@@ -158,7 +158,7 @@ Alternatively, a test run can be started via the website (http://localhost:9999)
 
 The distributor should now receive the results and deliver them to the subscribers. 
 
-**Note:** these endpoints will be exposed via HTTPS in a production deployment. Alternatively, you can also [enforce HTTPS at the Ballerina service level](https://ballerina.io/learn/by-example/https-listener.html) by introducing the relevant configurations.
+**Note:** these endpoints will be exposed via HTTPS in a production deployment. Alternatively, you can also [enforce HTTPS at the Ballerina listener level](https://ballerina.io/learn/by-example/https-listener.html) by introducing the relevant configurations.
 
 ## How to Contribute
 
